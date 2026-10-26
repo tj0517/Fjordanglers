@@ -27,8 +27,8 @@ export const REPEAT_WINDOW_MS = 24 * HOUR_MS
 /** Auto-sends are counted over this rolling window against the daily cap (O-30). */
 export const AUTO_SEND_CAP_WINDOW_MS = 24 * HOUR_MS
 
-/** Used when AI_AUTO_SEND_DAILY_CAP is not set (O-30: 5 per day to start). */
-const DEFAULT_AUTO_SEND_DAILY_CAP = 5
+/** Used when AI_AUTO_SEND_DAILY_CAP is not set (O-30: 5 per day to start; 20 since FA-1.72, decision tj 2026-10-26). */
+const DEFAULT_AUTO_SEND_DAILY_CAP = 20
 
 /** The browser reports how long the form was on screen (O-27 a); under this is treated as automated. */
 const MIN_FILL_MS = 2000

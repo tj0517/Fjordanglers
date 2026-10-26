@@ -11,7 +11,7 @@
  * Knowledge is provided via the agent_knowledge mock rows in mockDb().
  */
 
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 
 const anthropicCreate = vi.fn().mockResolvedValue({
   content: [{ type: 'text', text: 'Draft reply text from stub.' }],
@@ -32,9 +32,11 @@ vi.mock('@/lib/env', () => ({
 
 vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
 
+// FA-1.72: the trip title is switchable so a test can see "Experience requested:" in the conversation.
+const mockTrip = vi.hoisted(() => ({ title: null as string | null }))
 vi.mock('@/lib/inquiries/experience-lookup', () => ({
   getInquiryExperience: async () => null,
-  tripTitleOf: () => null,
+  tripTitleOf: () => mockTrip.title,
 }))
 
 import { createServiceClient } from '@/lib/supabase/server'
@@ -509,5 +511,60 @@ describe('draftReply — the brief reaches the prompt (FA-1.55)', () => {
     const prompt = lastPrompt()
     expect(prompt).not.toContain('Skill level')
     expect(prompt).not.toContain('junk')
+  })
+})
+
+// ─── FA-1.72 — the conversation the prompt was built from is returned, for the judge ──────────
+
+describe('draftReply — returns the conversation it wrote from (FA-1.72)', () => {
+  const FORM_INQUIRY = {
+    ...INQUIRY_DATA,
+    message:         'We can only do the four dates I listed — any guide for them?',
+    requested_dates: ['2026-06-17', '2026-06-18', '2026-06-19', '2026-06-23'],
+    party_size:      2,
+    source:          'web_form',
+  }
+
+  function promptSent(): string {
+    return (anthropicCreate.mock.calls[0][0] as { messages: { content: string }[] }).messages[0].content
+  }
+
+  beforeEach(() => {
+    anthropicCreate.mockClear()
+    anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: 'Draft reply text from stub.' }] })
+    mockTrip.title = 'Iceland Salmon Week'
+  })
+
+  afterEach(() => {
+    mockTrip.title = null
+  })
+
+  it('form with text, dates and a trip, empty thread: dates and trip are in result.conversation, and it is verbatim in the prompt — RED on main: no conversation', async () => {
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, FORM_INQUIRY)
+
+    const result = await draftReply({ inquiryId: 'inquiry-form', counterpart: 'angler', channel: 'email', allowFormOnly: true })
+
+    expect(result.conversation).toContain('Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23')
+    expect(result.conversation).toContain('Experience requested: Iceland Salmon Week')
+    expect(result.conversation).toContain(FORM_INQUIRY.message)
+    expect(promptSent()).toContain(result.conversation)
+  })
+
+  it('non-empty thread: the inquiry block is still there, followed by the history — RED on main', async () => {
+    mockDb(
+      [
+        { direction: 'inbound',  channel: 'email', body: 'Hello, I want to book', occurred_at: '2026-07-01T10:00:00Z' },
+        { direction: 'outbound', channel: 'email', body: 'What species?',         occurred_at: '2026-07-01T11:00:00Z' },
+      ],
+      null, DEFAULT_KNOWLEDGE_ROWS, FORM_INQUIRY,
+    )
+
+    const result = await draftReply({ inquiryId: 'inquiry-thread', counterpart: 'angler', channel: 'email' })
+
+    expect(result.conversation).toContain('Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23')
+    expect(result.conversation).toContain('Experience requested: Iceland Salmon Week')
+    expect(result.conversation).toContain('=== CONVERSATION HISTORY ===')
+    expect(result.conversation).toContain('What species?')
+    expect(promptSent()).toContain(result.conversation)
   })
 })

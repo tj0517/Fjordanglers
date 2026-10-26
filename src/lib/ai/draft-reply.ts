@@ -6,8 +6,10 @@
  *   - Loads active knowledge entries from agent_knowledge (instructions, tone, destination, guide).
  *   - Calls the Anthropic API with the assembled prompt.
  *   - Saves the result as a messages row with status='draft', drafted_by='agent'.
- *   - Returns { draftId, text, subject, usedIds, usedEntries } — does NOT send the message.
+ *   - Returns { draftId, text, subject, usedIds, usedEntries, conversation } — does NOT send the message.
  *     usedEntries are the knowledge entries the prompt was built from (FA-1.47: the judge gets the same set).
+ *     conversation is the text the prompt was built from — inquiry block + history (FA-1.72: the judge
+ *     gets exactly that, so it reads what the drafting agent read).
  *
  * SERVER-ONLY. Callers: src/actions/messages.ts.
  */
@@ -42,6 +44,8 @@ export interface DraftReplyResult {
   usedIds:  string[]
   /** The entries behind usedIds, in the same order (instructions first). */
   usedEntries: KnowledgeEntry[]
+  /** The conversation text the prompt was built from (assembleConversation) — what the judge reads. */
+  conversation: string
 }
 
 export class DraftReplyError extends Error {
@@ -211,5 +215,6 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     subject,
     usedIds,
     usedEntries: [instructions, ...entries],
+    conversation,
   }
 }

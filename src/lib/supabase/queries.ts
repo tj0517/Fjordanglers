@@ -1282,19 +1282,12 @@ type ServiceClient = SupabaseClient<Database>
 export type InquiryForAutoSend = {
   id:           string
   status:       string
-  trip_country: string | null
   angler_email: string | null
   /** Form text. On a form inquiry this is the client's first message; the thread stays empty. */
   message:      string | null
-  /** FA-1.46: trip reference and form data — a form without text is answered from these. */
+  /** FA-1.46: trip reference — a form without text but with a trip is still answerable. */
   trip_id:            string | null
   experience_page_id: string | null
-  angler_name:        string
-  requested_dates:    string[] | null
-  party_size:         number | null
-  source:             string | null
-  /** FA-1.55 — the v2 form's answers, so the judge reads the same block as the draft. */
-  brief:              unknown
 }
 
 export async function getInquiryForAutoSend(
@@ -1303,7 +1296,7 @@ export async function getInquiryForAutoSend(
 ): Promise<InquiryForAutoSend | null> {
   const { data } = await client
     .from('inquiries')
-    .select('id, status, trip_country, angler_email, message, trip_id, experience_page_id, angler_name, requested_dates, party_size, source, brief')
+    .select('id, status, angler_email, message, trip_id, experience_page_id')
     .eq('id', inquiryId)
     .maybeSingle()
   return (data ?? null) as InquiryForAutoSend | null

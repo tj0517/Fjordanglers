@@ -2,7 +2,10 @@
  * Hybrid auto-send pipeline. FA-1.27.
  *
  * autoSendReply({ inquiryId, counterpart, channel })
- *   Pre-draft gates → draftReply (always saves draft) → destination gate → judge → daily cap → send or hold.
+ *   Pre-draft gates → draftReply (always saves draft) → judge → daily cap → send or hold.
+ *   The agent sends by default (FA-1.72): `send` from the judge is the whole decision. The score is
+ *   information (result and event), never a gate, and a missing destination entry does not block —
+ *   the judge stops a price or condition the knowledge base does not back (STOP group 4).
  *   Emits `agent.auto_send_decided` for EVERY invocation that gets past the hard errors below:
  *     - pre-draft gate failures: sent=false, score=null, draft_message_id=null + reason
  *       (includes FA-1.40/1.46: no thread, no form message and no trip — nothing to answer;
@@ -19,10 +22,7 @@
 
 import { createServiceClient } from '@/lib/supabase/server'
 import { draftReply, DraftReplyError } from '@/lib/ai/draft-reply'
-import { judgeReply, JUDGE_THRESHOLD } from '@/lib/ai/judge-reply'
-import { loadKnowledge } from '@/lib/ai/knowledge'
-import { assembleConversation } from '@/lib/ai/extract-trip'
-import { getInquiryExperience, tripTitleOf } from '@/lib/inquiries/experience-lookup'
+import { judgeReply } from '@/lib/ai/judge-reply'
 import { sendMessage } from '@/lib/messages/send'
 import {
   getInquiryForAutoSend,
@@ -71,10 +71,10 @@ export async function hasAgentAutoReply(inquiryId: string): Promise<boolean> {
  * failures and post-draft outcomes.
  *
  * A form inquiry keeps the client's text in inquiries.message with an empty thread
- * (FA-1.40): the draft is written from it (allowFormOnly) and the judge sees it as
- * the first [ANGLER] message. A form without text but with a trip (FA-1.46) is drafted
- * from the form data, and the judge sees the ORIGINAL INQUIRY block as the first [ANGLER]
- * message. A non-empty thread is judged exactly as before.
+ * (FA-1.40): the draft is written from it (allowFormOnly). A form without text but with a trip
+ * (FA-1.46) is drafted from the form data. In every case the judge receives the conversation
+ * text draftReply built its prompt from (FA-1.72), so it sees the same inquiry block (experience,
+ * requested dates, party size, the client's text, brief) and history as the drafting agent.
  * Flag-off is the caller's responsibility — do not call this when the flag is off.
  */
 export async function autoSendReply(params: {
@@ -117,9 +117,8 @@ export async function autoSendReply(params: {
     return { sent: false, score: null, reasons: [takeoverReason], draftMessageId: null }
   }
 
-  // Conversation for the judge: sent/received messages (no drafts). On a form inquiry
-  // the thread is empty and the client's text lives in inquiries.message (FA-1.40). A form
-  // without text is answered from its trip data (FA-1.46) — same condition as draftReply.
+  // Nothing to answer: no thread, no form text and no trip. The judge's conversation is not
+  // built here — it is the one draftReply wrote from (FA-1.72).
   const msgs = await getConversationForJudge(supabase, inquiryId)
   const formText = inquiry.message?.trim() ?? ''
   const hasTrip = inquiry.trip_id != null || inquiry.experience_page_id != null
@@ -130,31 +129,7 @@ export async function autoSendReply(params: {
     return { sent: false, score: null, reasons: [reason], draftMessageId: null }
   }
 
-  let conversationText: string
-  if (msgs.length > 0) {
-    conversationText = msgs.map(m => `[${m.direction === 'inbound' ? 'ANGLER' : 'AGENT'}] ${m.body}`).join('\n\n')
-  } else if (formText !== '') {
-    conversationText = `[ANGLER] ${formText}`
-  } else {
-    // Same facts and same assembler call as draftReply, so judge and draft see one block.
-    const tripTitle = tripTitleOf(await getInquiryExperience({
-      experience_page_id: inquiry.experience_page_id,
-      trip_id:            inquiry.trip_id,
-    }))
-    conversationText = `[ANGLER] ${assembleConversation(
-      inquiry.angler_name,
-      null,
-      inquiry.requested_dates ?? [],
-      inquiry.party_size ?? 1,
-      tripTitle,
-      [],
-      null,
-      inquiry.source,
-      { brief: inquiry.brief },
-    )}`
-  }
-
-  // Draft — saved here regardless of gate 4 or judge, so admin always has it to edit.
+  // Draft — saved here regardless of the judge, so admin always has it to edit.
   let draft: Awaited<ReturnType<typeof draftReply>>
   try {
     draft = await draftReply({ inquiryId, counterpart: 'angler', channel: 'email', allowFormOnly: true })
@@ -168,21 +143,10 @@ export async function autoSendReply(params: {
     throw err
   }
 
-  // Gate 4: destination knowledge entry must exist for this country.
-  // Without it the draft may promise something we cannot deliver — never auto-send.
-  const { entries } = await loadKnowledge({ country: inquiry.trip_country })
-  const hasDestination = entries.some(e => e.kind === 'destination')
-
-  if (!hasDestination) {
-    const reason = 'no active destination knowledge entry for country: ' + (inquiry.trip_country ?? 'unknown')
-    await emitDecision(supabase, inquiryId, draft.draftId, false, null, [reason])
-    return { sent: false, score: null, reasons: [reason], draftMessageId: draft.draftId }
-  }
-
   // Judge
   let judged: Awaited<ReturnType<typeof judgeReply>>
   try {
-    judged = await judgeReply(conversationText, draft.text, draft.usedEntries)
+    judged = await judgeReply(draft.conversation, draft.text, draft.usedEntries)
   } catch (err) {
     const reason = `judge error: ${err instanceof Error ? err.message : String(err)}`
     console.error('[autoSendReply] judgeReply failed:', err)
@@ -190,7 +154,8 @@ export async function autoSendReply(params: {
     return { sent: false, score: null, reasons: [reason], draftMessageId: draft.draftId }
   }
 
-  const shouldSend = judged.score >= JUDGE_THRESHOLD && judged.send
+  // FA-1.72: the judge's `send` is the decision; the score is only recorded.
+  const shouldSend = judged.send
 
   // Daily cap (FA-1.42): checked last, so only a draft that would really have gone out is
   // held for it, and the judge's score stays on the event. The draft is already saved.

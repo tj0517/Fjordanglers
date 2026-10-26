@@ -32,14 +32,10 @@ vi.mock('@/lib/ai/draft-reply', () => ({
   draftReply: vi.fn(),
   DraftReplyError: class DraftReplyError extends Error {},
 }))
-vi.mock('@/lib/ai/judge-reply', () => ({ judgeReply: vi.fn(), JUDGE_THRESHOLD: 0.9 }))
+vi.mock('@/lib/ai/judge-reply', () => ({ judgeReply: vi.fn() }))
 vi.mock('@/lib/messages/send', () => ({
   sendMessage: vi.fn(),
   DraftNotFoundError: class DraftNotFoundError extends Error {},
-}))
-// Gate 4 needs a destination entry; the knowledge loader itself is not under test here.
-vi.mock('@/lib/ai/knowledge', () => ({
-  loadKnowledge: vi.fn().mockResolvedValue({ entries: [{ kind: 'destination' }] }),
 }))
 vi.mock('@/lib/inquiries/state', () => ({
   transition:      vi.fn().mockResolvedValue({ from: 'new', to: 'qualifying' }),
@@ -151,7 +147,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockEnv.AI_AUTO_REPLY_ENABLED = true
   process.env.RESEND_DEV_FAKE = '1'
-  vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: [], usedEntries: [] })
+  vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: [], usedEntries: [], conversation: 'conversation' })
   vi.mocked(judgeReply).mockResolvedValue({ score: 0.95, send: true, reasons: ['looks good'] })
 })
 
