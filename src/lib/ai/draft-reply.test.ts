@@ -32,7 +32,7 @@ vi.mock('@/lib/env', () => ({
 
 vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
 
-// FA-1.72: the trip title is switchable so a test can see "Experience requested:" in the conversation.
+// FA-1.72: the trip title is switchable so a test can see the trip-page line in the conversation.
 const mockTrip = vi.hoisted(() => ({ title: null as string | null }))
 vi.mock('@/lib/inquiries/experience-lookup', () => ({
   getInquiryExperience: async () => null,
@@ -545,7 +545,7 @@ describe('draftReply — returns the conversation it wrote from (FA-1.72)', () =
     const result = await draftReply({ inquiryId: 'inquiry-form', counterpart: 'angler', channel: 'email', allowFormOnly: true })
 
     expect(result.conversation).toContain('Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23')
-    expect(result.conversation).toContain('Experience requested: Iceland Salmon Week')
+    expect(result.conversation).toContain("Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week")
     expect(result.conversation).toContain(FORM_INQUIRY.message)
     expect(promptSent()).toContain(result.conversation)
   })
@@ -562,9 +562,52 @@ describe('draftReply — returns the conversation it wrote from (FA-1.72)', () =
     const result = await draftReply({ inquiryId: 'inquiry-thread', counterpart: 'angler', channel: 'email' })
 
     expect(result.conversation).toContain('Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23')
-    expect(result.conversation).toContain('Experience requested: Iceland Salmon Week')
+    expect(result.conversation).toContain("Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week")
     expect(result.conversation).toContain('=== CONVERSATION HISTORY ===')
     expect(result.conversation).toContain('What species?')
     expect(promptSent()).toContain(result.conversation)
+  })
+})
+
+describe('draftReply — the sent prompt (FA-1.73)', () => {
+  const FORM = {
+    ...INQUIRY_DATA,
+    message:         'We want 2 days of fishing in July',
+    requested_dates: [],
+    party_size:      2,
+    source:          'web_form',
+  }
+
+  beforeEach(() => {
+    anthropicCreate.mockClear()
+    anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: 'Draft reply text from stub.' }] })
+    mockTrip.title = 'Highland Salmon with Bergur'
+  })
+
+  afterEach(() => {
+    mockTrip.title = null
+  })
+
+  it('the prompt has the new trip-page label and the availability, trip-hint and do-not-re-ask rules — RED on main', async () => {
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, FORM)
+
+    await draftReply({ inquiryId: 'inquiry-rules', counterpart: 'angler', channel: 'email', allowFormOnly: true })
+
+    const prompt = (anthropicCreate.mock.calls[0][0] as { messages: { content: string }[] }).messages[0].content
+    expect(prompt).toContain("Trip page the client came from (hint only — not the client's choice of region or style): Highland Salmon with Bergur")
+    expect(prompt).not.toContain('Experience requested')
+    expect(prompt).toContain("we'll check whether <guide> is free on <date>")
+    expect(prompt).toContain('"South Island" is not "Southland"')
+    expect(prompt).toContain('Never ask for something the client already gave')
+  })
+
+  it('the rules reach the prompt even when the Instructions entry says nothing about them', async () => {
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, FORM)
+
+    await draftReply({ inquiryId: 'inquiry-rules', counterpart: 'angler', channel: 'email', allowFormOnly: true })
+
+    const prompt = (anthropicCreate.mock.calls[0][0] as { messages: { content: string }[] }).messages[0].content
+    expect(DEFAULT_KNOWLEDGE_ROWS[0].body).toBe('You are the FA assistant.')
+    expect(prompt).toContain('=== DRAFTING RULES ===')
   })
 })

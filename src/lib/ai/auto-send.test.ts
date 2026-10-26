@@ -939,7 +939,7 @@ describe('autoSendReply — judge input is the conversation draftReply wrote fro
     vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.9, send: true, reasons: ['ok'] }))
   })
 
-  it('form with text, requested dates and an experience (empty thread): the judge gets "Requested dates:" and "Experience requested:" — RED on main: only "[ANGLER] <text>"', async () => {
+  it('form with text, requested dates and an experience (empty thread): the judge gets "Requested dates:" and the trip-page line — RED on main: only "[ANGLER] <text>"', async () => {
     setupMockDb({ message: FORM_MESSAGE, conversationMsgs: [], trip_id: 'trip-1', requested_dates: FORM_DATES })
     const conversation = conversationFor([])
     vi.mocked(draftReply).mockResolvedValue({ draftId: 'd-1', text: 'Draft', subject: null, usedIds: [], usedEntries: [], conversation })
@@ -948,7 +948,7 @@ describe('autoSendReply — judge input is the conversation draftReply wrote fro
 
     const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
     expect(conversationArg).toContain('Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23')
-    expect(conversationArg).toContain('Experience requested: Iceland Salmon Week')
+    expect(conversationArg).toContain("Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week")
     expect(conversationArg).toContain(FORM_MESSAGE)
     expect(conversationArg).toBe(conversation)
   })
@@ -965,7 +965,7 @@ describe('autoSendReply — judge input is the conversation draftReply wrote fro
 
     const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
     expect(conversationArg).toContain('Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23')
-    expect(conversationArg).toContain('Experience requested: Iceland Salmon Week')
+    expect(conversationArg).toContain("Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week")
     expect(conversationArg).toContain('=== CONVERSATION HISTORY ===')
     expect(conversationArg).toBe(conversation)
   })
