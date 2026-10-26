@@ -66,3 +66,6 @@ backups/
 
 # FA-1.72: production prompt text kept out of the public repo (proof case 16 is repeatable locally only)
 .fa-proofs/**/instructions-prod*
+
+# FA-1.73: prod knowledge text (tone, destinations, guides) used by the local proof — never committed
+.fa-proofs/fa-1.73/knowledge-prod/

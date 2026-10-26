@@ -1,0 +1,441 @@
+
+ RUN  v4.0.18 /home/tj/Fjordanglers
+
+ ❯ src/lib/ai/draft-reply-prompt.test.ts (8 tests | 4 failed) 9ms
+     ✓ context block contains counterpart, channel, status and guide name 2ms
+     ✓ draft context precedes the knowledge and conversation sections 0ms
+     ✓ shows "none" for assigned guide when no guide is resolved 0ms
+     × an angler draft carries the availability rule, the trip-page-is-a-hint rule and the do-not-re-ask rule — RED on main: no rules block 4ms
+     × the gap rules: near gap offers the covered area with a question and no guide name; far gap promises to check and quotes nothing — RED on main 1ms
+     × the code rules allow the guide name — the name ban lives only in the Instructions entry, never in code 0ms
+     × the rules come after the knowledge, so no knowledge entry sits below them 0ms
+     ✓ a draft to the guide gets no client rules 0ms
+ ❯ src/lib/ai/extract-trip.test.ts (8 tests | 1 failed) 40ms
+     ✓ labels an inbound message from the guide as the guide, not "Angler" 17ms
+     ✓ labels an inbound message from the angler as "Angler" 0ms
+     ✓ labels an outbound message to the guide as "FA → guide" 0ms
+     ✓ labels an outbound message to the angler as "FA → angler" 0ms
+     ✓ is byte-identical to plain Angler/FA labelling when counterpart is absent (inquiry-agent.ts, src/actions/ai.ts) 0ms
+     ✓ labels a guide message "Guide (unassigned)" instead of guessing a name, and does not throw 1ms
+     × prints the trip title under a label that says it is not the client's choice — RED on main: "Experience requested" 19ms
+     ✓ prints no trip line when there is no title 0ms
+ ❯ src/lib/ai/draft-reply.test.ts (28 tests | 4 failed) 73ms
+     ✓ saves a draft row with status=draft and drafted_by=agent 23ms
+     ✓ does NOT insert an inquiry_events row 1ms
+     ✓ returns the ids of used knowledge entries 1ms
+     ✓ returns the used knowledge entries with the same ids as usedIds (FA-1.47) — RED on main: no usedEntries 2ms
+     ✓ throws a readable DraftReplyError when thread is empty (default: allowFormOnly not set) 1ms
+     ✓ throws DraftReplyError when no active instructions entry exists 1ms
+     ✓ drafts from the form message when the thread is empty and allowFormOnly is true 1ms
+     ✓ drafts a guide message from the form data too, with an empty thread and allowFormOnly 0ms
+     ✓ throws a readable DraftReplyError when there is neither a thread nor a form message 1ms
+     ✓ drafts from the form data when message is empty but trip_id is set 0ms
+     ✓ drafts from the form data when message is empty but experience_page_id is set 0ms
+     ✓ still refuses without allowFormOnly, even when the inquiry has a trip 0ms
+     ✓ the no-trip error says why: no form message and no trip to write from 0ms
+     ✓ (b) second call with existing draft updates the row — no duplicate insert 1ms
+     ✓ (c) draft messages are excluded from the conversation context sent to AI 1ms
+     ✓ email → non-empty subject containing country and name 0ms
+     ✓ whatsapp → null 0ms
+     ✓ instagram → null 0ms
+     ✓ email with null country → uses fallback 0ms
+     ✓ prints the skill level and the priority from the brief 3ms
+     ✓ keeps the brief inside the inquiry block, where the model reads it as data 0ms
+     ✓ does not print the answers twice when the stored message already carries the summary 0ms
+     ✓ a v1 inquiry (brief null) gets the prompt it got on main — no brief block 0ms
+     ✓ a malformed brief is skipped, not shown to the model as fact 1ms
+     × form with text, dates and a trip, empty thread: dates and trip are in result.conversation, and it is verbatim in the prompt — RED on main: no conversation 19ms
+     × non-empty thread: the inquiry block is still there, followed by the history — RED on main 8ms
+     × the prompt has the new trip-page label and the availability, trip-hint and do-not-re-ask rules — RED on main 3ms
+     × the rules reach the prompt even when the Instructions entry says nothing about them 1ms
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send and emits sent=false when judgeReply throws (API error)
+[autoSendReply] judgeReply failed: Error: Anthropic API timeout
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:382:45
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send and emits sent=false when judgeReply throws (malformed JSON)
+[autoSendReply] judgeReply failed: SyntaxError: Unexpected token < in JSON at position 0
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:402:45
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send when the judge reply was cut off mid-JSON — "judge error", draft kept (fail-safe, FA-1.72)
+[autoSendReply] judgeReply failed: Error: [judgeReply] Could not parse judge response: {"score": 0.95, "send": true, "reasons": ["The draft quotes
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:414:7
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge receives the draft's knowledge (FA-1.47) > passes judgeReply the entries draftReply used — same ids as usedIds, not another set — RED on main: no third argument
+[autoSendReply] judge blocked without evidence { inquiryId: 'inq-1', judgeReasons: [ 'hold' ], evidence: [] }
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — daily cap (FA-1.42) > holds the draft with a reason when the count query fails (D4) — nothing is sent
+[autoSendReply] daily cap count failed: Error: connection reset
+    at countAutoSendsSince (/home/tj/Fjordanglers/src/lib/supabase/queries.ts:1428:28)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at dailyCapHoldReason (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:230:26)
+    at Module.autoSendReply (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:174:24)
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:782:20
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:20
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — the agent leads only until a human takes over (FA-1.48) > holds with a reason when the takeover check fails — no model call, nothing sent
+[autoSendReply] takeover check failed: Error: connection reset
+    at hasHumanTakenOverThread (/home/tj/Fjordanglers/src/lib/supabase/queries.ts:1343:28)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at humanTakeoverReason (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:215:13)
+    at Module.autoSendReply (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:118:26)
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:1072:20
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:20
+
+ ❯ src/lib/ai/auto-send.test.ts (52 tests | 2 failed) 68ms
+     ✓ returns AutoSendResult{sent=false} for counterpart=guide and emits agent.auto_send_decided 4ms
+     ✓ returns AutoSendResult{sent=false} for channel=whatsapp and emits agent.auto_send_decided 1ms
+     ✓ returns AutoSendResult{sent=false} for status=waiting_guide and emits agent.auto_send_decided 1ms
+     ✓ sends when the judge says send=true — RED on main: the destination gate holds it before the judge 2ms
+     ✓ still holds when the judge says send=false (a price with no knowledge behind it is STOP group 4) — reasons in the event 1ms
+     ✓ SENDS when the judge says send=true at a low score (0.55) — the score is information, not a gate — RED on main: held below 0.9 0ms
+     ✓ does NOT send when judge send=false with evidence, even if score=0.97 — the judge's reasons stay in the event 0ms
+     ✓ does NOT send and emits sent=false when judgeReply throws (API error) 6ms
+     ✓ does NOT send and emits sent=false when judgeReply throws (malformed JSON) 1ms
+     ✓ does NOT send when the judge reply was cut off mid-JSON — "judge error", draft kept (fail-safe, FA-1.72) 1ms
+     ✓ passes injection text to judgeReply as conversation data, not as instructions 0ms
+     ✓ calls sendMessage with agent actor and emits agent.auto_send_decided sent=true; status stays new 1ms
+     ✓ flag complaint=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent 0ms
+     ✓ flag competitor=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent 0ms
+     ✓ flag guide_contact=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent 0ms
+     ✓ every raised flag is named; a flag needs no evidence 1ms
+     ✓ a raised flag holds before the daily cap is even read 0ms
+     ✓ send=false from group 4 with a quote that IS in the draft → held with the judge's reasons 0ms
+     ✓ the quote is compared with whitespace collapsed (a JSON string cannot carry the draft's line breaks) 0ms
+     ✓ send=false from group 4/5 WITHOUT evidence → "judge blocked without evidence", logged, still not sent — RED before round 3: the judge's own reasons 2ms
+     ✓ send=false with a quote that is NOT in the draft → "judge blocked without evidence", not sent — RED before round 3 0ms
+     ✓ one real quote and one invented quote → the block is not trusted 0ms
+     ✓ an empty quote is no evidence 0ms
+     ✓ send=true needs no evidence and is never turned into a hold by its absence 0ms
+     ✓ judgeReply throwing on a missing/misshapen client_flags is a judge error — nothing sent (fail-safe) 0ms
+     ✓ passes judgeReply the entries draftReply used — same ids as usedIds, not another set — RED on main: no third argument 1ms
+     ✓ holds the draft when 20 auto-sends already went out in 24 h (default cap) 1ms
+     ✓ still sends with 19 auto-sends in the window (below the default cap of 20) — RED on main: the cap there is 5 0ms
+     ✓ takes the cap from AI_AUTO_SEND_DAILY_CAP: 2 sent with cap 2 holds, 1 sent with cap 2 sends 0ms
+     ✓ keeps the judge reasons when the judge already said no — the cap only holds what would have gone out 0ms
+     ✓ holds the draft with a reason when the count query fails (D4) — nothing is sent 5ms
+     ✓ drafts from the form, judges, and sends at 0.93 — RED on main: draftReply throws "thread is empty" 1ms
+     ✓ no thread and message=null → event with a reason, no draft, no send — RED on main 0ms
+     ✓ no thread and message="   " → event with a reason, no draft, no send — RED on main 0ms
+     ✓ missing active instructions entry (DraftReplyError) still returns null with no event — FA-1.27 behaviour kept 0ms
+     ✓ drafts from the trip data, judges, and sends at 0.93 — RED on main: "no message thread and no form message to answer" 1ms
+     ✓ also runs for an experience_page_id (no legacy trip_id) — RED on main 0ms
+     ✓ no thread, no message and no trip → event with the reason, no draft, no send 0ms
+     × form with text, requested dates and an experience (empty thread): the judge gets "Requested dates:" and the trip-page line — RED on main: only "[ANGLER] <text>" 8ms
+     × non-empty thread: the judge gets the inquiry block and the history — RED on main: only the thread lines 20ms
+     ✓ form without text, trip only: the judge gets the same block, not a copy built in auto-send 0ms
+     ✓ stays silent after a manual reply from the panel (drafted_by admin) — RED on main: the model is called 1ms
+     ✓ recognises an outbound stored the way the FA-1.49 Zoho import stores it (drafted_by admin, event actor admin, source webhook) 0ms
+     ✓ recognises an agent draft sent by a human (drafted_by agent, message.sent actor admin) — RED on main 0ms
+     ✓ keeps leading when the only outbound is an auto-sent agent message (drafted_by agent, actor agent) 0ms
+     ✓ keeps leading when an agent message has no message.sent event at all 0ms
+     ✓ takes over on a human message even when an auto-sent agent message sits beside it 0ms
+     ✓ outbound to a guide only (counterpart=guide, drafted_by admin, sent) is not a takeover — path as today 0ms
+     ✓ first form inquiry with an empty thread keeps the first-reply path 0ms
+     ✓ holds with a reason when the takeover check fails — no model call, nothing sent 1ms
+     ✓ returns true when a prior agent-sent message exists 0ms
+     ✓ returns false when no prior agent-sent message exists 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 11 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — judge input is the conversation draftReply wrote from (FA-1.72) > form with text, requested dates and an experience (empty thread): the judge gets "Requested dates:" and the trip-page line — RED on main: only "[ANGLER] <text>"
+AssertionError: expected '=== ORIGINAL INQUIRY ===\nAngler: Ann…' to contain 'Trip page the client came from (hint …'
+
+- Expected
++ Received
+
+- Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week
++ === ORIGINAL INQUIRY ===
++ Angler: Anna Angler
++ Experience requested: Iceland Salmon Week
++ Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23
++ Party size: 2
++ Angler's message (submitted via the website inquiry form, not an email): "Hi, I can only do the four dates I listed. Is there a guide for them?"
+
+ ❯ src/lib/ai/auto-send.test.ts:951:29
+    949|     const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
+    950|     expect(conversationArg).toContain('Requested dates: 2026-06-17, 20…
+    951|     expect(conversationArg).toContain("Trip page the client came from …
+       |                             ^
+    952|     expect(conversationArg).toContain(FORM_MESSAGE)
+    953|     expect(conversationArg).toBe(conversation)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/11]⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — judge input is the conversation draftReply wrote from (FA-1.72) > non-empty thread: the judge gets the inquiry block and the history — RED on main: only the thread lines
+AssertionError: expected '=== ORIGINAL INQUIRY ===\nAngler: Ann…' to contain 'Trip page the client came from (hint …'
+
+- Expected
++ Received
+
+- Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week
++ === ORIGINAL INQUIRY ===
++ Angler: Anna Angler
++ Experience requested: Iceland Salmon Week
++ Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23
++ Party size: 2
++ Angler's message (submitted via the website inquiry form, not an email): "Hi, I can only do the four dates I listed. Is there a guide for them?"
++
++ === CONVERSATION HISTORY ===
++
++ [1 Sept 2026] Angler (inbound via email):
++ I want to fish NZ rivers.
++
++ [1 Sept 2026] FA (outbound via email):
++ Great, we can arrange that.
+
+ ❯ src/lib/ai/auto-send.test.ts:968:29
+    966|     const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
+    967|     expect(conversationArg).toContain('Requested dates: 2026-06-17, 20…
+    968|     expect(conversationArg).toContain("Trip page the client came from …
+       |                             ^
+    969|     expect(conversationArg).toContain('=== CONVERSATION HISTORY ===')
+    970|     expect(conversationArg).toBe(conversation)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/11]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > buildDraftPrompt — code-added drafting rules (FA-1.73) > an angler draft carries the availability rule, the trip-page-is-a-hint rule and the do-not-re-ask rule — RED on main: no rules block
+AssertionError: expected -1 to be greater than or equal to 0
+ ❯ rulesBlock src/lib/ai/draft-reply-prompt.test.ts:62:19
+     60|   function rulesBlock(prompt: string): string {
+     61|     const start = prompt.indexOf('=== DRAFTING RULES ===')
+     62|     expect(start).toBeGreaterThanOrEqual(0)
+       |                   ^
+     63|     const end = prompt.indexOf('=== CONVERSATION ===')
+     64|     expect(end).toBeGreaterThan(start)
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:69:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/11]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > buildDraftPrompt — code-added drafting rules (FA-1.73) > the gap rules: near gap offers the covered area with a question and no guide name; far gap promises to check and quotes nothing — RED on main
+AssertionError: expected -1 to be greater than or equal to 0
+ ❯ rulesBlock src/lib/ai/draft-reply-prompt.test.ts:62:19
+     60|   function rulesBlock(prompt: string): string {
+     61|     const start = prompt.indexOf('=== DRAFTING RULES ===')
+     62|     expect(start).toBeGreaterThanOrEqual(0)
+       |                   ^
+     63|     const end = prompt.indexOf('=== CONVERSATION ===')
+     64|     expect(end).toBeGreaterThan(start)
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:79:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/11]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > buildDraftPrompt — code-added drafting rules (FA-1.73) > the code rules allow the guide name — the name ban lives only in the Instructions entry, never in code
+AssertionError: expected -1 to be greater than or equal to 0
+ ❯ rulesBlock src/lib/ai/draft-reply-prompt.test.ts:62:19
+     60|   function rulesBlock(prompt: string): string {
+     61|     const start = prompt.indexOf('=== DRAFTING RULES ===')
+     62|     expect(start).toBeGreaterThanOrEqual(0)
+       |                   ^
+     63|     const end = prompt.indexOf('=== CONVERSATION ===')
+     64|     expect(end).toBeGreaterThan(start)
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:88:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/11]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > buildDraftPrompt — code-added drafting rules (FA-1.73) > the rules come after the knowledge, so no knowledge entry sits below them
+AssertionError: expected -1 to be greater than 154
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:102:54
+    100|       'conversation',
+    101|     )
+    102|     expect(prompt.indexOf('=== DRAFTING RULES ===')).toBeGreaterThan(p…
+       |                                                      ^
+    103|   })
+    104| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/11]⎯
+
+ FAIL  src/lib/ai/draft-reply.test.ts > draftReply — returns the conversation it wrote from (FA-1.72) > form with text, dates and a trip, empty thread: dates and trip are in result.conversation, and it is verbatim in the prompt — RED on main: no conversation
+AssertionError: expected '=== ORIGINAL INQUIRY ===\nAngler: Jan…' to contain 'Trip page the client came from (hint …'
+
+- Expected
++ Received
+
+- Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week
++ === ORIGINAL INQUIRY ===
++ Angler: Jan Kowalski
++ Experience requested: Iceland Salmon Week
++ Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23
++ Party size: 2
++ Angler's message (submitted via the website inquiry form, not an email): "We can only do the four dates I listed — any guide for them?"
+
+ ❯ src/lib/ai/draft-reply.test.ts:548:33
+    546| 
+    547|     expect(result.conversation).toContain('Requested dates: 2026-06-17…
+    548|     expect(result.conversation).toContain("Trip page the client came f…
+       |                                 ^
+    549|     expect(result.conversation).toContain(FORM_INQUIRY.message)
+    550|     expect(promptSent()).toContain(result.conversation)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/11]⎯
+
+ FAIL  src/lib/ai/draft-reply.test.ts > draftReply — returns the conversation it wrote from (FA-1.72) > non-empty thread: the inquiry block is still there, followed by the history — RED on main
+AssertionError: expected '=== ORIGINAL INQUIRY ===\nAngler: Jan…' to contain 'Trip page the client came from (hint …'
+
+- Expected
++ Received
+
+- Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week
++ === ORIGINAL INQUIRY ===
++ Angler: Jan Kowalski
++ Experience requested: Iceland Salmon Week
++ Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23
++ Party size: 2
++ Angler's message (submitted via the website inquiry form, not an email): "We can only do the four dates I listed — any guide for them?"
++
++ === CONVERSATION HISTORY ===
++
++ [1 Jul 2026] Angler (inbound via email):
++ Hello, I want to book
++
++ [1 Jul 2026] FA (outbound via email):
++ What species?
+
+ ❯ src/lib/ai/draft-reply.test.ts:565:33
+    563| 
+    564|     expect(result.conversation).toContain('Requested dates: 2026-06-17…
+    565|     expect(result.conversation).toContain("Trip page the client came f…
+       |                                 ^
+    566|     expect(result.conversation).toContain('=== CONVERSATION HISTORY ==…
+    567|     expect(result.conversation).toContain('What species?')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/11]⎯
+
+ FAIL  src/lib/ai/draft-reply.test.ts > draftReply — the sent prompt (FA-1.73) > the prompt has the new trip-page label and the availability, trip-hint and do-not-re-ask rules — RED on main
+AssertionError: expected 'You are the FA assistant.\n\n=== DRAF…' to contain 'Trip page the client came from (hint …'
+
+- Expected
++ Received
+
+- Trip page the client came from (hint only — not the client's choice of region or style): Highland Salmon with Bergur
++ You are the FA assistant.
++
++ === DRAFT CONTEXT ===
++ Addressee: angler
++ Channel: email
++ Inquiry status: qualifying
++ Assigned guide: none
++
++ === KNOWLEDGE ===
++
++ --- Tone (Tone) ---
++ Warm, direct.
++
++ --- Destination: Iceland (Iceland) ---
++ Season: June–September.
++
++
++ === CONVERSATION ===
++ === ORIGINAL INQUIRY ===
++ Angler: Jan Kowalski
++ Experience requested: Highland Salmon with Bergur
++ Party size: 2
++ Angler's message (submitted via the website inquiry form, not an email): "We want 2 days of fishing in July"
+
+ ❯ src/lib/ai/draft-reply.test.ts:597:20
+    595| 
+    596|     const prompt = (anthropicCreate.mock.calls[0][0] as { messages: { …
+    597|     expect(prompt).toContain("Trip page the client came from (hint onl…
+       |                    ^
+    598|     expect(prompt).not.toContain('Experience requested')
+    599|     expect(prompt).toContain("we'll check whether <guide> is free on <…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/11]⎯
+
+ FAIL  src/lib/ai/draft-reply.test.ts > draftReply — the sent prompt (FA-1.73) > the rules reach the prompt even when the Instructions entry says nothing about them
+AssertionError: expected 'You are the FA assistant.\n\n=== DRAF…' to contain '=== DRAFTING RULES ==='
+
+- Expected
++ Received
+
+- === DRAFTING RULES ===
++ You are the FA assistant.
++
++ === DRAFT CONTEXT ===
++ Addressee: angler
++ Channel: email
++ Inquiry status: qualifying
++ Assigned guide: none
++
++ === KNOWLEDGE ===
++
++ --- Tone (Tone) ---
++ Warm, direct.
++
++ --- Destination: Iceland (Iceland) ---
++ Season: June–September.
++
++
++ === CONVERSATION ===
++ === ORIGINAL INQUIRY ===
++ Angler: Jan Kowalski
++ Experience requested: Highland Salmon with Bergur
++ Party size: 2
++ Angler's message (submitted via the website inquiry form, not an email): "We want 2 days of fishing in July"
+
+ ❯ src/lib/ai/draft-reply.test.ts:611:20
+    609|     const prompt = (anthropicCreate.mock.calls[0][0] as { messages: { …
+    610|     expect(DEFAULT_KNOWLEDGE_ROWS[0].body).toBe('You are the FA assist…
+    611|     expect(prompt).toContain('=== DRAFTING RULES ===')
+       |                    ^
+    612|   })
+    613| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/11]⎯
+
+ FAIL  src/lib/ai/extract-trip.test.ts > assembleConversation — trip title is a hint (FA-1.73) > prints the trip title under a label that says it is not the client's choice — RED on main: "Experience requested"
+AssertionError: expected '=== ORIGINAL INQUIRY ===\nAngler: Jan…' to contain 'Trip page the client came from (hint …'
+
+- Expected
++ Received
+
+- Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week
++ === ORIGINAL INQUIRY ===
++ Angler: Jan Kowalski
++ Experience requested: Iceland Salmon Week
++ Requested dates: 2026-07-15
++ Party size: 2
++ Angler's message: "I want to fish for salmon"
+
+ ❯ src/lib/ai/extract-trip.test.ts:92:26
+     90|     const conversation = assembleConversation(...BASE_ARGS, [])
+     91| 
+     92|     expect(conversation).toContain(
+       |                          ^
+     93|       "Trip page the client came from (hint only — not the client's ch…
+     94|     )
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/11]⎯
+
+
+ Test Files  4 failed (4)
+      Tests  11 failed | 85 passed (96)
+   Start at  14:38:39
+   Duration  1.07s (transform 1.13s, setup 174ms, import 1.70s, tests 190ms, environment 0ms)
+
