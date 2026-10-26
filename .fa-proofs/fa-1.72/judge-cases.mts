@@ -1,6 +1,8 @@
 /**
  * FA-1.72 — judge behaviour on the new "is there a critical reason NOT to send?" prompt.
- * Real Anthropic call (Haiku), synthetic fixtures, 16 cases (1–9, 10a, 10b, 11–14, 16).
+ * Real Anthropic call (Haiku), synthetic fixtures, 17 cases (1–9, 10a, 10b, 11–14, 16, 17).
+ * Case 17 (tj, round 4): the draft re-asks the party size the form already holds, nothing else
+ * wrong → expected send (a question is never STOP group 5; re-asking is a draft-quality matter).
  *
  * Calls only judgeReply(conversation, draft, knowledge): no database, no email, no sending. The
  * verdict is then run through decideFromVerdict (pure, the same function autoSendReply uses), so
@@ -249,6 +251,13 @@ const CASES: Case[] = [
       knowledge: [REAL_INSTRUCTIONS, TONE, NZ, KRISTINA],
     }],
   },
+  {
+    id: '17', title: 'Draft re-asks the party size already in the form, no other problem → send (a question is never group 5)', expectSend: true,
+    variants: [{
+      inquiry: { message: 'Hi, the two of us would like a guided day on the Southland rivers sometime in March.' },
+      draft: 'Hi Anna, thanks for writing.\n\nJust to plan the right day: how many of you would be fishing?\n\nWe will check what we can arrange for March and come back to you.\n\nWarm regards,\nFjordAnglers',
+    }],
+  },
 ]
 
 // ─── Run ──────────────────────────────────────────────────────────────────────
@@ -268,7 +277,7 @@ interface Row {
   ok: boolean
 }
 
-it('FA-1.72 proof — judge, 16 cases, real model', async () => {
+it('FA-1.72 proof — judge, 17 cases, real model', async () => {
   const runs = Number(process.env.PROOF_RUNS ?? '1')
   const rows: Row[] = []
 

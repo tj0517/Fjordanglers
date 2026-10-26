@@ -138,6 +138,14 @@ describe('judgeReply — knowledge in the input (FA-1.47)', () => {
     }
   })
 
+  it('group 5 counts only a statement of a date, month, place or number of people — a question never — RED before round 4', async () => {
+    await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
+    const content = sentUserContent()
+    expect(content).toMatch(/only a STATEMENT of a date, a month, a place or a number of people counts/i)
+    expect(content).toMatch(/a question in the draft is never STOP GROUP 5/i)
+    expect(content).toMatch(/for group 5, "conflict" must name the invented or contradicting fact/i)
+  })
+
   it('says a price is verified only when the same amount is literally in a knowledge entry', async () => {
     await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
     const content = sentUserContent()
