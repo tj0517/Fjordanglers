@@ -2,7 +2,7 @@
 id: FA-1.77
 title: Payment link — nazwa i opis produktu Stripe widoczne i edytowalne przed utworzeniem; zmiana na istniejącym linku bez zmiany adresu
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
