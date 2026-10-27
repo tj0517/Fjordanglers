@@ -2,7 +2,7 @@
 id: FA-1.77
 title: Payment link — nazwa i opis produktu Stripe widoczne i edytowalne przed utworzeniem; zmiana na istniejącym linku bez zmiany adresu
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -69,3 +69,4 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 ```
 
 ## Notatki z realizacji
+- **2026-10-27, tj:** serwer MCP stripe nadal nie działa (`CONNECTION_CLOSED`, brak `STRIPE_RESTRICTED_KEY` w środowisku Claude Code) — dla FA-1.77 opcjonalny; praca na mocku Stripe, bez zrzutu checkoutu na `sk_test`; dowód zachowania istniejącego linku z dokumentacji Stripe (context7). Odnotowane w „Not done” raportu.
