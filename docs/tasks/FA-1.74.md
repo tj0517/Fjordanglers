@@ -2,7 +2,7 @@
 id: FA-1.74
 title: Oferta edytowalna — zmiana nazwy i ceny po utworzeniu, kilka pozycji w ofercie, oferta bez odpowiedzi w wątku
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -86,3 +86,4 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 - Podpowiedź depozytu = `DEPOSIT_PERCENT` (20%), nie 30% — linia w Zakresie poprawiona zgodnie z decyzją tj z 2026-10-27.
 - Równoległa edycja tej samej oferty przez dwóch adminów (drugi zapis może usunąć pozycję dodaną przez pierwszego) → `docs/deferred-tasks.md`.
 - **2026-10-27, tj: preflight = A** — `scripts/dev-preflight.sh` nie istnieje (to produkt FA-1.67, `todo`; reguła w prompcie zastosowana za wcześnie). Zamiast skryptu: trzy ręczne sprawdzenia (docker odpowiada w 10 s, brak obcych `supabase_*`, wolny dysk) + dowód wiersza seed (`admin@seed.test`) przez ten sam URL bazy co dev server, wklejone przed pierwszym krokiem w przeglądarce. `next dev` tylko z env z `supabase status -o env` + `RESEND_DEV_FAKE=1`, `EXPERIENCE_V2_ENABLED=true`, atrapy Stripe z `.env.test`; nigdy `.env.local`. Walk tylko ekranów zapytania w adminie potrzebnych do zrzutów — bez wysyłki z Conversation, bez formularza publicznego, bez payment linków. Po walku `next dev` zatrzymany; kontenery Seaclouds zostają zatrzymane i wypisane w raporcie.
+- **2026-10-27 — accepted by tj on 9b4e217 (PR #167):** all six criteria proven (action + card tests, three refusal red proofs + rollback tests on the in-memory fake, screenshots 01–08, CI check/db/knip/secrets green). Known limits: rollback proven only on the fake DB; accepted stage in the walk reached via SQL fixture (Mark as presented needs a message until FA-1.76).
