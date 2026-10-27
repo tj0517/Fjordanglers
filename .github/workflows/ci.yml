@@ -12,7 +12,7 @@
 # ŻADEN SEKRET. Wszystkie wartości env pochodzą z commitowanego `.env.test`
 # (klucze lokalnego stacku Supabase są deterministyczne i identyczne u każdego,
 # Stripe/Resend to placeholdery). `secrets.*` nie występuje w tym pliku ani razu —
-# jedyny token to `GITHUB_TOKEN`, który Actions wstrzykuje samo i którego tu nie używamy.
+# jedyny token to `GITHUB_TOKEN` (`github.token`), używany tylko do logowania do ghcr.io w `db`.
 # Ten plik działa na `pull_request`, więc sekret nie może tu trafić nigdy. Jedyne
 # miejsce z sekretami to `deploy-db.yml` (FA-1.20) — zasada jest zapisana w jego
 # nagłówku, tylko tam.
@@ -175,6 +175,10 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # `packages: read` — tylko dla logowania do ghcr.io niżej (FA-1.78).
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
 
@@ -192,6 +196,15 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      # Anonimowe pobrania z ghcr.io dzielą limit z całym IP runnera — PR #169 padł
+      # dwa razy na `toomanyrequests` przy obrazie postgres (27 X 2026, FA-1.78).
+      # Zalogowane pobrania liczą się na to repo. Token przebiegu, nie sekret.
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
 
       # Startujemy tylko to, czego dotykają testy: postgres + kong (API 54421) + postgrest.
       # + gotrue: action tests log in for real as seed accounts (FA-1.56).
