@@ -2,7 +2,7 @@
 id: FA-1.77
 title: Payment link — nazwa i opis produktu Stripe widoczne i edytowalne przed utworzeniem; zmiana na istniejącym linku bez zmiany adresu
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -73,3 +73,4 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 - **2026-10-27, tj:** serwer MCP stripe nadal nie działa (`CONNECTION_CLOSED`, brak `STRIPE_RESTRICTED_KEY` w środowisku Claude Code) — dla FA-1.77 opcjonalny; praca na mocku Stripe, bez zrzutu checkoutu na `sk_test`; dowód zachowania istniejącego linku z dokumentacji Stripe (context7). Odnotowane w „Not done” raportu.
 - **2026-10-27, tj — decyzja 1 (limit opisu):** Stripe nie dokumentuje limitu `description` produktu (udokumentowany tylko `name` = 250). Opcja A: opis **wymagany** (niepusty po trim) i **maks. 250 znaków** — ta sama reguła co nazwa. Walidacja po stronie serwera przed wywołaniem Stripe.
 - **2026-10-27, tj — decyzja 2 (D3, istniejący link):** opcja A — dokumentacja Stripe uznana za wystarczającą („The Payment Link uses the price to compute the order total. It also retrieves the product associated with the price. The product's name and image are used to render the payment page.” — https://docs.stripe.com/products-prices/how-products-and-prices-work); budujemy D3(a) (`products.update`, adres linku bez zmian), bez skryptu dowodowego na `sk_test`. W raporcie kryterium oznaczone „docs-based, manual check by tj pending” — tj sprawdzi stronę płatności po deployu.
+- **2026-10-27, tj:** odebrane przez tj 2026-10-27 — kod (walidacja przed Stripe, products.update bez nowego linku, zdarzenie przed/po), red proofs w PR, zrzuty 01/02b obejrzane w wf-review; ręczny test strony płatności istniejącego linku po deployu — otwarte (tj).
