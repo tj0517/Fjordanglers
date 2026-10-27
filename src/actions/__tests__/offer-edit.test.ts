@@ -115,7 +115,7 @@ function makeFake(db: Db, opts: FakeOpts = {}) {
     }
 
     const q = {
-      select(_cols?: string) { if (op !== 'select') returning = true; return q },
+      select() { if (op !== 'select') returning = true; return q },
       eq(col: string, val: unknown) { filters.push(r => r[col] === val); return q },
       in(col: string, vals: unknown[]) { filters.push(r => vals.includes(r[col])); return q },
       order(col: string) { sortKeys.push(col); return q },
