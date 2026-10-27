@@ -1015,7 +1015,7 @@ export function NextStepCard({
               {amountSet && !linkMatches && (
                 <section aria-labelledby="product-new-title" data-testid="product-details-new" className="flex flex-col gap-3">
                   <div className="flex flex-col gap-0.5">
-                    <h3 id="product-new-title" className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted-foreground f-body">Payment page</h3>
+                    <h3 id="product-new-title" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground f-body">Payment page</h3>
                     <Hint>{anglerFirstName} sees this name and description on the Stripe payment page.</Hint>
                   </div>
                   <ProductFields value={product} onChange={setProduct} disabled={depositPending} />
