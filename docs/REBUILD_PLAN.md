@@ -628,6 +628,7 @@ w aplikacji — nigdy jako osobny krok „dopisz".
 | `guide.offer_received` | guide | j.w. | admin oznacza wiadomość przychodzącą od przewodnika jako „to jest oferta" (jedno kliknięcie w wątku, zapisuje cenę/termin) | M10 odcinek 2 |
 | `offer.presented` | admin | j.w. | wiadomość wychodząca do klienta oznaczona „przedstawia ofertę"; także `source='backfill'` z FA-1.38 (`recordPastOffer()`, `channel='app'`, `occurred_at` = data wysłania oferty — jedyny writer `inquiries.offer_sent_at` w kodzie) | M7, M10 |
 | `offer.accepted` / `offer.declined` | angler | j.w. | admin oznacza odpowiedź klienta; `declined` → `inquiry.lost` | M7 |
+| `offer.updated` | admin | app | admin edytuje pozycje oferty w miejscu na karcie „Next step” (FA-1.74, `updateOfferOptions`; etap bez zmian); `payload.offer_id`, `payload.before`, `payload.after` (pozycje: `id`, `label`, `price_cents`, `currency`) | M11, ostrzeżenie o depozycie od starej ceny |
 | `payment.link_sent` | admin | stripe | link generowany **z aplikacji** (Stripe Payment Link API z `metadata.inquiry_id`) i wklejany do wiadomości w wątku | M11 |
 | `payment.received` | system | stripe | webhook `checkout.session.completed` / `payment_link` z `metadata.inquiry_id`; awaryjnie `UnmatchedLinker` (source=app); także `source='backfill'` z FA-1.37 (`recordPastPayment()`, `channel='app'`, `occurred_at` = data wpłaty) | M1, M2, M3, M7 |
 | `guide.notified_paid` | admin | j.w. | wiadomość do przewodnika oznaczona „poinformowano o wpłacie" | M11 |
@@ -647,11 +648,11 @@ Zarezerwowane, bez emisji w etapie 1 (w `types.ts` z komentarzem `// stage N`):
 `incident.opened`/`resolved`.
 
 Usunięte z katalogu (brak odpowiednika w rzeczywistym procesie): `offer.created`,
-`offer.updated`, `offer.sent` (builder ofert i `sendOfferEmail` nie są używane),
+`offer.sent` (builder ofert i `sendOfferEmail` nie są używane),
 `deposit.link_sent`/`deposit.paid` (zastąpione `payment.*`).
 
 Historia przed 2026-09-16 (backfill FA-1.05, źródła potwierdzone audytem prod): `inquiry.created` z `inquiries.created_at` (99 wierszy), `message.sent`/`message.received` z `messages` (684 wiersze). `offer.presented` — 1 wiersz z `inquiries.offer_sent_at`. `payment.received`, `guide.contacted` i `inquiry.lost` nie mają historii sprzed stage-1 — brak wiarygodnego timestampu lub brak wierszy źródłowych.
 
 **Ręczne dotknięcie** = zdarzenie `actor_kind='admin'` typu `message.sent`,
-`status.changed`, `payment.link_sent`, `contacts.exchanged`. M11 = liczba takich zdarzeń
+`status.changed`, `payment.link_sent`, `contacts.exchanged`, `offer.updated` (FA-1.74, tj D-B 2026-10-27). M11 = liczba takich zdarzeń
 na zapytanie zakończone wpłatą.

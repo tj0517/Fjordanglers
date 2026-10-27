@@ -3,10 +3,11 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Loader2, Check } from 'lucide-react'
+import { Loader2, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   markAsGuideOffer,
+  updateOfferOptions,
   markOfferPresented,
   markClientAccepted,
   markClientDeclined,
@@ -15,7 +16,7 @@ import {
   createPaymentLink,
 } from '@/actions/messages'
 import { setDepositAmount, type SetDepositAmountResult } from '@/actions/inquiries'
-import { DEPOSIT_PERCENT, depositHintCents, formatDepositAmount } from '@/lib/inquiries/deposit'
+import { ALLOWED_DEPOSIT_CURRENCIES, DEPOSIT_PERCENT, depositHintCents, formatDepositAmount } from '@/lib/inquiries/deposit'
 import { Button } from '@/components/ui/button'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -31,7 +32,7 @@ export interface NextStepCardProps {
   inquiryId:              string
   inquiryStatus:          string
   offer:                  OfferForPanel | null
-  /** ID of the latest inbound message (any counterpart) — used as source for guide offer */
+  /** ID of the latest inbound message (any counterpart) — linked as the offer's source when present */
   latestInboundMsgId:     string | null
   /** ID of the latest outbound message to angler — used as message for markOfferPresented */
   latestOutboundAnglerId: string | null
@@ -57,6 +58,8 @@ export interface NextStepCardProps {
   depositPaidAt?:         string | null
   /** True when an agent draft carrying the active payment link is waiting in Conversation */
   hasDepositDraft?:       boolean
+  /** FA-1.74: the accepted option's price changed after the deposit amount was saved */
+  depositFromOldPrice?:   boolean
 }
 
 // ─── Small presentational pieces ──────────────────────────────────────────────
@@ -96,6 +99,170 @@ function Spinner({ on }: { on: boolean }) {
   return on ? <Loader2 size={12} className="animate-spin" /> : null
 }
 
+// ─── Offer options form (FA-1.74) ─────────────────────────────────────────────
+//
+// Behind "Create guide offer" and "Edit offer": any number of options (name, price,
+// currency), minimum one. The server validates again.
+
+interface OfferOptionValue {
+  /** Existing option id; null for an option added in this form. */
+  id:         string | null
+  label:      string
+  priceCents: number
+  currency:   string
+}
+
+interface Row {
+  key:      string
+  id:       string | null
+  label:    string
+  price:    string
+  currency: string
+  locked:   boolean
+}
+
+function priceText(cents: number): string {
+  return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2)
+}
+
+function priceCents(text: string): number | null {
+  const n = Math.round(parseFloat(text) * 100)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+let nextKey = 0
+function newRow(currency: string): Row {
+  nextKey += 1
+  return { key: `new-${nextKey}`, id: null, label: '', price: '', currency, locked: false }
+}
+
+function OfferOptionsForm({
+  initial,
+  lockedIds = [],
+  submitLabel,
+  pending,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  /** Current options (edit) or empty (create — starts with one blank option). */
+  initial:     ReadonlyArray<{ id: string; label: string; price_cents: number; currency: string }>
+  /** Options that cannot be removed (the accepted one). */
+  lockedIds?:  readonly string[]
+  submitLabel: string
+  pending:     boolean
+  error:       string | null
+  onSubmit:    (options: OfferOptionValue[]) => void
+  onCancel:    () => void
+}) {
+  const [rows, setRows] = useState<Row[]>(() =>
+    initial.length > 0
+      ? initial.map(o => ({
+          key:      o.id,
+          id:       o.id,
+          label:    o.label,
+          price:    priceText(o.price_cents),
+          currency: o.currency.toLowerCase(),
+          locked:   lockedIds.includes(o.id),
+        }))
+      : [newRow('eur')],
+  )
+
+  function update(key: string, patch: Partial<Pick<Row, 'label' | 'price' | 'currency'>>) {
+    setRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)))
+  }
+
+  const valid = rows.every(r => r.label.trim() !== '' && priceCents(r.price) != null)
+
+  function submit() {
+    if (!valid) return
+    onSubmit(rows.map(r => ({
+      id:         r.id,
+      label:      r.label.trim(),
+      priceCents: priceCents(r.price) ?? 0,
+      currency:   r.currency,
+    })))
+  }
+
+  return (
+    <div className="flex flex-col gap-3" data-testid="offer-options-form">
+      {rows.map((r, i) => (
+        <div key={r.key} className="flex flex-col gap-2 rounded-xl border border-border px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground f-body">
+              Option {i + 1}{r.locked ? ' · accepted' : ''}
+            </p>
+            {rows.length > 1 && !r.locked && (
+              <button
+                type="button"
+                onClick={() => setRows(rs => rs.filter(x => x.key !== r.key))}
+                disabled={pending}
+                aria-label={`Remove option ${i + 1}`}
+                className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <input
+            type="text"
+            value={r.label}
+            onChange={e => update(r.key, { label: e.target.value })}
+            disabled={pending}
+            placeholder="e.g. Trout fly fishing — 3 days"
+            aria-label={`Option ${i + 1} name`}
+            className={cn(INPUT, 'w-full')}
+          />
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={r.price}
+              onChange={e => update(r.key, { price: e.target.value })}
+              disabled={pending}
+              placeholder="Price"
+              aria-label={`Option ${i + 1} price`}
+              className={cn(INPUT, 'flex-1')}
+            />
+            <select
+              value={r.currency}
+              onChange={e => update(r.key, { currency: e.target.value })}
+              disabled={pending}
+              aria-label={`Option ${i + 1} currency`}
+              className={INPUT}
+            >
+              {ALLOWED_DEPOSIT_CURRENCIES.map(c => (
+                <option key={c} value={c.toLowerCase()}>{c}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      ))}
+      <div>
+        <button
+          type="button"
+          onClick={() => setRows(rs => [...rs, newRow(rs[rs.length - 1]?.currency ?? 'eur')])}
+          disabled={pending}
+          className="h-9 px-1 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer disabled:opacity-50"
+        >
+          Add option
+        </button>
+      </div>
+      <ErrorLine message={error} />
+      <div className="flex justify-end gap-3">
+        <Button type="button" onClick={onCancel} disabled={pending} className={SECONDARY}>
+          Cancel
+        </Button>
+        <Button type="button" onClick={submit} disabled={pending || !valid} className={PRIMARY}>
+          <Spinner on={pending} />
+          {submitLabel}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function NextStepCard({
@@ -117,17 +284,17 @@ export function NextStepCard({
   guideName = null,
   depositPaidAt = null,
   hasDepositDraft = false,
+  depositFromOldPrice = false,
 }: NextStepCardProps) {
   const router = useRouter()
 
-  // ── Guide offer form state ────────────────────────────────────────────────
+  // ── Guide offer form state (create + edit) ────────────────────────────────
   const [showOfferForm,  setShowOfferForm]  = useState(false)
-  const [optionLabel,    setOptionLabel]    = useState('')
-  const [optionPrice,    setOptionPrice]    = useState('')
-  const [optionCurrency, setOptionCurrency] = useState('eur')
   const [offerPending,   startOffer]        = useTransition()
   const [offerError,     setOfferError]     = useState<string | null>(null)
   const [offerFlash,     setOfferFlash]     = useState(false)
+  const [showEditForm,   setShowEditForm]   = useState(false)
+  const [editFlash,      setEditFlash]      = useState(false)
 
   // ── Present offer state ───────────────────────────────────────────────────
   const [presentPending, startPresent]    = useTransition()
@@ -177,21 +344,32 @@ export function NextStepCard({
 
   // ─── Handlers (unchanged server actions) ─────────────────────────────────
 
-  function handleCreateGuideOffer() {
-    if (latestInboundMsgId == null) return
-    const priceCents = Math.round(parseFloat(optionPrice) * 100)
-    if (!optionLabel.trim() || !Number.isFinite(priceCents) || priceCents <= 0) return
+  function handleCreateGuideOffer(options: OfferOptionValue[]) {
     setOfferError(null)
     startOffer(async () => {
-      const res = await markAsGuideOffer(latestInboundMsgId, {
-        guideId: guideId ?? undefined,
-        options: [{ label: optionLabel.trim(), priceCents, currency: optionCurrency }],
+      const res = await markAsGuideOffer(inquiryId, {
+        messageId: latestInboundMsgId,
+        guideId:   guideId ?? undefined,
+        options:   options.map(o => ({ label: o.label, priceCents: o.priceCents, currency: o.currency })),
       })
       if (res.success) {
         setShowOfferForm(false)
-        setOptionLabel('')
-        setOptionPrice('')
         flash(setOfferFlash)
+        router.refresh()
+      } else {
+        setOfferError(res.error)
+      }
+    })
+  }
+
+  function handleEditOffer(options: OfferOptionValue[]) {
+    if (offer == null) return
+    setOfferError(null)
+    startOffer(async () => {
+      const res = await updateOfferOptions(offer.id, options)
+      if (res.success) {
+        setShowEditForm(false)
+        flash(setEditFlash)
         router.refresh()
       } else {
         setOfferError(res.error)
@@ -353,73 +531,26 @@ export function NextStepCard({
           {offerFlash && <FlashBanner message="Guide offer created" />}
           <Heading
             title="No offer yet"
-            text="Attach a guide in the Guide tab and wait for their proposal. When the guide replies with prices, turn it into an offer here."
+            text="Attach a guide in the Guide tab and get their prices — in this thread, by WhatsApp or by phone. Then turn them into an offer here, one option per variant."
           />
           {!showOfferForm ? (
-            <>
-              <div className="flex flex-wrap gap-3">
-                <Button nativeButton={false} render={<Link href="?tab=guide" scroll={false} />} className={SECONDARY}>
-                  Go to Guide tab
-                </Button>
-                <Button
-                  type="button"
-                  disabled={latestInboundMsgId == null}
-                  onClick={() => setShowOfferForm(true)}
-                  className={SECONDARY}
-                >
-                  Create guide offer
-                </Button>
-              </div>
-              {latestInboundMsgId == null && (
-                <Hint>“Create guide offer” unlocks after the first reply in this thread.</Hint>
-              )}
-            </>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground f-body">Guide offer — option 1</p>
-              <input
-                type="text"
-                value={optionLabel}
-                onChange={e => setOptionLabel(e.target.value)}
-                placeholder="e.g. Trout fly fishing — 3 days"
-                className={cn(INPUT, 'w-full')}
-              />
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={optionPrice}
-                  onChange={e => setOptionPrice(e.target.value)}
-                  placeholder="Price"
-                  className={cn(INPUT, 'flex-1')}
-                />
-                <select
-                  value={optionCurrency}
-                  onChange={e => setOptionCurrency(e.target.value)}
-                  className={INPUT}
-                >
-                  <option value="eur">EUR</option>
-                  <option value="usd">USD</option>
-                  <option value="isk">ISK</option>
-                </select>
-              </div>
-              <ErrorLine message={offerError} />
-              <div className="flex justify-end gap-3">
-                <Button type="button" onClick={() => { setShowOfferForm(false); setOfferError(null) }} className={SECONDARY}>
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleCreateGuideOffer}
-                  disabled={offerPending || !optionLabel.trim() || !optionPrice}
-                  className={PRIMARY}
-                >
-                  <Spinner on={offerPending} />
-                  Create guide offer
-                </Button>
-              </div>
+            <div className="flex flex-wrap gap-3">
+              <Button nativeButton={false} render={<Link href="?tab=guide" scroll={false} />} className={SECONDARY}>
+                Go to Guide tab
+              </Button>
+              <Button type="button" onClick={() => setShowOfferForm(true)} className={SECONDARY}>
+                Create guide offer
+              </Button>
             </div>
+          ) : (
+            <OfferOptionsForm
+              initial={[]}
+              submitLabel="Create guide offer"
+              pending={offerPending}
+              error={offerError}
+              onSubmit={handleCreateGuideOffer}
+              onCancel={() => { setShowOfferForm(false); setOfferError(null) }}
+            />
           )}
         </>
       )}
@@ -432,27 +563,49 @@ export function NextStepCard({
             title={`Present the offer to ${anglerFirstName}`}
             text={`Send ${anglerFirstName} the offer from Conversation, then mark it as presented here. The status moves to Offer presented.`}
           />
-          <div className="flex flex-col gap-2">
-            {offer.options.map((opt, i) => (
-              <div key={opt.id} className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
-                <div className="flex flex-col">
-                  <span className="text-[15px] font-semibold text-foreground f-body">{opt.label}</span>
-                  <span className="text-[13px] text-muted-foreground f-body">
-                    Option {i + 1}{guideName != null ? ` · guide ${guideName}` : ''}
-                  </span>
-                </div>
-                <span className="text-base font-bold text-foreground f-body">{formatDepositAmount(opt.price_cents, opt.currency)}</span>
+          {editFlash && <FlashBanner message="Offer updated" />}
+          {showEditForm ? (
+            <OfferOptionsForm
+              initial={offer.options}
+              lockedIds={offer.options.filter(o => o.is_accepted).map(o => o.id)}
+              submitLabel="Save offer"
+              pending={offerPending}
+              error={offerError}
+              onSubmit={handleEditOffer}
+              onCancel={() => { setShowEditForm(false); setOfferError(null) }}
+            />
+          ) : (
+            <>
+              <div className="flex flex-col gap-2">
+                {offer.options.map((opt, i) => (
+                  <div key={opt.id} className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
+                    <div className="flex flex-col">
+                      <span className="text-[15px] font-semibold text-foreground f-body">{opt.label}</span>
+                      <span className="text-[13px] text-muted-foreground f-body">
+                        Option {i + 1}{guideName != null ? ` · guide ${guideName}` : ''}
+                      </span>
+                    </div>
+                    <span className="text-base font-bold text-foreground f-body">{formatDepositAmount(opt.price_cents, opt.currency)}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <ErrorLine message={presentError} />
-          <div className="flex justify-end">
-            <Button type="button" onClick={handlePresentOffer} disabled={presentPending || presentMsgId == null} className={PRIMARY}>
-              <Spinner on={presentPending} />
-              Mark offer as presented
-            </Button>
-          </div>
-          {presentMsgId == null && <Hint>Send {anglerFirstName} a message with the offer first.</Hint>}
+              <ErrorLine message={presentError} />
+              <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setShowEditForm(true)}
+                className="h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
+              >
+                Edit offer
+              </button>
+                <Button type="button" onClick={handlePresentOffer} disabled={presentPending || presentMsgId == null} className={PRIMARY}>
+                  <Spinner on={presentPending} />
+                  Mark offer as presented
+                </Button>
+              </div>
+              {presentMsgId == null && <Hint>Send {anglerFirstName} a message with the offer first.</Hint>}
+            </>
+          )}
         </>
       )}
 
@@ -464,36 +617,58 @@ export function NextStepCard({
             title={`Waiting for ${anglerFirstName}'s decision`}
             text="Mark the option the angler accepts, or record a decline."
           />
-          <div className="flex flex-col gap-2">
-            {offer.options.map((opt, i) => (
-              <div key={opt.id} className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
-                <div className="flex flex-col">
-                  <span className="text-[15px] font-semibold text-foreground f-body">{opt.label}</span>
-                  <span className="text-[13px] text-muted-foreground f-body">
-                    Option {i + 1}{guideName != null ? ` · guide ${guideName}` : ''}
-                  </span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-base font-bold text-foreground f-body">{formatDepositAmount(opt.price_cents, opt.currency)}</span>
-                  <Button
-                    type="button"
-                    onClick={() => handleClientAccepted(opt.id)}
-                    disabled={acceptPending}
-                    className={PRIMARY}
-                  >
-                    <Spinner on={acceptPending} />
-                    Client accepted
-                  </Button>
-                </div>
+          {editFlash && <FlashBanner message="Offer updated" />}
+          {showEditForm ? (
+            <OfferOptionsForm
+              initial={offer.options}
+              lockedIds={offer.options.filter(o => o.is_accepted).map(o => o.id)}
+              submitLabel="Save offer"
+              pending={offerPending}
+              error={offerError}
+              onSubmit={handleEditOffer}
+              onCancel={() => { setShowEditForm(false); setOfferError(null) }}
+            />
+          ) : (
+            <>
+              <div className="flex flex-col gap-2">
+                {offer.options.map((opt, i) => (
+                  <div key={opt.id} className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
+                    <div className="flex flex-col">
+                      <span className="text-[15px] font-semibold text-foreground f-body">{opt.label}</span>
+                      <span className="text-[13px] text-muted-foreground f-body">
+                        Option {i + 1}{guideName != null ? ` · guide ${guideName}` : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-base font-bold text-foreground f-body">{formatDepositAmount(opt.price_cents, opt.currency)}</span>
+                      <Button
+                        type="button"
+                        onClick={() => handleClientAccepted(opt.id)}
+                        disabled={acceptPending}
+                        className={PRIMARY}
+                      >
+                        <Spinner on={acceptPending} />
+                        Client accepted
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <ErrorLine message={acceptError} />
-          <div className="flex justify-end">
-            <Button type="button" onClick={handleClientDeclined} disabled={acceptPending} className={SECONDARY}>
-              Client declined
-            </Button>
-          </div>
+              <ErrorLine message={acceptError} />
+              <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setShowEditForm(true)}
+                className="h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
+              >
+                Edit offer
+              </button>
+                <Button type="button" onClick={handleClientDeclined} disabled={acceptPending} className={SECONDARY}>
+                  Client declined
+                </Button>
+              </div>
+            </>
+          )}
         </>
       )}
 
@@ -502,6 +677,7 @@ export function NextStepCard({
         <>
           {setAmountFlash && <FlashBanner message="Deposit amount saved" />}
           {depositFlash && <FlashBanner message="Deposit link created" />}
+          {editFlash && <FlashBanner message="Offer updated" />}
 
           {!amountSet ? (
             <Heading
@@ -522,123 +698,169 @@ export function NextStepCard({
             />
           )}
 
-          {amountSet && depositDisplay != null && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-border px-4 py-3.5 flex flex-col gap-1">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground f-body">Deposit</span>
-                <span className="text-xl font-bold text-foreground f-body">{depositDisplay}</span>
-                {depositPct != null && (
-                  <span className="text-xs text-muted-foreground f-body">
-                    {depositPct}% of {formatDepositAmount(acceptedOption.price_cents, acceptedOption.currency)}
-                  </span>
-                )}
-              </div>
-              <div className="rounded-xl border border-border px-4 py-3.5 flex flex-col gap-1">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground f-body">Link</span>
-                {linkMatches ? (
-                  <>
-                    <span className="text-[15px] font-semibold text-foreground f-body flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-700" aria-hidden="true" />Active
-                    </span>
-                    <span className="text-xs text-muted-foreground f-body">Stripe · not paid yet</span>
-                  </>
-                ) : linkOutdated ? (
-                  <>
-                    <span className="text-[15px] font-semibold text-amber-700 f-body flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-amber-500" aria-hidden="true" />Outdated
-                    </span>
-                    <span className="text-xs text-muted-foreground f-body">Amount changed — create a new link</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-[15px] font-semibold text-muted-foreground f-body">Not created yet</span>
-                    <span className="text-xs text-muted-foreground f-body">Stripe</span>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {showAmountForm && (
-            <div className="flex flex-col gap-2">
-              <label htmlFor="deposit-amount" className="text-[13px] font-semibold text-foreground f-body">
-                Deposit amount ({acceptedOption.currency.toUpperCase()})
-              </label>
-              <div className="flex gap-2">
-                <input
-                  id="deposit-amount"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={depositInput}
-                  onChange={e => setDepositInput(e.target.value)}
-                  disabled={setAmountPending}
-                  placeholder="Amount"
-                  className={cn(INPUT, 'flex-1')}
-                />
-                <Button
-                  type="button"
-                  onClick={handleSetDepositAmount}
-                  disabled={setAmountPending}
-                  className={amountSet ? SECONDARY : PRIMARY}
-                >
-                  <Spinner on={setAmountPending} />
-                  Save deposit amount
-                </Button>
-                {amountSet && (
-                  <Button type="button" onClick={() => setShowAmountForm(false)} className={SECONDARY}>
-                    Cancel
-                  </Button>
-                )}
-              </div>
+          {amountSet && depositFromOldPrice && !showEditForm && (
+            <div role="alert" data-testid="deposit-old-price" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col gap-1">
+              <p className="text-sm font-semibold f-body text-amber-800">Deposit was set from the old price — check the amount</p>
               {hintCents != null && (
-                <Hint>{DEPOSIT_PERCENT}% = {formatDepositAmount(hintCents, acceptedOption.currency)}</Hint>
+                <p className="text-xs f-body text-amber-800">
+                  New price {formatDepositAmount(acceptedOption.price_cents, acceptedOption.currency)} · {DEPOSIT_PERCENT}% = {formatDepositAmount(hintCents, acceptedOption.currency)}
+                </p>
               )}
-              <ErrorLine message={setAmountError} />
             </div>
           )}
 
-          {linkMatches && depositUrl != null && (
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="payment-link" className="text-[13px] font-semibold text-foreground f-body">Payment link</label>
-              <div className="flex gap-2">
-                <input
-                  id="payment-link"
-                  readOnly
-                  value={depositUrl}
-                  className={cn(INPUT, 'flex-1 min-w-0 text-[13px] bg-muted/60')}
-                />
-                <Button type="button" onClick={handleCopyLink} className={SECONDARY}>
-                  {copied ? 'Copied' : 'Copy'}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          <ErrorLine message={depositError} />
-
-          {amountSet && (
-            <div className="flex items-center justify-between gap-3 pt-1">
-              {!showAmountForm ? (
-                <button
-                  type="button"
-                  onClick={() => setShowAmountForm(true)}
-                  className="h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
-                >
-                  Change amount
-                </button>
-              ) : <span />}
-              {linkMatches ? (
-                <Button nativeButton={false} render={<Link href="?tab=conversation" scroll={false} />} className={PRIMARY}>
-                  {hasDepositDraft ? 'Open draft in Conversation' : 'Open Conversation'}
-                </Button>
-              ) : (
-                <Button type="button" onClick={handleCreateDepositLink} disabled={depositPending} className={PRIMARY}>
-                  <Spinner on={depositPending} />
-                  Create deposit link — {depositDisplay}
-                </Button>
+          {showEditForm ? (
+            <OfferOptionsForm
+              initial={offer?.options ?? []}
+              lockedIds={[acceptedOption.id]}
+              submitLabel="Save offer"
+              pending={offerPending}
+              error={offerError}
+              onSubmit={handleEditOffer}
+              onCancel={() => { setShowEditForm(false); setOfferError(null) }}
+            />
+          ) : (
+            <>
+              {amountSet && depositDisplay != null && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-border px-4 py-3.5 flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground f-body">Deposit</span>
+                    <span className="text-xl font-bold text-foreground f-body">{depositDisplay}</span>
+                    {depositPct != null && (
+                      <span className="text-xs text-muted-foreground f-body">
+                        {depositPct}% of {formatDepositAmount(acceptedOption.price_cents, acceptedOption.currency)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="rounded-xl border border-border px-4 py-3.5 flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground f-body">Link</span>
+                    {linkMatches ? (
+                      <>
+                        <span className="text-[15px] font-semibold text-foreground f-body flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-700" aria-hidden="true" />Active
+                        </span>
+                        <span className="text-xs text-muted-foreground f-body">Stripe · not paid yet</span>
+                      </>
+                    ) : linkOutdated ? (
+                      <>
+                        <span className="text-[15px] font-semibold text-amber-700 f-body flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-amber-500" aria-hidden="true" />Outdated
+                        </span>
+                        <span className="text-xs text-muted-foreground f-body">Amount changed — create a new link</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[15px] font-semibold text-muted-foreground f-body">Not created yet</span>
+                        <span className="text-xs text-muted-foreground f-body">Stripe</span>
+                      </>
+                    )}
+                  </div>
+                </div>
               )}
-            </div>
+
+              {showAmountForm && (
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="deposit-amount" className="text-[13px] font-semibold text-foreground f-body">
+                    Deposit amount ({acceptedOption.currency.toUpperCase()})
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="deposit-amount"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={depositInput}
+                      onChange={e => setDepositInput(e.target.value)}
+                      disabled={setAmountPending}
+                      placeholder="Amount"
+                      className={cn(INPUT, 'flex-1')}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleSetDepositAmount}
+                      disabled={setAmountPending}
+                      className={amountSet ? SECONDARY : PRIMARY}
+                    >
+                      <Spinner on={setAmountPending} />
+                      Save deposit amount
+                    </Button>
+                    {amountSet && (
+                      <Button type="button" onClick={() => setShowAmountForm(false)} className={SECONDARY}>
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                  {hintCents != null && (
+                    <Hint>{DEPOSIT_PERCENT}% = {formatDepositAmount(hintCents, acceptedOption.currency)}</Hint>
+                  )}
+                  <ErrorLine message={setAmountError} />
+                </div>
+              )}
+
+              {linkMatches && depositUrl != null && (
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="payment-link" className="text-[13px] font-semibold text-foreground f-body">Payment link</label>
+                  <div className="flex gap-2">
+                    <input
+                      id="payment-link"
+                      readOnly
+                      value={depositUrl}
+                      className={cn(INPUT, 'flex-1 min-w-0 text-[13px] bg-muted/60')}
+                    />
+                    <Button type="button" onClick={handleCopyLink} className={SECONDARY}>
+                      {copied ? 'Copied' : 'Copy'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <ErrorLine message={depositError} />
+
+              {amountSet && (
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <div className="flex items-center gap-2">
+                    {!showAmountForm && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAmountForm(true)}
+                        className="h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
+                      >
+                        Change amount
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowEditForm(true)}
+                      className="h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
+                    >
+                      Edit offer
+                    </button>
+                  </div>
+                  {linkMatches ? (
+                    <Button nativeButton={false} render={<Link href="?tab=conversation" scroll={false} />} className={PRIMARY}>
+                      {hasDepositDraft ? 'Open draft in Conversation' : 'Open Conversation'}
+                    </Button>
+                  ) : (
+                    <Button type="button" onClick={handleCreateDepositLink} disabled={depositPending} className={PRIMARY}>
+                      <Spinner on={depositPending} />
+                      Create deposit link — {depositDisplay}
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {!amountSet && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditForm(true)}
+                    className="h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
+                  >
+                    Edit offer
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
