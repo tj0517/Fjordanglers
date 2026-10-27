@@ -77,3 +77,5 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 ```
 
 ## Notatki z realizacji
+- **2026-10-27, tj:** serwer MCP stripe nie działa (`CONNECTION_CLOSED` — brak `STRIPE_RESTRICTED_KEY` w środowisku Claude Code) — dla FA-1.76 opcjonalny; praca na mocku Stripe, odnotowane w „Not done” raportu.
+- **2026-10-27, wykonanie:** dev server do zrzutów uruchomiony metodą zaakceptowaną w FA-1.74 (preflight = A): odłączony worktree bez `.env.local`, env tylko z `supabase status -o env` + atrapy Stripe + `RESEND_DEV_FAKE=1`; kontenery Seaclouds zatrzymane przed startem stosu.
