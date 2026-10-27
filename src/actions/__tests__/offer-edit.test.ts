@@ -64,15 +64,20 @@ function makeFake(db: Db, opts: FakeOpts = {}) {
     let op: 'select' | 'upsert' | 'delete' | 'insert' = 'select'
     let payload: Row[] = []
     let returning = false
-    let sortKey: string | null = null
+    const sortKeys: string[] = []
 
     function run(): { data: unknown; error: { message: string } | null } {
       const rows = db[table]
       if (op === 'select') {
         let out = rows.filter(r => filters.every(f => f(r)))
-        if (sortKey != null) {
-          const k = sortKey
-          out = [...out].sort((a, b) => String(a[k]).localeCompare(String(b[k])))
+        if (sortKeys.length > 0) {
+          out = [...out].sort((a, b) => {
+            for (const k of sortKeys) {
+              const c = String(a[k]).localeCompare(String(b[k]))
+              if (c !== 0) return c
+            }
+            return 0
+          })
         }
         return { data: out.map(r => ({ ...r })), error: null }
       }
@@ -113,7 +118,7 @@ function makeFake(db: Db, opts: FakeOpts = {}) {
       select(_cols?: string) { if (op !== 'select') returning = true; return q },
       eq(col: string, val: unknown) { filters.push(r => r[col] === val); return q },
       in(col: string, vals: unknown[]) { filters.push(r => vals.includes(r[col])); return q },
-      order(col: string) { sortKey = col; return q },
+      order(col: string) { sortKeys.push(col); return q },
       upsert(rows: Row[]) { op = 'upsert'; payload = rows; return q },
       insert(row: Row | Row[]) { op = 'insert'; payload = Array.isArray(row) ? row : [row]; return q },
       delete() { op = 'delete'; return q },

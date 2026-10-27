@@ -506,6 +506,7 @@ export async function updateOfferOptions(
     .select('*')
     .eq('offer_id', offerId)
     .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
   if (currentErr != null || currentRows == null) {
     console.error('[updateOfferOptions] options lookup error:', currentErr)
     return { success: false, error: 'Could not read the offer options' }
@@ -580,6 +581,7 @@ export async function updateOfferOptions(
     .select('id, label, price_cents, currency')
     .eq('offer_id', offerId)
     .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
   try {
     if (afterErr != null || after == null) throw new Error(afterErr?.message ?? 'options not readable after save')
     await emitEvent(svc, {

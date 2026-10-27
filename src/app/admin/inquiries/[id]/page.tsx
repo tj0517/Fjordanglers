@@ -280,6 +280,7 @@ export default async function AdminInquiryDetailPage({
         .select('id, label, price_cents, currency, is_accepted')
         .eq('offer_id', offerRow.id)
         .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
       panelOffer = {
         id:                offerRow.id,
         status:            offerRow.status,
