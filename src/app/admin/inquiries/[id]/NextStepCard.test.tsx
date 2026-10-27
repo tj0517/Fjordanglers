@@ -7,6 +7,7 @@
  * FA-1.76 — stages without needless blocks: "Client accepted" on a draft offer, "Back
  * to draft", "Change accepted option" (+ confirmation with a live link), guide steps
  * without a message, "Restore inquiry" on lost, declined offer → reopen / new offer.
+ * FA-1.77 — Stripe product name / description before the link, and Edit on an active link.
  */
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
@@ -21,6 +22,8 @@ import {
   backToDraft,
   changeAcceptedOption,
   reopenOffer,
+  createPaymentLink,
+  updatePaymentLinkDetails,
 } from '@/actions/messages'
 import { updateInquiryStatus } from '@/actions/inquiries'
 
@@ -39,6 +42,7 @@ vi.mock('@/actions/messages', () => ({
   backToDraft:           vi.fn(),
   changeAcceptedOption:  vi.fn(),
   reopenOffer:           vi.fn(),
+  updatePaymentLinkDetails: vi.fn(),
 }))
 vi.mock('@/actions/inquiries', () => ({
   setDepositAmount:    vi.fn(),
@@ -441,5 +445,117 @@ describe('NextStepCard — lost and declined (FA-1.76 D5 a)', () => {
       options:           [{ label: '4 days', priceCents: 380000, currency: 'eur' }],
       supersedesOfferId: 'off-1',
     })))
+  })
+})
+
+// ─── FA-1.77 ──────────────────────────────────────────────────────────────────
+
+describe('NextStepCard — Stripe product name and description (FA-1.77)', () => {
+  const defaults = {
+    name:        'Laxá salmon week — 2027-06-12 · 2 people',
+    description: 'FjordAnglers booking & curation fee. The trip balance is paid directly to your guide after arrival.',
+  }
+  const depositStage = {
+    ...base,
+    inquiryStatus:      'offer_presented',
+    offer:              acceptedOffer,
+    depositAmountCents: 60000,
+    depositCurrency:    'EUR',
+    productDefaults:    defaults,
+  }
+  const activeLink = {
+    ...depositStage,
+    inquiryStatus:                 'awaiting_payment',
+    depositPaymentLinkId:          'plink_1',
+    depositPaymentLinkUrl:         'https://buy.stripe.com/test_1',
+    depositPaymentLinkAmountCents: 60000,
+    depositPaymentLinkCurrency:    'EUR',
+  }
+  const value = (label: string) => (screen.getByLabelText(label) as HTMLInputElement | HTMLTextAreaElement).value
+
+  it('before the link: both fields show today\'s pattern, with counters against 250', () => {
+    render(<NextStepCard {...depositStage} />)
+    expect(value('Product name')).toBe(defaults.name)
+    expect(value('Description')).toBe(defaults.description)
+    const section = screen.getByTestId('product-details-new')
+    expect(section.textContent).toContain(`${defaults.name.length}/250`)
+    expect(section.textContent).toContain(`${defaults.description.length}/250`)
+  })
+
+  it('creates the link with the values the admin edited', async () => {
+    vi.mocked(createPaymentLink).mockResolvedValue({ success: true, url: 'https://buy.stripe.com/test_new' })
+    render(<NextStepCard {...depositStage} />)
+    fill('Product name', 'Laxá — June, 2 anglers')
+    fill('Description', 'Booking fee. Balance to Einar on arrival.')
+    fireEvent.click(screen.getByRole('button', { name: /Create deposit link/ }))
+    await waitFor(() => expect(vi.mocked(createPaymentLink)).toHaveBeenCalledWith('inq-1', {
+      name:        'Laxá — June, 2 anglers',
+      description: 'Booking fee. Balance to Einar on arrival.',
+    }))
+  })
+
+  it('an outdated link (amount changed) shows the fields again for the new link', () => {
+    render(<NextStepCard {...activeLink} depositAmountCents={70000} />)
+    expect(screen.getByTestId('product-details-new')).toBeTruthy()
+    expect(screen.queryByTestId('product-details-active')).toBeNull()
+    expect(screen.getByRole('button', { name: /Create deposit link/ })).toBeTruthy()
+  })
+
+  it('the server\'s refusal is shown and the counter turns red over the limit', async () => {
+    vi.mocked(createPaymentLink).mockResolvedValue({ success: false, error: 'Product name is 251 characters — Stripe allows 250' })
+    render(<NextStepCard {...depositStage} />)
+    fill('Product name', 'n'.repeat(251))
+    expect(screen.getByText('251/250').className).toContain('text-destructive')
+    fireEvent.click(screen.getByRole('button', { name: /Create deposit link/ }))
+    expect(await screen.findByText('Product name is 251 characters — Stripe allows 250')).toBeTruthy()
+  })
+
+  it('active link: shows the current name and description; Edit saves through updatePaymentLinkDetails', async () => {
+    vi.mocked(updatePaymentLinkDetails).mockResolvedValue({ success: true })
+    const current = { name: 'Laxá salmon week · 2 people', description: 'Booking fee.' }
+    render(<NextStepCard {...activeLink} depositPaymentLinkProduct={current} />)
+    const section = screen.getByTestId('product-details-active')
+    expect(section.textContent).toContain(current.name)
+    expect(section.textContent).toContain(current.description)
+    expect(screen.queryByLabelText('Product name')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(value('Product name')).toBe(current.name)
+    expect(value('Description')).toBe(current.description)
+    fill('Product name', 'Laxá salmon week · 3 people')
+    fireEvent.click(screen.getByRole('button', { name: 'Save name and description' }))
+    await waitFor(() => expect(vi.mocked(updatePaymentLinkDetails)).toHaveBeenCalledWith('inq-1', {
+      name:        'Laxá salmon week · 3 people',
+      description: 'Booking fee.',
+    }))
+    expect(vi.mocked(createPaymentLink)).not.toHaveBeenCalled()
+    expect(await screen.findByText('Payment page updated — same link')).toBeTruthy()
+    // The link field still shows the same URL
+    expect(value('Payment link')).toBe('https://buy.stripe.com/test_1')
+  })
+
+  it('active link created before FA-1.77: says so, and Edit starts from today\'s pattern', () => {
+    render(<NextStepCard {...activeLink} depositPaymentLinkProduct={null} />)
+    expect(screen.getByTestId('product-details-active').textContent).toMatch(/created before its name and description were recorded/)
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(value('Product name')).toBe(defaults.name)
+    expect(value('Description')).toBe(defaults.description)
+  })
+
+  it('Edit: a refusal stays in the form; Cancel closes it without a call', async () => {
+    vi.mocked(updatePaymentLinkDetails).mockResolvedValue({ success: false, error: 'Description is required' })
+    render(<NextStepCard {...activeLink} depositPaymentLinkProduct={{ name: 'Trip', description: 'Fee.' }} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fill('Description', '')
+    fireEvent.click(screen.getByRole('button', { name: 'Save name and description' }))
+    expect(await screen.findByText('Description is required')).toBeTruthy()
+    expect(screen.getByLabelText('Description')).toBeTruthy()
+
+    vi.mocked(updatePaymentLinkDetails).mockClear()
+    const cancel = screen.getByRole('button', { name: 'Cancel' }) as HTMLButtonElement
+    await waitFor(() => expect(cancel.disabled).toBe(false))
+    fireEvent.click(cancel)
+    expect(screen.queryByLabelText('Description')).toBeNull()
+    expect(vi.mocked(updatePaymentLinkDetails)).not.toHaveBeenCalled()
   })
 })

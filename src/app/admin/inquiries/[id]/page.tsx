@@ -8,7 +8,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
-import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
+import { getInquiryExperience, tripTitleOf } from '@/lib/inquiries/experience-lookup'
+import { buildStripeProductName, buildStripeProductDescription } from '@/lib/ai/draft-deposit-link'
+import { linkProductFromEvents } from '@/lib/stripe/product-details'
 import { env } from '@/lib/env'
 import { getGuidePhone } from '@/lib/guide-contacts'
 import { MessageComposer } from './MessageComposer'
@@ -607,6 +609,13 @@ export default async function AdminInquiryDetailPage({
       activeLinkSentAt      = linkEvt.occurred_at
     }
   }
+  // FA-1.77: what the angler sees on the payment page — recorded name/description of the
+  // active link (null for links created before FA-1.77), and today's pattern for a new one.
+  const activeLinkProduct = activeLinkId != null ? linkProductFromEvents(inquiryEvents, activeLinkId).details : null
+  const productDefaults = {
+    name:        buildStripeProductName(tripTitleOf(experience), requestedDates ?? [], inquiry.party_size ?? 1),
+    description: buildStripeProductDescription(),
+  }
 
   // ── Tab: Offer & payment (FA-1.32 mockup: Next step | Deal + Internal) ──
   const isPaidStage = ['paid', 'handed_over', 'completed'].includes(safeStatus)
@@ -638,6 +647,8 @@ export default async function AdminInquiryDetailPage({
         depositPaymentLinkUrl={activeLinkUrl}
         depositPaymentLinkAmountCents={activeLinkAmountCents}
         depositPaymentLinkCurrency={activeLinkCurrency}
+        depositPaymentLinkProduct={activeLinkProduct}
+        productDefaults={productDefaults}
         guideNotifiedPaid={guideNotifiedPaid}
         anglerFirstName={anglerFirstName}
         guideName={guide?.full_name ?? null}
