@@ -347,10 +347,10 @@ describe('Notify guide / Contacts exchanged without a guide message (D2.4)', () 
 
 describe('restore from lost (D5 a)', () => {
   it.each([
-    [INQ.restoreQ, 'qualifying'],
-    [INQ.restoreW, 'waiting_guide'],
-    [INQ.restoreO, 'offer_presented'],
-  ] as const)('lost → %s… returns to %s with lost_reason_code / lost_reason cleared', async (id, to) => {
+    ['qualifying',      INQ.restoreQ],
+    ['waiting_guide',   INQ.restoreW],
+    ['offer_presented', INQ.restoreO],
+  ] as const)('lost → %s, with lost_reason_code / lost_reason cleared', async (to, id) => {
     await makeInquiry(id, 'lost', { lost_reason_code: 'price', lost_reason: 'too expensive this year' })
 
     expect(await updateInquiryStatus(id, to)).toEqual({ success: true })
