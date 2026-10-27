@@ -12,7 +12,7 @@
 # ŻADEN SEKRET. Wszystkie wartości env pochodzą z commitowanego `.env.test`
 # (klucze lokalnego stacku Supabase są deterministyczne i identyczne u każdego,
 # Stripe/Resend to placeholdery). `secrets.*` nie występuje w tym pliku ani razu —
-# jedyny token to `GITHUB_TOKEN` (`github.token`), używany tylko do logowania do ghcr.io w `db`.
+# jedyny token to `GITHUB_TOKEN`, który Actions wstrzykuje samo i którego tu nie używamy.
 # Ten plik działa na `pull_request`, więc sekret nie może tu trafić nigdy. Jedyne
 # miejsce z sekretami to `deploy-db.yml` (FA-1.20) — zasada jest zapisana w jego
 # nagłówku, tylko tam.
@@ -175,10 +175,6 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # `packages: read` — tylko dla logowania do ghcr.io niżej (FA-1.78).
-    permissions:
-      contents: read
-      packages: read
     steps:
       - uses: actions/checkout@v4
 
@@ -197,22 +193,29 @@ jobs:
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
 
-      # Anonimowe pobrania z ghcr.io dzielą limit z całym IP runnera — PR #169 padł
-      # dwa razy na `toomanyrequests` przy obrazie postgres (27 X 2026, FA-1.78).
-      # Zalogowane pobrania liczą się na to repo. Token przebiegu, nie sekret.
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
-
       # Startujemy tylko to, czego dotykają testy: postgres + kong (API 54421) + postgrest.
       # + gotrue: action tests log in for real as seed accounts (FA-1.56).
       # Reszta kontenerów to kilka minut pobierania obrazów za nic.
+      #
+      # Trzy próby (przerwy 30 s, potem 60 s): ghcr.io dławi pobieranie obrazu postgres
+      # (`toomanyrequests`, PR #169 i #170, 27 X 2026), a CLI samo ponawia tylko ~15 s.
+      # Logowanie do ghcr.io nie pomogło — FA-1.78. Rejestr ustawia `setup-cli`, nie my.
       - name: supabase start
         run: |
-          supabase start \
-            -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          for attempt in 1 2 3; do
+            echo "supabase start — próba $attempt/3"
+            if supabase start \
+              -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor; then
+              exit 0
+            fi
+            [ "$attempt" -eq 3 ] && break
+            delay=$((attempt * 30))
+            echo "supabase start nie wstał (próba $attempt/3) — stop i ponowienie za ${delay} s"
+            supabase stop --no-backup || true
+            sleep "$delay"
+          done
+          echo "::error::supabase start nie wstał po 3 próbach"
+          exit 1
 
       # ── FAIL 1: migracja, która nie aplikuje się na czysto ────────────────
       - name: db reset — wszystkie migracje na pustej bazie
