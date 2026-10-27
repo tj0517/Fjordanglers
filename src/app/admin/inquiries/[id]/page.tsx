@@ -35,6 +35,7 @@ import { RequestedDatesEditor } from './RequestedDatesEditor'
 import { DeleteInquiryButton } from './DeleteInquiryButton'
 import type { TripDetails } from '@/actions/inquiries'
 import { availabilityWindow } from '@/lib/availability-window'
+import { depositSetFromOldPrice } from '@/lib/inquiries/deposit'
 import { ExternalOfferToggle } from '../ExternalOfferToggle'
 import { EventTimeline } from '@/components/admin/inquiry/EventTimeline'
 import { STATUS_LABELS, isInquiryStatus, type InquiryStatus } from '@/lib/inquiries/state'
@@ -278,6 +279,7 @@ export default async function AdminInquiryDetailPage({
         .from('offer_options')
         .select('id, label, price_cents, currency, is_accepted')
         .eq('offer_id', offerRow.id)
+        .order('created_at', { ascending: true })
       panelOffer = {
         id:                offerRow.id,
         status:            offerRow.status,
@@ -342,6 +344,10 @@ export default async function AdminInquiryDetailPage({
     : null
 
   const requestedDates = inquiry.requested_dates as string[] | null
+
+  // FA-1.74: the accepted option's price was edited after the deposit amount was saved
+  const panelAccepted = panelOffer?.options.find(o => o.is_accepted) ?? null
+  const depositFromOldPrice = panelAccepted != null && depositSetFromOldPrice(inquiryEvents, panelAccepted)
 
   // ── Build correspondence thread ───────────────────────────────────────────
   const thread: ThreadItem[] = []
@@ -636,6 +642,7 @@ export default async function AdminInquiryDetailPage({
         guideName={guide?.full_name ?? null}
         depositPaidAt={inquiry.deposit_paid_at}
         hasDepositDraft={latestAnglerDraft != null}
+        depositFromOldPrice={depositFromOldPrice}
       />
 
       <aside className="flex flex-col gap-5 lg:col-start-2">

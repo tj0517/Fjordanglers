@@ -14,9 +14,15 @@
  * sendMessageFromThread(inquiryId, params)
  *   Admin sends a freeform message from the inquiry thread UI.
  *
- * markAsGuideOffer(messageId, { guideId, options })
- *   Admin marks an inbound guide message as "this is the offer".
+ * markAsGuideOffer(inquiryId, { messageId, guideId, options })
+ *   Admin turns the guide's prices into an offer — from a thread reply (messageId) or
+ *   from outside the thread (WhatsApp, phone: messageId null, FA-1.74 D2.1).
  *   Inserts an offers + offer_options row and emits guide.offer_received.
+ *
+ * updateOfferOptions(offerId, options)
+ *   Admin edits an offer in place (FA-1.74 D1): label / price / currency of existing
+ *   options, new options, removed options. Status of the offer and inquiry unchanged.
+ *   Emits offer.updated with the options before and after.
  *
  * markOfferPresented(offerId, messageId?)
  *   Admin marks the outbound message to the angler as "presents this offer".
@@ -54,7 +60,7 @@ import { transition, TransitionError } from '@/lib/inquiries/state'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { getGuidePhone } from '@/lib/guide-contacts'
-import { formatDepositAmount } from '@/lib/inquiries/deposit'
+import { formatDepositAmount, isDepositCurrency } from '@/lib/inquiries/deposit'
 import { getInquiryExperience, tripTitleOf, TRIP_TITLE_FALLBACK } from '@/lib/inquiries/experience-lookup'
 import {
   draftDepositLinkMessage,
@@ -330,36 +336,69 @@ interface OfferOptionInput {
   notes?:     string | null
 }
 
+/** create_offer_with_options casts price_cents to int4. */
+const MAX_PRICE_CENTS = 2_147_483_647
+
+/**
+ * Server-side check of one option from the form (FA-1.74): non-empty label, positive
+ * integer cents, currency from the deposit list (tj D-C). Returns the error or null.
+ */
+function offerOptionError(o: { label: unknown; priceCents: unknown; currency: unknown }, n: number): string | null {
+  if (typeof o.label !== 'string' || o.label.trim() === '') return `Option ${n}: name is required`
+  if (typeof o.priceCents !== 'number' || !Number.isInteger(o.priceCents) || o.priceCents <= 0 || o.priceCents > MAX_PRICE_CENTS) {
+    return `Option ${n}: price must be a positive amount`
+  }
+  if (typeof o.currency !== 'string' || !isDepositCurrency(o.currency.toUpperCase())) {
+    return `Option ${n}: currency is not supported`
+  }
+  return null
+}
+
 export interface MarkAsGuideOfferParams {
-  guideId?: string | null
-  options:  OfferOptionInput[]
+  /** The thread reply the offer came from; null when the guide quoted outside the thread. */
+  messageId?: string | null
+  guideId?:   string | null
+  options:    OfferOptionInput[]
 }
 
 export async function markAsGuideOffer(
-  messageId: string,
+  inquiryId: string,
   params:    MarkAsGuideOfferParams,
 ): Promise<ActionResult & { offerId?: string }> {
   const { userId } = await requireAdmin()
   if (params.options.length === 0) return { success: false, error: 'At least one option is required' }
+  for (const [i, o] of params.options.entries()) {
+    const err = offerOptionError(o, i + 1)
+    if (err != null) return { success: false, error: err }
+  }
 
   const svc = createServiceClient()
+  const messageId = params.messageId ?? null
 
-  const { data: msg } = await svc
-    .from('messages')
-    .select('id, inquiry_id')
-    .eq('id', messageId)
-    .single()
-  if (msg == null) return { success: false, error: 'Message not found' }
+  const { data: inquiry } = await svc
+    .from('inquiries')
+    .select('id')
+    .eq('id', inquiryId)
+    .maybeSingle()
+  if (inquiry == null) return { success: false, error: 'Inquiry not found' }
 
-  const inquiryId: string = msg.inquiry_id
+  if (messageId != null) {
+    const { data: msg } = await svc
+      .from('messages')
+      .select('id')
+      .eq('id', messageId)
+      .eq('inquiry_id', inquiryId)
+      .maybeSingle()
+    if (msg == null) return { success: false, error: 'Message not found in this inquiry' }
+  }
 
   // Use RPC to insert offer + options in one server-side transaction.
   // Separate PostgREST calls each commit immediately; the DEFERRABLE INITIALLY DEFERRED
   // trigger on offers would fire after the first commit (before options exist) and raise P0001.
   const optionsJson = params.options.map(o => ({
-    label:      o.label,
+    label:      o.label.trim(),
     price_cents: o.priceCents,
-    currency:   o.currency,
+    currency:   o.currency.toLowerCase(),
     date_from:  o.dateFrom ?? null,
     date_to:    o.dateTo ?? null,
     party_size: o.partySize ?? null,
@@ -371,7 +410,8 @@ export async function markAsGuideOffer(
     p_inquiry_id:        inquiryId,
     // Postgres function accepts NULL uuid; generator typed p_guide_id as non-nullable string
     p_guide_id:          (params.guideId ?? null) as unknown as string,
-    p_source_message_id: messageId,
+    // Same for p_source_message_id: NULL = offer quoted outside the thread (FA-1.74 D2.1)
+    p_source_message_id: messageId as unknown as string,
     p_created_by:        userId,
     p_options:           optionsJson,
   })
@@ -392,6 +432,171 @@ export async function markAsGuideOffer(
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   return { success: true, offerId }
+}
+
+// ─── updateOfferOptions ───────────────────────────────────────────────────────
+
+export interface OfferOptionEdit {
+  /** Existing option id; null/absent = a new option. */
+  id?:        string | null
+  label:      string
+  priceCents: number
+  currency:   string
+}
+
+const EDITABLE_OFFER_STATUSES = ['draft', 'presented', 'accepted']
+/** Paid or later, and the closed ones (tj D-D). */
+const OFFER_LOCKED_INQUIRY_STATUSES = ['paid', 'handed_over', 'completed', 'lost', 'cancelled']
+
+type OfferOptionSnapshot = { id: string; label: string; price_cents: number; currency: string }
+
+function snapshot(o: OfferOptionSnapshot): OfferOptionSnapshot {
+  return { id: o.id, label: o.label, price_cents: o.price_cents, currency: o.currency }
+}
+
+/**
+ * Edit an offer in place (FA-1.74 D1). No database function (tj D-A = A), so the change
+ * is three writes, each committed on its own:
+ *   1. one upsert — changed and new options (adds first, so the offer never drops to 0);
+ *   2. one delete — removed options (the deferred min-one trigger still guards it);
+ *   3. the offer.updated event — only after 1 and 2 succeeded.
+ * If 2 or 3 fails, the options are put back as they were (original rows re-upserted,
+ * added rows deleted) and the action returns an error.
+ */
+export async function updateOfferOptions(
+  offerId: string,
+  options: OfferOptionEdit[],
+): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  if (options.length === 0) return { success: false, error: 'An offer needs at least one option' }
+  for (const [i, o] of options.entries()) {
+    const err = offerOptionError(o, i + 1)
+    if (err != null) return { success: false, error: err }
+  }
+  const submittedIds = options.flatMap(o => (o.id != null ? [o.id] : []))
+  if (new Set(submittedIds).size !== submittedIds.length) {
+    return { success: false, error: 'The same option was submitted twice' }
+  }
+
+  const svc = createServiceClient()
+
+  const { data: offer } = await svc
+    .from('offers')
+    .select('id, inquiry_id, status')
+    .eq('id', offerId)
+    .maybeSingle()
+  if (offer == null) return { success: false, error: 'Offer not found' }
+  if (!EDITABLE_OFFER_STATUSES.includes(offer.status)) {
+    return { success: false, error: `A ${offer.status} offer cannot be edited` }
+  }
+
+  const inquiryId: string = offer.inquiry_id
+  const { data: inquiry } = await svc
+    .from('inquiries')
+    .select('id, status')
+    .eq('id', inquiryId)
+    .maybeSingle()
+  if (inquiry == null) return { success: false, error: 'Inquiry not found' }
+  if (OFFER_LOCKED_INQUIRY_STATUSES.includes(inquiry.status)) {
+    return { success: false, error: `The offer cannot be edited — the inquiry is ${inquiry.status}` }
+  }
+
+  const { data: currentRows, error: currentErr } = await svc
+    .from('offer_options')
+    .select('*')
+    .eq('offer_id', offerId)
+    .order('created_at', { ascending: true })
+  if (currentErr != null || currentRows == null) {
+    console.error('[updateOfferOptions] options lookup error:', currentErr)
+    return { success: false, error: 'Could not read the offer options' }
+  }
+  const current = currentRows
+
+  const currentById = new Map(current.map(o => [o.id, o]))
+  if (submittedIds.some(id => !currentById.has(id))) {
+    return { success: false, error: 'Option not found or does not belong to this offer' }
+  }
+  const removed = current.filter(o => !submittedIds.includes(o.id))
+  if (removed.some(o => o.is_accepted)) {
+    return { success: false, error: 'The accepted option cannot be removed — change the accepted option first' }
+  }
+
+  const upserts = options.flatMap(o => {
+    const row = { offer_id: offerId, label: o.label.trim(), price_cents: o.priceCents, currency: o.currency.toLowerCase() }
+    if (o.id == null) return [row]
+    const prev = currentById.get(o.id)
+    const same = prev != null && prev.label === row.label && prev.price_cents === row.price_cents && prev.currency === row.currency
+    return same ? [] : [{ id: o.id, ...row }]
+  })
+  if (upserts.length === 0 && removed.length === 0) return { success: true }
+
+  const changedIds = upserts.flatMap(r => ('id' in r ? [r.id] : []))
+  let addedIds: string[] = []
+
+  /** Puts the options back as they were before this call. Returns false when it could not. */
+  async function rollback(): Promise<boolean> {
+    const originals = current.filter(o => changedIds.includes(o.id) || removed.some(r => r.id === o.id))
+    if (originals.length > 0) {
+      const { error } = await svc.from('offer_options').upsert(originals, { onConflict: 'id' })
+      if (error != null) { console.error('[updateOfferOptions] rollback upsert error:', error); return false }
+    }
+    if (addedIds.length > 0) {
+      const { error } = await svc.from('offer_options').delete().in('id', addedIds).eq('offer_id', offerId)
+      if (error != null) { console.error('[updateOfferOptions] rollback delete error:', error); return false }
+    }
+    return true
+  }
+  const PARTLY_SAVED = 'Saving failed and the offer may be partly saved — reload the page and check the options'
+
+  // 1. changed + new options (one statement)
+  if (upserts.length > 0) {
+    const { data: written, error } = await svc
+      .from('offer_options')
+      .upsert(upserts, { onConflict: 'id', defaultToNull: false })
+      .select('id')
+    if (error != null || written == null) {
+      console.error('[updateOfferOptions] upsert error:', error)
+      return { success: false, error: 'Could not save the offer options' }
+    }
+    addedIds = written.map(w => w.id).filter(id => !currentById.has(id))
+  }
+
+  // 2. removed options (one statement)
+  if (removed.length > 0) {
+    const { error } = await svc
+      .from('offer_options')
+      .delete()
+      .in('id', removed.map(o => o.id))
+      .eq('offer_id', offerId)
+    if (error != null) {
+      console.error('[updateOfferOptions] delete error:', error)
+      return { success: false, error: (await rollback()) ? 'Could not save the offer options — nothing was changed' : PARTLY_SAVED }
+    }
+  }
+
+  // 3. the event — only after every option write succeeded (tj D-A)
+  const { data: after, error: afterErr } = await svc
+    .from('offer_options')
+    .select('id, label, price_cents, currency')
+    .eq('offer_id', offerId)
+    .order('created_at', { ascending: true })
+  try {
+    if (afterErr != null || after == null) throw new Error(afterErr?.message ?? 'options not readable after save')
+    await emitEvent(svc, {
+      inquiryId,
+      type:    'offer.updated',
+      actor:   { kind: 'admin', id: userId },
+      source:  'app',
+      channel: 'app',
+      payload: { offer_id: offerId, before: current.map(snapshot), after: after.map(snapshot) },
+    })
+  } catch (err) {
+    console.error('[updateOfferOptions] event error:', err)
+    return { success: false, error: (await rollback()) ? 'Could not save the offer options — nothing was changed' : PARTLY_SAVED }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  return { success: true }
 }
 
 // ─── markOfferPresented ───────────────────────────────────────────────────────

@@ -38,6 +38,7 @@ const EMITTED_EVENT_TYPES = [
   'offer.presented',          // outbound message to the angler marked "presents an offer" (FA-1.12)
   'offer.accepted',           // admin marks the angler's answer (FA-1.12)
   'offer.declined',           // as above; leads to inquiry.lost (FA-1.12)
+  'offer.updated',            // admin edits the offer's options in place (FA-1.74); payload: offer_id, before, after
   'payment.link_sent',        // Stripe Payment Link generated from the app (FA-1.12)
   'payment.received',         // checkout.session.completed webhook; UnmatchedLinker as fallback
   'guide.notified_paid',      // message to the guide marked "told about the deposit" (FA-1.12)
@@ -88,4 +89,5 @@ export const MANUAL_TOUCH_EVENT_TYPES: readonly EventType[] = [
   'status.changed',
   'payment.link_sent',
   'contacts.exchanged',
+  'offer.updated',            // tj D-B 2026-10-27 — REBUILD_PLAN M11 "edycja oferty"
 ]
