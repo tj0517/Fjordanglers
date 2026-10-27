@@ -37,7 +37,8 @@
  *
  * backToDraft(offerId) · changeAcceptedOption(offerId) · reopenOffer(offerId)
  *   Step the offer back (FA-1.76 D2.3, D2.5, D5 a): presented → draft, accepted →
- *   presented (deactivates an active deposit link, awaiting_payment → offer_presented),
+ *   presented (deactivates an active deposit link, clears the deposit amount,
+ *   awaiting_payment → offer_presented),
  *   declined → draft. Each emits offer.reverted.
  *
  * markClientDeclined(offerId, messageId?)
@@ -924,6 +925,11 @@ export async function backToDraft(offerId: string): Promise<ActionResult> {
  * first — if that fails nothing changes — and the inquiry goes back from
  * awaiting_payment to offer_presented, so the angler cannot pay for a withdrawn option.
  *
+ * The deposit amount was set for the withdrawn option, so it is cleared too (tj
+ * 2026-10-27, option B) and the card asks for it again with the new option's hint.
+ * The old amount, currency and frozen rate go into offer.reverted; if a later step
+ * fails, the deposit is put back.
+ *
  * A payment landing between the deactivation and the status change is not handled
  * here (docs/deferred-tasks.md, FA-1.76).
  */
@@ -945,6 +951,24 @@ export async function changeAcceptedOption(offerId: string): Promise<ActionResul
     .eq('is_accepted', true)
     .maybeSingle()
 
+  const { data: dep } = await svc
+    .from('inquiries')
+    .select('deposit_amount_cents, deposit_currency, deposit_eur_rate, deposit_eur_rate_at')
+    .eq('id', ctx.inquiryId)
+    .maybeSingle()
+  const oldDeposit = dep?.deposit_amount_cents != null ? dep : null
+
+  /** Puts the cleared deposit back when a later step fails — the option stays accepted. */
+  async function restoreDeposit(): Promise<void> {
+    if (oldDeposit == null) return
+    const { error } = await svc
+      .from('inquiries')
+      .update(oldDeposit)
+      .eq('id', ctx.inquiryId)
+      .is('deposit_amount_cents', null)
+    if (error != null) console.error('[changeAcceptedOption] deposit restore error:', error)
+  }
+
   const linkId = ctx.depositPaymentLinkId
   if (linkId != null) {
     try {
@@ -953,15 +977,31 @@ export async function changeAcceptedOption(offerId: string): Promise<ActionResul
       console.error('[changeAcceptedOption] Could not deactivate link:', err)
       return { success: false, error: `Could not deactivate the payment link — nothing was changed. (${err instanceof Error ? err.message : 'Stripe error'})` }
     }
+  }
+
+  if (linkId != null || oldDeposit != null) {
     // The link is dead: forget it, or createPaymentLink would hand the same URL out again.
-    const { error: clearErr } = await svc
+    // The deposit belonged to the withdrawn option (all four columns — deposit_cents_all_or_nothing).
+    let clear = svc
       .from('inquiries')
-      .update({ deposit_payment_link_id: null, deposit_payment_link_url: null })
+      .update({
+        deposit_amount_cents: null,
+        deposit_currency:     null,
+        deposit_eur_rate:     null,
+        deposit_eur_rate_at:  null,
+        ...(linkId != null ? { deposit_payment_link_id: null, deposit_payment_link_url: null } : {}),
+      })
       .eq('id', ctx.inquiryId)
-      .eq('deposit_payment_link_id', linkId)
+    if (linkId != null) clear = clear.eq('deposit_payment_link_id', linkId)
+    const { error: clearErr } = await clear
     if (clearErr != null) {
-      console.error('[changeAcceptedOption] link clear error:', clearErr)
-      return { success: false, error: 'The payment link was deactivated in Stripe, but the inquiry could not be updated — reload and try again' }
+      console.error('[changeAcceptedOption] inquiry clear error:', clearErr)
+      return {
+        success: false,
+        error:   linkId != null
+          ? 'The payment link was deactivated in Stripe, but the inquiry could not be updated — reload and try again'
+          : 'Could not clear the deposit amount — nothing was changed',
+      }
     }
   }
 
@@ -973,6 +1013,7 @@ export async function changeAcceptedOption(offerId: string): Promise<ActionResul
       })
     } catch (err) {
       console.error('[changeAcceptedOption] transition error:', err)
+      await restoreDeposit()
       return { success: false, error: `The payment link was deactivated, but the status could not go back: ${err instanceof Error ? err.message : 'unknown error'}` }
     }
   }
@@ -984,6 +1025,7 @@ export async function changeAcceptedOption(offerId: string): Promise<ActionResul
     .eq('is_accepted', true)
   if (optErr != null) {
     console.error('[changeAcceptedOption] option update error:', optErr)
+    await restoreDeposit()
     return { success: false, error: 'Could not clear the accepted option' }
   }
 
@@ -998,10 +1040,21 @@ export async function changeAcceptedOption(offerId: string): Promise<ActionResul
       to:        'presented',
       option_id: accepted?.id ?? null,
       ...(linkId != null ? { link_id: linkId } : {}),
+      ...(oldDeposit != null
+        ? {
+            deposit_cleared: {
+              amount_cents: oldDeposit.deposit_amount_cents,
+              currency:     oldDeposit.deposit_currency,
+              eur_rate:     oldDeposit.deposit_eur_rate,
+              eur_rate_at:  oldDeposit.deposit_eur_rate_at,
+            },
+          }
+        : {}),
     },
   })
   if (err != null) {
     if (accepted != null) await svc.from('offer_options').update({ is_accepted: true }).eq('id', accepted.id)
+    await restoreDeposit()
     return { success: false, error: err }
   }
 

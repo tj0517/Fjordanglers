@@ -3,7 +3,8 @@
  *
  *   • "Client accepted" on a draft offer records presented on the way (D2.2)
  *   • "Mark as presented" without a message (D2.2)
- *   • Back to draft, change accepted option — with and without a live deposit link (D2.3, D2.5)
+ *   • Back to draft, change accepted option — with and without a live deposit link (D2.3, D2.5);
+ *     the deposit set for the withdrawn option is cleared (tj 2026-10-27, option B)
  *   • Notify guide / contacts exchanged without a guide message (D2.4)
  *   • Restore from lost into the three loop statuses; the money path stays shut (D5 a)
  *   • Declined offer → reopen, or replace with a new one (superseded)
@@ -76,6 +77,7 @@ const INQ = {
   cancelled:    '17600000-0000-4000-8000-00000000000d',
   declined:     '17600000-0000-4000-8000-00000000000e',
   lostLocked:   '17600000-0000-4000-8000-00000000000f',
+  changeDep:    '17600000-0000-4000-8000-000000000010',
 } as const
 const ALL_INQ = Object.values(INQ)
 
@@ -130,10 +132,19 @@ async function makeOffer(inquiryId: string, status: string): Promise<{ offerId: 
   return { offerId, opt1, opt2 }
 }
 
+/** A deposit as setDepositAmount leaves it — all four columns (deposit_cents_all_or_nothing). */
+const DEPOSIT = {
+  deposit_amount_cents: 60000,
+  deposit_currency:     'EUR',
+  deposit_eur_rate:     1,
+  deposit_eur_rate_at:  '2026-10-27T10:00:00+00:00',
+} as const
+const NO_DEPOSIT = { deposit_amount_cents: null, deposit_currency: null, deposit_eur_rate: null, deposit_eur_rate_at: null }
+
 async function inquiry(id: string) {
   const { data } = await db()
     .from('inquiries')
-    .select('status, lost_reason_code, lost_reason, deposit_payment_link_id, deposit_payment_link_url')
+    .select('status, lost_reason_code, lost_reason, deposit_payment_link_id, deposit_payment_link_url, deposit_amount_cents, deposit_currency, deposit_eur_rate, deposit_eur_rate_at')
     .eq('id', id)
     .single()
   return data!
@@ -275,12 +286,30 @@ describe('step back (D2.3)', () => {
     expect(await markClientAccepted(offerId, opt2)).toEqual({ success: true })
     expect(await accepted(offerId)).toEqual([opt2])
   })
+
+  it('clears the deposit set for the withdrawn option and records the old one in offer.reverted (tj 2026-10-27)', async () => {
+    await makeInquiry(INQ.changeDep, 'offer_presented', DEPOSIT)
+    const { offerId, opt1 } = await makeOffer(INQ.changeDep, 'accepted')
+
+    expect(await changeAcceptedOption(offerId)).toEqual({ success: true })
+
+    expect(await inquiry(INQ.changeDep)).toMatchObject({ status: 'offer_presented', ...NO_DEPOSIT })
+    const ev = await events(INQ.changeDep)
+    expect(ev.map(e => e.type)).toEqual(['offer.reverted'])
+    expect(ev[0].payload).toMatchObject({
+      option_id:       opt1,
+      deposit_cleared: { amount_cents: 60000, currency: 'EUR', eur_rate: 1 },
+    })
+    expect(Date.parse((ev[0].payload as { deposit_cleared: { eur_rate_at: string } }).deposit_cleared.eur_rate_at))
+      .toBe(Date.parse(DEPOSIT.deposit_eur_rate_at))
+  })
 })
 
 describe('change accepted option with an active deposit link (D2.5)', () => {
   it('deactivates the link in Stripe, forgets it, and moves awaiting_payment → offer_presented', async () => {
     vi.mocked(stripe.paymentLinks.update).mockResolvedValue({ id: 'plink_fa176', active: false } as never)
     await makeInquiry(INQ.changeLink, 'awaiting_payment', {
+      ...DEPOSIT,
       deposit_payment_link_id:  'plink_fa176',
       deposit_payment_link_url: 'https://buy.stripe.com/test_fa176',
     })
@@ -291,18 +320,26 @@ describe('change accepted option with an active deposit link (D2.5)', () => {
     expect(vi.mocked(stripe.paymentLinks.update)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(stripe.paymentLinks.update)).toHaveBeenCalledWith('plink_fa176', { active: false })
     const inq = await inquiry(INQ.changeLink)
-    expect(inq).toMatchObject({ status: 'offer_presented', deposit_payment_link_id: null, deposit_payment_link_url: null })
+    expect(inq).toMatchObject({
+      status: 'offer_presented', deposit_payment_link_id: null, deposit_payment_link_url: null, ...NO_DEPOSIT,
+    })
     expect((await offerRow(offerId)).status).toBe('presented')
     expect(await accepted(offerId)).toEqual([])
     const ev = await events(INQ.changeLink)
     expect(ev.map(e => e.type)).toEqual(['status.changed', 'offer.reverted'])
     expect(ev[0]).toMatchObject({ from_status: 'awaiting_payment', to_status: 'offer_presented' })
-    expect(ev[1]).toMatchObject({ payload: { from: 'accepted', to: 'presented', option_id: opt1, link_id: 'plink_fa176' } })
+    expect(ev[1]).toMatchObject({
+      payload: {
+        from: 'accepted', to: 'presented', option_id: opt1, link_id: 'plink_fa176',
+        deposit_cleared: { amount_cents: 60000, currency: 'EUR', eur_rate: 1 },
+      },
+    })
   })
 
   it('when Stripe refuses, nothing changes — link, status, offer and log stay as they were', async () => {
     vi.mocked(stripe.paymentLinks.update).mockRejectedValue(new Error('Stripe network error'))
     await makeInquiry(INQ.changeFail, 'awaiting_payment', {
+      ...DEPOSIT,
       deposit_payment_link_id:  'plink_fa176_fail',
       deposit_payment_link_url: 'https://buy.stripe.com/test_fa176_fail',
     })
@@ -311,7 +348,9 @@ describe('change accepted option with an active deposit link (D2.5)', () => {
     const res = await changeAcceptedOption(offerId)
 
     expect(res).toMatchObject({ success: false, error: expect.stringMatching(/nothing was changed/) })
-    expect(await inquiry(INQ.changeFail)).toMatchObject({ status: 'awaiting_payment', deposit_payment_link_id: 'plink_fa176_fail' })
+    expect(await inquiry(INQ.changeFail)).toMatchObject({
+      status: 'awaiting_payment', deposit_payment_link_id: 'plink_fa176_fail', deposit_amount_cents: 60000, deposit_currency: 'EUR',
+    })
     expect((await offerRow(offerId)).status).toBe('accepted')
     expect(await accepted(offerId)).toEqual([opt1])
     expect(await events(INQ.changeFail)).toEqual([])

@@ -347,6 +347,44 @@ describe('NextStepCard — step back (FA-1.76 D2.3, D2.5)', () => {
   })
 })
 
+describe('NextStepCard — deposit cleared on option change (tj 2026-10-27, option B)', () => {
+  it('after "Change accepted option" and a new "Client accepted", the deposit stage asks for the amount again', async () => {
+    vi.mocked(changeAcceptedOption).mockResolvedValue({ success: true })
+    vi.mocked(markClientAccepted).mockResolvedValue({ success: true })
+    const withDeposit = {
+      depositAmountCents:            60000,
+      depositCurrency:               'EUR',
+      depositPaymentLinkId:          'plink_1',
+      depositPaymentLinkUrl:         'https://buy.stripe.com/test_1',
+      depositPaymentLinkAmountCents: 60000,
+      depositPaymentLinkCurrency:    'EUR',
+    }
+    // Deposit stage for option 1 (3 days): 600 EUR set, link out.
+    const { rerender } = render(<NextStepCard {...base} {...withDeposit} inquiryStatus="awaiting_payment" offer={acceptedOffer} />)
+    expect(screen.getByText(/Send the deposit link/)).toBeTruthy()
+    expect(screen.queryByLabelText(/Deposit amount/)).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change accepted option' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Deactivate link and change' }))
+    await waitFor(() => expect(vi.mocked(changeAcceptedOption)).toHaveBeenCalledWith('off-1'))
+
+    // What router.refresh() brings back: offer presented, no deposit, no link.
+    rerender(<NextStepCard {...base} inquiryStatus="offer_presented" offer={presentedOffer} />)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Client accepted' })[1])
+    await waitFor(() => expect(vi.mocked(markClientAccepted)).toHaveBeenCalledWith('off-1', 'opt-2'))
+
+    // …and then: option 2 (5 days, 4,500 EUR) accepted, deposit still empty.
+    const opt2Accepted = { ...draftOffer, status: 'accepted', options: [twoOptions[0], { ...twoOptions[1], is_accepted: true }] }
+    rerender(<NextStepCard {...base} inquiryStatus="offer_presented" offer={opt2Accepted} />)
+
+    expect(screen.getByText('Set the deposit amount for the angler')).toBeTruthy()
+    const input = screen.getByLabelText('Deposit amount (EUR)') as HTMLInputElement
+    expect(input.value).toBe('900.00')               // 20% of 4,500 EUR, not the old 600
+    expect(screen.getByRole('button', { name: 'Save deposit amount' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Create deposit link/ })).toBeNull()
+  })
+})
+
 describe('NextStepCard — guide steps without a message (FA-1.76 D2.4)', () => {
   it('"Notify guide" is enabled with no guide message and sends null', async () => {
     vi.mocked(markGuideNotifiedPaid).mockResolvedValue({ success: true })

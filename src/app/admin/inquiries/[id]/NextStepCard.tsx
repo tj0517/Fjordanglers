@@ -333,6 +333,17 @@ export function NextStepCard({
   const [setAmountError,   setSetAmountError]   = useState<string | null>(null)
   const [setAmountFlash,   setSetAmountFlash]   = useState(false)
 
+  // router.refresh() keeps this component's state. When the accepted option changes or
+  // its deposit is cleared ("Change accepted option", FA-1.76), start the amount form
+  // again from the new option's hint — adjusting state during render, not in an effect.
+  const depositKey = `${acceptedOption?.id ?? ''}|${amountSet ? depositAmountCents : ''}`
+  const [depositFor, setDepositFor] = useState(depositKey)
+  if (depositFor !== depositKey) {
+    setDepositFor(depositKey)
+    setDepositInput(initialInput)
+    setShowAmountForm(!amountSet)
+  }
+
   // ── Deposit link state ────────────────────────────────────────────────────
   const [depositPending, startDeposit]    = useTransition()
   const [depositFlash,   setDepositFlash] = useState(false)
