@@ -2,7 +2,7 @@
 id: FA-1.74
 title: Oferta edytowalna — zmiana nazwy i ceny po utworzeniu, kilka pozycji w ofercie, oferta bez odpowiedzi w wątku
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -48,7 +48,7 @@ Dziś oferta tworzy się raz (jedna pozycja: nazwa, cena, waluta) i potem jest t
 - [ ] Bez migracji. Kolejność zapisów tak, by triggery DEFERRABLE nie odrzuciły pośredniego stanu (najpierw dodanie/zmiana, usunięcie na końcu). **Jeśli bez funkcji w bazie nie da się tego zrobić bezpiecznie (np. zapis częściowy przy błędzie) — STOP i opisz problem, nie pisz migracji.**
 - [ ] Nowy typ zdarzenia `offer.updated` w `src/lib/events/types.ts`; payload: `offer_id` + lista pozycji przed i po (`id`, `label`, `price_cents`, `currency`).
 - [ ] Karta: przycisk „Edit offer” w etapach `present`, `decision`, `deposit` → ten sam formularz z wartościami bieżącymi; po zapisie etap bez zmian.
-- [ ] Etap `deposit`: gdy zmieniła się cena zaakceptowanej pozycji, a kwota depozytu jest już zapisana — ostrzeżenie na karcie („Deposit was set from the old price — check the amount”) i podpowiedź 30% liczona z nowej ceny.
+- [ ] Etap `deposit`: gdy zmieniła się cena zaakceptowanej pozycji, a kwota depozytu jest już zapisana — ostrzeżenie na karcie („Deposit was set from the old price — check the amount”) i podpowiedź `DEPOSIT_PERCENT` (20%) liczona z nowej ceny.
 - [ ] Testy: akcja edycji (zmiana ceny, dodanie, usunięcie, odmowa usunięcia ostatniej i zaakceptowanej pozycji, odmowa po `paid`), oferta bez wiadomości źródłowej, karta (formularz wielu pozycji, „Edit offer”).
 
 ## Gotowe, gdy
@@ -76,3 +76,11 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 ```
 
 ## Notatki z realizacji
+
+**Decyzje tj 2026-10-27 (po odczycie stanu, przed implementacją):**
+- **D-A = A** — zapis edycji bez funkcji w bazie: trzy zapisy (zmiana/dodanie pozycji, usunięcie pozycji, zdarzenie) + cofnięcie przy błędzie. Warunki tj: zdarzenie `offer.updated` zapisywane dopiero po udanych wszystkich zapisach pozycji; gdy którykolwiek zapis się nie uda — cofnięcie i błąd. Test wymuszający błąd drugiego zapisu pokazuje ofertę w stanie wyjściowym i brak `offer.updated` — wklejony jako red proof.
+- **D-B = A** — `offer.updated` liczy się jako ręczne dotknięcie (M11), zgodnie z `REBUILD_PLAN.md` §M11 („edycja oferty”); Załącznik C poprawiony. Niespójność (`offer.presented` / `offer.accepted` nieliczone) → `docs/deferred-tasks.md`, bez zmiany w tym zadaniu.
+- **D-C = A** — dozwolone waluty pozycji: EUR, USD, ISK, NZD (ta sama lista co depozyt); NZD dodane do formularza.
+- **D-D = A** — edycja odrzucona także dla zapytań `lost` / `cancelled` (oprócz `paid` / `handed_over` / `completed`).
+- Podpowiedź depozytu = `DEPOSIT_PERCENT` (20%), nie 30% — linia w Zakresie poprawiona zgodnie z decyzją tj z 2026-10-27.
+- Równoległa edycja tej samej oferty przez dwóch adminów (drugi zapis może usunąć pozycję dodaną przez pierwszego) → `docs/deferred-tasks.md`.
