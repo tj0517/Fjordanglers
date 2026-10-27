@@ -2,7 +2,7 @@
 id: FA-1.76
 title: Etapy oferty bez zbędnych blokad — pominięcie „presented”, cofanie kroków i zmiana zaakceptowanej pozycji, „Notify guide” / „Contacts exchanged” bez wiadomości, przywrócenie zapytania z lost
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -40,7 +40,7 @@ Karta „Next step” prowadzi dziś sztywno: „Mark as presented” wymaga wys
 - D2.3 **Cofanie kroków**: `accepted → presented` (zmiana zaakceptowanej pozycji — „Change accepted option”), `presented → draft` („Back to draft”).
 - D2.4 **„Notify guide” i „Contacts exchanged” bez wiadomości do guida w wątku** (wiadomość opcjonalna — gdy jest, nadal się podpina).
 - D2+ / D5 (a) **Przywrócenie z lost**: admin wybiera status, do którego wraca zapytanie: `qualifying`, `waiting_guide` albo `offer_presented`. `cancelled` zostaje końcowy. Ścieżka do `awaiting_payment` / `paid` z lost — zamknięta.
-- Propozycja planisty do akceptacji tj przy zapisie pliku: **cofnięcie akceptacji przy aktywnym linku depozytu** — panel pyta o potwierdzenie i wyłącza link w Stripe (jak dziś przy zmianie kwoty), zapytanie wraca z `awaiting_payment` do `offer_presented`; dzięki temu klient nie zapłaci za wycofaną pozycję.
+- D2.5 (zaakceptowane przez tj 2026-10-27): **cofnięcie akceptacji przy aktywnym linku depozytu** — panel pyta o potwierdzenie i wyłącza link w Stripe (jak dziś przy zmianie kwoty), zapytanie wraca z `awaiting_payment` do `offer_presented`; dzięki temu klient nie zapłaci za wycofaną pozycję.
 
 ## Zakres
 - [ ] Odczyt stanu: `ALLOWED_TRANSITIONS`, `transition()` (co dzieje się z `lost_reason*`, jakie zdarzenie emituje), wybór `stage` w karcie, warunki `disabled` przycisków, `StatusChanger`; sprawdzić w migracjach, czy baza ma własny strażnik przejść statusu (trigger) — wkleić wynik grepa.
