@@ -118,6 +118,7 @@ new ─▶ qualifying ◀─▶ waiting_guide ◀─▶ offer_presented ─▶ a
  └─────────────────▶ waiting_guide  (lead arrives with a complete brief)          │
                                                                      handed_over ◀┘ ─▶ completed
 any non-terminal ─▶ lost | cancelled
+lost ─▶ qualifying | waiting_guide | offer_presented   (restore — the angler came back)
 ```
 
 | status | meaning | typical trigger |
@@ -130,13 +131,17 @@ any non-terminal ─▶ lost | cancelled
 | `paid` | deposit received | `payment.received` |
 | `handed_over` | guide notified, contacts exchanged | `contacts.exchanged` |
 | `completed` | trip happened | `trip.completed` |
-| `lost` / `cancelled` | terminal | `inquiry.lost` / manual |
+| `lost` | we did not win it; can be restored into the loop (FA-1.76) | `inquiry.lost` |
+| `cancelled` | terminal | manual |
 
 Loops between `qualifying`, `waiting_guide` and `offer_presented` are allowed in both
 directions, all three ways (angler changes dates after seeing an offer → back to the
 guide), and `awaiting_payment` can fall back into that loop while nobody has paid yet.
 The money path is strict: `paid` is reachable **only** from `awaiting_payment`;
 `awaiting_payment` only from `offer_presented`; `completed` only through `handed_over`.
+`lost` is restored only into the loop (`qualifying`, `waiting_guide`, `offer_presented`;
+FA-1.76, tj D5 a) — never straight to `awaiting_payment` or `paid` — and the restore
+clears `lost_reason_code` / `lost_reason`. `completed` and `cancelled` have no way out.
 
 `transition(client, inquiryId, to, { actor, reason, channel? })` in
 `src/lib/inquiries/state.ts` validates the edge, updates `status`, recomputes

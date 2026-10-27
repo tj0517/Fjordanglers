@@ -4,11 +4,25 @@
  * the stage has no action; an empty frame is a bug.
  * FA-1.74 — multi-option offer form, offer without a thread reply, "Edit offer",
  * old-price deposit warning.
+ * FA-1.76 — stages without needless blocks: "Client accepted" on a draft offer, "Back
+ * to draft", "Change accepted option" (+ confirmation with a live link), guide steps
+ * without a message, "Restore inquiry" on lost, declined offer → reopen / new offer.
  */
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { NextStepCard } from './NextStepCard'
-import { markAsGuideOffer, updateOfferOptions } from '@/actions/messages'
+import {
+  markAsGuideOffer,
+  updateOfferOptions,
+  markOfferPresented,
+  markClientAccepted,
+  markGuideNotifiedPaid,
+  markContactsExchanged,
+  backToDraft,
+  changeAcceptedOption,
+  reopenOffer,
+} from '@/actions/messages'
+import { updateInquiryStatus } from '@/actions/inquiries'
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), replace: vi.fn(), push: vi.fn() }),
@@ -22,9 +36,13 @@ vi.mock('@/actions/messages', () => ({
   markGuideNotifiedPaid: vi.fn(),
   markContactsExchanged: vi.fn(),
   createPaymentLink:     vi.fn(),
+  backToDraft:           vi.fn(),
+  changeAcceptedOption:  vi.fn(),
+  reopenOffer:           vi.fn(),
 }))
 vi.mock('@/actions/inquiries', () => ({
-  setDepositAmount: vi.fn(),
+  setDepositAmount:    vi.fn(),
+  updateInquiryStatus: vi.fn(),
 }))
 
 afterEach(() => { cleanup(); vi.clearAllMocks() })
@@ -46,20 +64,18 @@ const base = {
 }
 
 describe('NextStepCard — no action for the stage → no frame', () => {
-  it('awaiting_payment with a declined offer renders nothing', () => {
-    const { container } = render(
-      <NextStepCard
-        {...base}
-        inquiryStatus="awaiting_payment"
-        offer={{ id: 'o1', status: 'declined', source_message_id: null, options: [] }}
-      />,
-    )
+  it('cancelled renders nothing (stays terminal, FA-1.76)', () => {
+    const { container } = render(<NextStepCard {...base} inquiryStatus="cancelled" />)
     expect(container.innerHTML).toBe('')
   })
 
-  it('paid, guide already notified, no guide message → nothing', () => {
+  it('a superseded latest offer renders nothing', () => {
     const { container } = render(
-      <NextStepCard {...base} inquiryStatus="paid" guideNotifiedPaid={true} />,
+      <NextStepCard
+        {...base}
+        inquiryStatus="offer_presented"
+        offer={{ id: 'o1', status: 'superseded', source_message_id: null, options: [] }}
+      />,
     )
     expect(container.innerHTML).toBe('')
   })
@@ -117,6 +133,7 @@ describe('NextStepCard — create offer without a thread reply, several options 
         { label: '3 days', priceCents: 300000, currency: 'eur' },
         { label: '5 days', priceCents: 450050, currency: 'nzd' },
       ],
+      supersedesOfferId: null,
     })
   })
 
@@ -243,5 +260,186 @@ describe('NextStepCard — old-price deposit warning (FA-1.74)', () => {
       />,
     )
     expect(screen.queryByTestId('deposit-old-price')).toBeNull()
+  })
+})
+
+// ─── FA-1.76 ──────────────────────────────────────────────────────────────────
+
+const draftOffer    = { id: 'off-1', status: 'draft',     source_message_id: null, options: twoOptions }
+const presentedOffer = { ...draftOffer, status: 'presented' }
+const acceptedOffer = {
+  ...draftOffer,
+  status:  'accepted',
+  options: [{ ...twoOptions[0], is_accepted: true }, twoOptions[1]],
+}
+
+describe('NextStepCard — stage present: skip "presented" (FA-1.76 D2.2)', () => {
+  it('shows "Client accepted" on every option and "Mark offer as presented" enabled without a message', () => {
+    render(<NextStepCard {...base} inquiryStatus="waiting_guide" offer={draftOffer} latestOutboundAnglerId={null} />)
+    expect(screen.getAllByRole('button', { name: 'Client accepted' })).toHaveLength(2)
+    const present = screen.getByRole('button', { name: 'Mark offer as presented' }) as HTMLButtonElement
+    expect(present.disabled).toBe(false)
+    expect(screen.queryByText(/with the offer first/i)).toBeNull()
+  })
+
+  it('"Client accepted" on a draft offer calls markClientAccepted with that option', async () => {
+    vi.mocked(markClientAccepted).mockResolvedValue({ success: true })
+    render(<NextStepCard {...base} inquiryStatus="waiting_guide" offer={draftOffer} />)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Client accepted' })[1])
+    await waitFor(() => expect(vi.mocked(markClientAccepted)).toHaveBeenCalledWith('off-1', 'opt-2'))
+  })
+
+  it('"Mark offer as presented" without a message sends null; with one, attaches it', async () => {
+    vi.mocked(markOfferPresented).mockResolvedValue({ success: true })
+    const { unmount } = render(<NextStepCard {...base} inquiryStatus="waiting_guide" offer={draftOffer} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Mark offer as presented' }))
+    await waitFor(() => expect(vi.mocked(markOfferPresented)).toHaveBeenLastCalledWith('off-1', null))
+    unmount()
+
+    render(<NextStepCard {...base} inquiryStatus="waiting_guide" offer={draftOffer} latestOutboundAnglerId="m-out-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Mark offer as presented' }))
+    await waitFor(() => expect(vi.mocked(markOfferPresented)).toHaveBeenLastCalledWith('off-1', 'm-out-1'))
+  })
+})
+
+describe('NextStepCard — step back (FA-1.76 D2.3, D2.5)', () => {
+  it('stage decision has "Back to draft"', async () => {
+    vi.mocked(backToDraft).mockResolvedValue({ success: true })
+    render(<NextStepCard {...base} inquiryStatus="offer_presented" offer={presentedOffer} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Back to draft' }))
+    await waitFor(() => expect(vi.mocked(backToDraft)).toHaveBeenCalledWith('off-1'))
+  })
+
+  it('stage deposit without a link: "Change accepted option" runs straight away', async () => {
+    vi.mocked(changeAcceptedOption).mockResolvedValue({ success: true })
+    render(<NextStepCard {...base} inquiryStatus="offer_presented" offer={acceptedOffer} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Change accepted option' }))
+    await waitFor(() => expect(vi.mocked(changeAcceptedOption)).toHaveBeenCalledWith('off-1'))
+    expect(screen.queryByTestId('change-option-confirm')).toBeNull()
+  })
+
+  it('stage deposit with an active link: asks first, then deactivates and changes', async () => {
+    vi.mocked(changeAcceptedOption).mockResolvedValue({ success: true })
+    render(
+      <NextStepCard
+        {...base}
+        inquiryStatus="awaiting_payment"
+        offer={acceptedOffer}
+        depositAmountCents={60000}
+        depositCurrency="EUR"
+        depositPaymentLinkId="plink_1"
+        depositPaymentLinkUrl="https://buy.stripe.com/test_1"
+        depositPaymentLinkAmountCents={60000}
+        depositPaymentLinkCurrency="EUR"
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Change accepted option' }))
+    expect(vi.mocked(changeAcceptedOption)).not.toHaveBeenCalled()
+    expect(screen.getByTestId('change-option-confirm').textContent).toMatch(/deactivated in Stripe/i)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep it' }))
+    expect(screen.queryByTestId('change-option-confirm')).toBeNull()
+    expect(vi.mocked(changeAcceptedOption)).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change accepted option' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Deactivate link and change' }))
+    await waitFor(() => expect(vi.mocked(changeAcceptedOption)).toHaveBeenCalledWith('off-1'))
+  })
+})
+
+describe('NextStepCard — deposit cleared on option change (tj 2026-10-27, option B)', () => {
+  it('after "Change accepted option" and a new "Client accepted", the deposit stage asks for the amount again', async () => {
+    vi.mocked(changeAcceptedOption).mockResolvedValue({ success: true })
+    vi.mocked(markClientAccepted).mockResolvedValue({ success: true })
+    const withDeposit = {
+      depositAmountCents:            60000,
+      depositCurrency:               'EUR',
+      depositPaymentLinkId:          'plink_1',
+      depositPaymentLinkUrl:         'https://buy.stripe.com/test_1',
+      depositPaymentLinkAmountCents: 60000,
+      depositPaymentLinkCurrency:    'EUR',
+    }
+    // Deposit stage for option 1 (3 days): 600 EUR set, link out.
+    const { rerender } = render(<NextStepCard {...base} {...withDeposit} inquiryStatus="awaiting_payment" offer={acceptedOffer} />)
+    expect(screen.getByText(/Send the deposit link/)).toBeTruthy()
+    expect(screen.queryByLabelText(/Deposit amount/)).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change accepted option' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Deactivate link and change' }))
+    await waitFor(() => expect(vi.mocked(changeAcceptedOption)).toHaveBeenCalledWith('off-1'))
+
+    // What router.refresh() brings back: offer presented, no deposit, no link.
+    rerender(<NextStepCard {...base} inquiryStatus="offer_presented" offer={presentedOffer} />)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Client accepted' })[1])
+    await waitFor(() => expect(vi.mocked(markClientAccepted)).toHaveBeenCalledWith('off-1', 'opt-2'))
+
+    // …and then: option 2 (5 days, 4,500 EUR) accepted, deposit still empty.
+    const opt2Accepted = { ...draftOffer, status: 'accepted', options: [twoOptions[0], { ...twoOptions[1], is_accepted: true }] }
+    rerender(<NextStepCard {...base} inquiryStatus="offer_presented" offer={opt2Accepted} />)
+
+    expect(screen.getByText('Set the deposit amount for the angler')).toBeTruthy()
+    const input = screen.getByLabelText('Deposit amount (EUR)') as HTMLInputElement
+    expect(input.value).toBe('900.00')               // 20% of 4,500 EUR, not the old 600
+    expect(screen.getByRole('button', { name: 'Save deposit amount' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Create deposit link/ })).toBeNull()
+  })
+})
+
+describe('NextStepCard — guide steps without a message (FA-1.76 D2.4)', () => {
+  it('"Notify guide" is enabled with no guide message and sends null', async () => {
+    vi.mocked(markGuideNotifiedPaid).mockResolvedValue({ success: true })
+    render(<NextStepCard {...base} inquiryStatus="paid" latestOutboundGuideId={null} />)
+    const btn = screen.getByRole('button', { name: 'Notify guide' }) as HTMLButtonElement
+    expect(btn.disabled).toBe(false)
+    fireEvent.click(btn)
+    await waitFor(() => expect(vi.mocked(markGuideNotifiedPaid)).toHaveBeenCalledWith('inq-1', null))
+  })
+
+  it('"Notify guide" attaches the latest guide message when there is one', async () => {
+    vi.mocked(markGuideNotifiedPaid).mockResolvedValue({ success: true })
+    render(<NextStepCard {...base} inquiryStatus="paid" latestOutboundGuideId="m-guide-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Notify guide' }))
+    await waitFor(() => expect(vi.mocked(markGuideNotifiedPaid)).toHaveBeenCalledWith('inq-1', 'm-guide-1'))
+  })
+
+  it('stage contacts is reached without a guide message', async () => {
+    vi.mocked(markContactsExchanged).mockResolvedValue({ success: true })
+    render(<NextStepCard {...base} inquiryStatus="paid" guideNotifiedPaid={true} latestOutboundGuideId={null} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Contacts exchanged' }))
+    await waitFor(() => expect(vi.mocked(markContactsExchanged)).toHaveBeenCalledWith('inq-1', null))
+  })
+})
+
+describe('NextStepCard — lost and declined (FA-1.76 D5 a)', () => {
+  it('lost shows "Restore inquiry" with exactly qualifying, waiting_guide, offer_presented', async () => {
+    vi.mocked(updateInquiryStatus).mockResolvedValue({ success: true })
+    render(<NextStepCard {...base} inquiryStatus="lost" offer={acceptedOffer} />)
+    const radios = screen.getAllByRole('radio') as HTMLInputElement[]
+    expect(radios.map(r => r.value).sort()).toEqual(['offer_presented', 'qualifying', 'waiting_guide'])
+
+    fireEvent.click(screen.getByRole('radio', { name: /Waiting guide/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Restore inquiry' }))
+    await waitFor(() => expect(vi.mocked(updateInquiryStatus)).toHaveBeenCalledWith('inq-1', 'waiting_guide'))
+  })
+
+  it('a declined offer after restore offers "Reopen offer" and "New offer"', async () => {
+    vi.mocked(reopenOffer).mockResolvedValue({ success: true })
+    vi.mocked(markAsGuideOffer).mockResolvedValue({ success: true, offerId: 'off-2' })
+    const declined = { ...draftOffer, status: 'declined' }
+    render(<NextStepCard {...base} inquiryStatus="qualifying" offer={declined} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen offer' }))
+    await waitFor(() => expect(vi.mocked(reopenOffer)).toHaveBeenCalledWith('off-1'))
+    cleanup()
+
+    render(<NextStepCard {...base} inquiryStatus="qualifying" offer={declined} />)
+    fireEvent.click(screen.getByRole('button', { name: 'New offer' }))
+    fill('Option 1 name', '4 days')
+    fill('Option 1 price', '3800')
+    fireEvent.click(screen.getByRole('button', { name: 'Create new offer' }))
+    await waitFor(() => expect(vi.mocked(markAsGuideOffer)).toHaveBeenCalledWith('inq-1', expect.objectContaining({
+      options:           [{ label: '4 days', priceCents: 380000, currency: 'eur' }],
+      supersedesOfferId: 'off-1',
+    })))
   })
 })

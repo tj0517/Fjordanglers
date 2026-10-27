@@ -9,6 +9,7 @@
  *                                                                                   │
  *                                                                      handed_over ◀┘ ─▶ completed
  *   any non-terminal ─▶ lost | cancelled
+ *   lost ─▶ qualifying | waiting_guide | offer_presented   (the angler came back, FA-1.76)
  *
  * `inquiries.status` is changed by `transition()` and by nothing else. Webhooks, the
  * agent, the admin StatusChanger and any cron all call this one function, so every
@@ -65,7 +66,7 @@ export const STATUS_MEANINGS: Record<InquiryStatus, string> = {
   paid:             'Deposit received',
   handed_over:      'Guide notified, contacts exchanged',
   completed:        'Trip happened',
-  lost:             'Terminal — we did not win it',
+  lost:             'We did not win it — can be restored if the angler comes back',
   cancelled:        'Terminal — called off',
 }
 
@@ -86,6 +87,13 @@ export const STATUS_MEANINGS: Record<InquiryStatus, string> = {
  * one way in.
  *
  * Every non-terminal status can go to `lost` or `cancelled`.
+ *
+ * `lost` is not terminal (FA-1.76, tj D5 a): anglers come back weeks later, so a lost
+ * inquiry can be restored into the loop — `qualifying`, `waiting_guide` or
+ * `offer_presented` — and nowhere else. The money path above is unchanged: a restored
+ * inquiry still reaches `awaiting_payment` only through `offer_presented`, and `paid`
+ * only through `awaiting_payment`. `transition()` clears `lost_reason*` on the way out.
+ * `completed` and `cancelled` stay terminal.
  */
 const LOOP: readonly InquiryStatus[] = ['qualifying', 'waiting_guide', 'offer_presented']
 const OUT:  readonly InquiryStatus[] = ['lost', 'cancelled']
@@ -101,7 +109,7 @@ export const ALLOWED_TRANSITIONS: Record<InquiryStatus, readonly InquiryStatus[]
   paid:             ['handed_over', ...OUT],
   handed_over:      ['completed', ...OUT],
   completed:        [],
-  lost:             [],
+  lost:             [...LOOP],
   cancelled:        [],
 }
 
