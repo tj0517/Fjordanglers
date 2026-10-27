@@ -14,10 +14,11 @@
  * sendMessageFromThread(inquiryId, params)
  *   Admin sends a freeform message from the inquiry thread UI.
  *
- * markAsGuideOffer(inquiryId, { messageId, guideId, options })
+ * markAsGuideOffer(inquiryId, { messageId, guideId, options, supersedesOfferId })
  *   Admin turns the guide's prices into an offer — from a thread reply (messageId) or
  *   from outside the thread (WhatsApp, phone: messageId null, FA-1.74 D2.1).
- *   Inserts an offers + offer_options row and emits guide.offer_received.
+ *   Inserts an offers + offer_options row and emits guide.offer_received. With
+ *   supersedesOfferId (a declined offer, FA-1.76) the old one becomes superseded.
  *
  * updateOfferOptions(offerId, options)
  *   Admin edits an offer in place (FA-1.74 D1): label / price / currency of existing
@@ -25,23 +26,30 @@
  *   Emits offer.updated with the options before and after.
  *
  * markOfferPresented(offerId, messageId?)
- *   Admin marks the outbound message to the angler as "presents this offer".
+ *   Admin marks the offer as presented — with the outbound message when there is one,
+ *   without when it went out by WhatsApp or phone (FA-1.76 D2.2).
  *   Emits offer.presented + proposes offer_presented transition.
  *
- * markClientAccepted(offerId, optionId)
- *   Admin marks the client's reply as accepting an option.
- *   Sets offer_options.is_accepted, emits offer.accepted + proposes awaiting_payment.
+ * markClientAccepted(offerId, optionId, messageId?)
+ *   Admin marks the option the angler accepted. On a draft offer "presented" is
+ *   recorded on the way (FA-1.76 D2.2). Sets offer_options.is_accepted, emits
+ *   offer.accepted; the status stays offer_presented.
+ *
+ * backToDraft(offerId) · changeAcceptedOption(offerId) · reopenOffer(offerId)
+ *   Step the offer back (FA-1.76 D2.3, D2.5, D5 a): presented → draft, accepted →
+ *   presented (deactivates an active deposit link, awaiting_payment → offer_presented),
+ *   declined → draft. Each emits offer.reverted.
  *
  * markClientDeclined(offerId, messageId?)
  *   Admin marks the client's reply as declining.
  *   Emits offer.declined + proposes lost.
  *
- * markGuideNotifiedPaid(messageId)
- *   Admin marks a guide message as "guide was told about the deposit".
- *   Emits guide.notified_paid.
+ * markGuideNotifiedPaid(inquiryId, messageId?)
+ *   Admin marks that the guide was told about the deposit; the message to the guide is
+ *   optional (FA-1.76 D2.4). Emits guide.notified_paid.
  *
- * markContactsExchanged(messageId)
- *   Admin marks the step where contacts were exchanged.
+ * markContactsExchanged(inquiryId, messageId?)
+ *   Admin marks the step where contacts were exchanged; message optional (D2.4).
  *   Emits contacts.exchanged + proposes handed_over.
  *
  * createPaymentLink(inquiryId)
@@ -55,8 +63,9 @@ import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { ActionResult } from '@/actions/inquiries'
 import { requireAdmin } from '@/lib/auth/guards'
-import { emitEvent } from '@/lib/events/emit'
-import { transition, TransitionError } from '@/lib/inquiries/state'
+import { emitEvent, type EmitEventParams } from '@/lib/events/emit'
+import { EVENT_CHANNELS, type EventChannel } from '@/lib/events/types'
+import { transition, TransitionError, type InquiryStatus } from '@/lib/inquiries/state'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { getGuidePhone } from '@/lib/guide-contacts'
@@ -359,6 +368,8 @@ export interface MarkAsGuideOfferParams {
   messageId?: string | null
   guideId?:   string | null
   options:    OfferOptionInput[]
+  /** A declined offer this one replaces ("New offer", FA-1.76) — it becomes superseded. */
+  supersedesOfferId?: string | null
 }
 
 export async function markAsGuideOffer(
@@ -390,6 +401,18 @@ export async function markAsGuideOffer(
       .eq('inquiry_id', inquiryId)
       .maybeSingle()
     if (msg == null) return { success: false, error: 'Message not found in this inquiry' }
+  }
+
+  const supersedesOfferId = params.supersedesOfferId ?? null
+  if (supersedesOfferId != null) {
+    const { data: old } = await svc
+      .from('offers')
+      .select('id, status')
+      .eq('id', supersedesOfferId)
+      .eq('inquiry_id', inquiryId)
+      .maybeSingle()
+    if (old == null) return { success: false, error: 'The offer to replace was not found in this inquiry' }
+    if (old.status !== 'declined') return { success: false, error: `Only a declined offer can be replaced — this one is ${old.status}` }
   }
 
   // Use RPC to insert offer + options in one server-side transaction.
@@ -429,6 +452,35 @@ export async function markAsGuideOffer(
     messageId,
     payload:   { offer_id: offerId, guide_id: params.guideId ?? null },
   })
+
+  if (supersedesOfferId != null) {
+    // After the new offer exists, so a failure here never leaves the inquiry without one.
+    const { data: moved } = await svc
+      .from('offers')
+      .update({ status: 'superseded' })
+      .eq('id', supersedesOfferId)
+      .eq('status', 'declined')
+      .select('id')
+      .maybeSingle()
+    try {
+      if (moved == null) throw new Error('declined offer changed underneath us')
+      await emitEvent(svc, {
+        inquiryId,
+        type:    'offer.superseded',
+        actor:   { kind: 'admin', id: userId },
+        source:  'app',
+        channel: 'app',
+        payload: { offer_id: supersedesOfferId, superseded_by: offerId },
+      })
+    } catch (err) {
+      console.error('[markAsGuideOffer] supersede error:', err)
+      if (moved != null) {
+        await svc.from('offers').update({ status: 'declined' }).eq('id', supersedesOfferId).eq('status', 'superseded')
+      }
+      revalidatePath('/admin/inquiries/' + inquiryId)
+      return { success: false, error: 'The new offer was created, but the declined one could not be marked as replaced — reload the page' }
+    }
+  }
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   return { success: true, offerId }
@@ -601,58 +653,178 @@ export async function updateOfferOptions(
   return { success: true }
 }
 
-// ─── markOfferPresented ───────────────────────────────────────────────────────
+// ─── Offer stages (FA-1.76) ───────────────────────────────────────────────────
+//
+// Much of the offer flow happens outside the app (WhatsApp, phone) and anglers come
+// back, so no stage needs a thread message and every stage before payment can be
+// stepped back. One thing never moves: `paid` comes only from Stripe.
 
-export async function markOfferPresented(
-  offerId:   string,
-  messageId: string,
-): Promise<ActionResult> {
-  const { userId } = await requireAdmin()
-  if (!messageId) return { success: false, error: 'messageId is required to present an offer' }
-  const svc = createServiceClient()
+type ServiceClient = ReturnType<typeof createServiceClient>
 
+interface OfferContext {
+  offerId:              string
+  offerStatus:          string
+  inquiryId:            string
+  inquiryStatus:        string
+  depositPaymentLinkId: string | null
+}
+
+type OfferContextResult = { ok: true; ctx: OfferContext } | { ok: false; error: string }
+
+/** Reads the offer and its inquiry; refuses when the inquiry is paid or closed. */
+async function readOfferContext(svc: ServiceClient, offerId: string): Promise<OfferContextResult> {
   const { data: offer } = await svc
     .from('offers')
     .select('id, inquiry_id, status')
     .eq('id', offerId)
-    .single()
-  if (offer == null) return { success: false, error: 'Offer not found' }
+    .maybeSingle()
+  if (offer == null) return { ok: false, error: 'Offer not found' }
 
-  const inquiryId: string = offer.inquiry_id
+  const { data: inquiry } = await svc
+    .from('inquiries')
+    .select('id, status, deposit_payment_link_id')
+    .eq('id', offer.inquiry_id)
+    .maybeSingle()
+  if (inquiry == null) return { ok: false, error: 'Inquiry not found' }
+  if (OFFER_LOCKED_INQUIRY_STATUSES.includes(inquiry.status)) {
+    return { ok: false, error: `The offer cannot be changed — the inquiry is ${inquiry.status}` }
+  }
 
-  await svc
+  return {
+    ok:  true,
+    ctx: {
+      offerId,
+      offerStatus:          offer.status,
+      inquiryId:            inquiry.id,
+      inquiryStatus:        inquiry.status,
+      depositPaymentLinkId: inquiry.deposit_payment_link_id,
+    },
+  }
+}
+
+/** The message's channel when it belongs to the inquiry; null when it does not. */
+async function messageChannel(svc: ServiceClient, messageId: string, inquiryId: string): Promise<EventChannel | null> {
+  const { data: msg } = await svc
+    .from('messages')
+    .select('id, channel')
+    .eq('id', messageId)
+    .eq('inquiry_id', inquiryId)
+    .maybeSingle()
+  if (msg == null) return null
+  return (EVENT_CHANNELS as readonly string[]).includes(msg.channel) ? msg.channel as EventChannel : 'app'
+}
+
+/** Best-effort status move: an inquiry already in `to` is fine, anything else is logged. */
+async function proposeTransition(
+  svc:       ServiceClient,
+  inquiryId: string,
+  to:        InquiryStatus,
+  userId:    string,
+  reason:    string,
+  caller:    string,
+): Promise<void> {
+  try {
+    await transition(svc, inquiryId, to, { actor: { kind: 'admin', id: userId }, reason })
+  } catch (err) {
+    if (!(err instanceof TransitionError && err.message.includes('already'))) {
+      console.warn(`[${caller}] transition warn:`, err)
+    }
+  }
+}
+
+/**
+ * Offer status compare-and-set + its event. If the event cannot be written the offer
+ * is put back, so the log never misses a step the card shows (CLAUDE.md rule 5).
+ * Returns the error, or null.
+ */
+async function moveOffer(
+  svc:   ServiceClient,
+  ctx:   OfferContext,
+  from:  string,
+  to:    string,
+  event: Omit<EmitEventParams, 'inquiryId'>,
+): Promise<string | null> {
+  const { data: moved, error } = await svc
     .from('offers')
-    .update({ status: 'presented' })
-    .eq('id', offerId)
+    .update({ status: to })
+    .eq('id', ctx.offerId)
+    .eq('status', from)
+    .select('id')
+    .maybeSingle()
+  if (error != null || moved == null) {
+    if (error != null) console.error('[moveOffer] update error:', error)
+    return 'The offer changed underneath us — reload and try again'
+  }
+  try {
+    await emitEvent(svc, { inquiryId: ctx.inquiryId, ...event })
+  } catch (err) {
+    console.error('[moveOffer] event error:', err)
+    await svc.from('offers').update({ status: from }).eq('id', ctx.offerId).eq('status', to)
+    return 'Could not record the change, so it was undone — try again'
+  }
+  return null
+}
 
-  await emitEvent(svc, {
-    inquiryId,
+/**
+ * draft → presented, `offer.presented`, inquiry → `offer_presented`. Shared by "Mark as
+ * presented" and by "Client accepted" on a draft offer, where presented is recorded on
+ * the way (tj D2.2). The message is attached when there is one.
+ */
+async function presentOffer(
+  svc:       ServiceClient,
+  ctx:       OfferContext,
+  userId:    string,
+  messageId: string | null,
+): Promise<string | null> {
+  let channel: EventChannel | null = null
+  if (messageId != null) {
+    channel = await messageChannel(svc, messageId, ctx.inquiryId)
+    if (channel == null) return 'Message not found in this inquiry'
+  }
+
+  const err = await moveOffer(svc, ctx, 'draft', 'presented', {
     type:      'offer.presented',
     actor:     { kind: 'admin', id: userId },
     source:    'app',
-    channel:   'email',
+    channel,
     messageId,
-    payload:   { offer_id: offerId },
+    payload:   { offer_id: ctx.offerId },
   })
+  if (err != null) return err
 
-  // Propose status transition (best-effort — not a hard failure)
-  try {
-    await transition(svc, inquiryId, 'offer_presented', {
-      actor:  { kind: 'admin', id: userId },
-      reason: 'Offer presented to angler',
-    })
-  } catch (err) {
-    if (!(err instanceof TransitionError && err.message.includes('already'))) {
-      console.warn('[markOfferPresented] transition warn:', err)
-    }
+  await proposeTransition(svc, ctx.inquiryId, 'offer_presented', userId, 'Offer presented to angler', 'presentOffer')
+  return null
+}
+
+// ─── markOfferPresented ───────────────────────────────────────────────────────
+
+export async function markOfferPresented(
+  offerId:    string,
+  messageId?: string | null,
+): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  const svc = createServiceClient()
+
+  const read = await readOfferContext(svc, offerId)
+  if (!read.ok) return { success: false, error: read.error }
+  if (read.ctx.offerStatus !== 'draft') {
+    return { success: false, error: `A ${read.ctx.offerStatus} offer cannot be marked as presented` }
   }
 
-  revalidatePath('/admin/inquiries/' + inquiryId)
+  const err = await presentOffer(svc, read.ctx, userId, messageId ?? null)
+  if (err != null) return { success: false, error: err }
+
+  revalidatePath('/admin/inquiries/' + read.ctx.inquiryId)
   return { success: true }
 }
 
 // ─── markClientAccepted ───────────────────────────────────────────────────────
 
+/**
+ * The angler picked an option. Works on a draft offer too — "presented" is recorded
+ * first (tj D2.2). The option is flagged before the offer moves, and both are undone
+ * if the event cannot be written.
+ */
 export async function markClientAccepted(
   offerId:    string,
   optionId:   string,
@@ -666,44 +838,200 @@ export async function markClientAccepted(
     .select('id, offer_id')
     .eq('id', optionId)
     .eq('offer_id', offerId)
-    .single()
+    .maybeSingle()
 
   if (option == null) {
     return { success: false, error: 'Option not found or does not belong to this offer' }
   }
 
-  const { data: offer } = await svc
-    .from('offers')
-    .select('id, inquiry_id')
-    .eq('id', offerId)
-    .single()
-  if (offer == null) return { success: false, error: 'Offer not found' }
+  const read = await readOfferContext(svc, offerId)
+  if (!read.ok) return { success: false, error: read.error }
+  const ctx = read.ctx
+  if (ctx.offerStatus === 'accepted') {
+    return { success: false, error: 'An option is already accepted — use “Change accepted option” first' }
+  }
+  if (ctx.offerStatus !== 'draft' && ctx.offerStatus !== 'presented') {
+    return { success: false, error: `A ${ctx.offerStatus} offer cannot be accepted` }
+  }
 
-  const inquiryId: string = offer.inquiry_id
+  if (ctx.offerStatus === 'draft') {
+    const err = await presentOffer(svc, ctx, userId, null)
+    if (err != null) return { success: false, error: err }
+  }
 
-  await svc
+  // One accepted option per offer (partial unique index offer_options_one_accepted_idx);
+  // none is accepted while the offer is draft or presented.
+  const { error: optErr } = await svc
     .from('offer_options')
     .update({ is_accepted: true })
     .eq('id', optionId)
+    .eq('offer_id', offerId)
+  if (optErr != null) {
+    console.error('[markClientAccepted] option update error:', optErr)
+    return { success: false, error: 'Could not mark the option as accepted' }
+  }
 
-  await svc
-    .from('offers')
-    .update({ status: 'accepted' })
-    .eq('id', offerId)
-
-  await emitEvent(svc, {
-    inquiryId,
+  const err = await moveOffer(svc, ctx, 'presented', 'accepted', {
     type:      'offer.accepted',
     actor:     { kind: 'admin', id: userId },
     source:    'app',
     messageId: messageId ?? null,
     payload:   { offer_id: offerId, option_id: optionId },
   })
+  if (err != null) {
+    await svc.from('offer_options').update({ is_accepted: false }).eq('id', optionId)
+    return { success: false, error: err }
+  }
 
   // Status stays offer_presented — awaiting_payment is reached only via createPaymentLink
   // (FA-1.29 D1). The public acceptOffer path is handled separately (deferred-tasks.md D1).
 
-  revalidatePath('/admin/inquiries/' + inquiryId)
+  revalidatePath('/admin/inquiries/' + ctx.inquiryId)
+  return { success: true }
+}
+
+// ─── backToDraft ──────────────────────────────────────────────────────────────
+
+/** presented → draft (tj D2.3). The inquiry status is left as it is. */
+export async function backToDraft(offerId: string): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  const svc = createServiceClient()
+
+  const read = await readOfferContext(svc, offerId)
+  if (!read.ok) return { success: false, error: read.error }
+  if (read.ctx.offerStatus !== 'presented') {
+    return { success: false, error: `A ${read.ctx.offerStatus} offer cannot go back to draft` }
+  }
+
+  const err = await moveOffer(svc, read.ctx, 'presented', 'draft', {
+    type:    'offer.reverted',
+    actor:   { kind: 'admin', id: userId },
+    source:  'app',
+    channel: 'app',
+    payload: { offer_id: offerId, from: 'presented', to: 'draft' },
+  })
+  if (err != null) return { success: false, error: err }
+
+  revalidatePath('/admin/inquiries/' + read.ctx.inquiryId)
+  return { success: true }
+}
+
+// ─── changeAcceptedOption ─────────────────────────────────────────────────────
+
+/**
+ * accepted → presented: the accepted option is cleared so another can be picked
+ * (tj D2.3). With a deposit link out (tj D2.5), the link is deactivated in Stripe
+ * first — if that fails nothing changes — and the inquiry goes back from
+ * awaiting_payment to offer_presented, so the angler cannot pay for a withdrawn option.
+ *
+ * A payment landing between the deactivation and the status change is not handled
+ * here (docs/deferred-tasks.md, FA-1.76).
+ */
+export async function changeAcceptedOption(offerId: string): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  const svc = createServiceClient()
+
+  const read = await readOfferContext(svc, offerId)
+  if (!read.ok) return { success: false, error: read.error }
+  const ctx = read.ctx
+  if (ctx.offerStatus !== 'accepted') {
+    return { success: false, error: `No accepted option to change — the offer is ${ctx.offerStatus}` }
+  }
+
+  const { data: accepted } = await svc
+    .from('offer_options')
+    .select('id')
+    .eq('offer_id', offerId)
+    .eq('is_accepted', true)
+    .maybeSingle()
+
+  const linkId = ctx.depositPaymentLinkId
+  if (linkId != null) {
+    try {
+      await stripe.paymentLinks.update(linkId, { active: false })
+    } catch (err) {
+      console.error('[changeAcceptedOption] Could not deactivate link:', err)
+      return { success: false, error: `Could not deactivate the payment link — nothing was changed. (${err instanceof Error ? err.message : 'Stripe error'})` }
+    }
+    // The link is dead: forget it, or createPaymentLink would hand the same URL out again.
+    const { error: clearErr } = await svc
+      .from('inquiries')
+      .update({ deposit_payment_link_id: null, deposit_payment_link_url: null })
+      .eq('id', ctx.inquiryId)
+      .eq('deposit_payment_link_id', linkId)
+    if (clearErr != null) {
+      console.error('[changeAcceptedOption] link clear error:', clearErr)
+      return { success: false, error: 'The payment link was deactivated in Stripe, but the inquiry could not be updated — reload and try again' }
+    }
+  }
+
+  if (ctx.inquiryStatus === 'awaiting_payment') {
+    try {
+      await transition(svc, ctx.inquiryId, 'offer_presented', {
+        actor:  { kind: 'admin', id: userId },
+        reason: 'Accepted option withdrawn — deposit link deactivated',
+      })
+    } catch (err) {
+      console.error('[changeAcceptedOption] transition error:', err)
+      return { success: false, error: `The payment link was deactivated, but the status could not go back: ${err instanceof Error ? err.message : 'unknown error'}` }
+    }
+  }
+
+  const { error: optErr } = await svc
+    .from('offer_options')
+    .update({ is_accepted: false })
+    .eq('offer_id', offerId)
+    .eq('is_accepted', true)
+  if (optErr != null) {
+    console.error('[changeAcceptedOption] option update error:', optErr)
+    return { success: false, error: 'Could not clear the accepted option' }
+  }
+
+  const err = await moveOffer(svc, ctx, 'accepted', 'presented', {
+    type:    'offer.reverted',
+    actor:   { kind: 'admin', id: userId },
+    source:  'app',
+    channel: 'app',
+    payload: {
+      offer_id:  offerId,
+      from:      'accepted',
+      to:        'presented',
+      option_id: accepted?.id ?? null,
+      ...(linkId != null ? { link_id: linkId } : {}),
+    },
+  })
+  if (err != null) {
+    if (accepted != null) await svc.from('offer_options').update({ is_accepted: true }).eq('id', accepted.id)
+    return { success: false, error: err }
+  }
+
+  revalidatePath('/admin/inquiries/' + ctx.inquiryId)
+  return { success: true }
+}
+
+// ─── reopenOffer ──────────────────────────────────────────────────────────────
+
+/** declined → draft, for an angler who came back (tj D5 a). */
+export async function reopenOffer(offerId: string): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  const svc = createServiceClient()
+
+  const read = await readOfferContext(svc, offerId)
+  if (!read.ok) return { success: false, error: read.error }
+  if (read.ctx.offerStatus !== 'declined') {
+    return { success: false, error: `Only a declined offer can be reopened — this one is ${read.ctx.offerStatus}` }
+  }
+
+  const err = await moveOffer(svc, read.ctx, 'declined', 'draft', {
+    type:    'offer.reverted',
+    actor:   { kind: 'admin', id: userId },
+    source:  'app',
+    channel: 'app',
+    payload: { offer_id: offerId, from: 'declined', to: 'draft' },
+  })
+  if (err != null) return { success: false, error: err }
+
+  revalidatePath('/admin/inquiries/' + read.ctx.inquiryId)
   return { success: true }
 }
 
@@ -755,64 +1083,94 @@ export async function markClientDeclined(
   return { success: true }
 }
 
+// ─── Guide steps after payment ────────────────────────────────────────────────
+
+const PAID_STATUSES = ['paid', 'handed_over', 'completed']
+
+/**
+ * Reads the paid inquiry and, when given, checks the message belongs to it. The message
+ * is optional (tj D2.4): the guide is often told by WhatsApp or phone.
+ */
+async function readPaidInquiry(
+  svc:       ServiceClient,
+  inquiryId: string,
+  messageId: string | null,
+): Promise<{ ok: true; status: string; channel: EventChannel | null } | { ok: false; error: string }> {
+  const { data: inquiry } = await svc
+    .from('inquiries')
+    .select('id, status')
+    .eq('id', inquiryId)
+    .maybeSingle()
+  if (inquiry == null) return { ok: false, error: 'Inquiry not found' }
+  if (!PAID_STATUSES.includes(inquiry.status)) {
+    return { ok: false, error: `The deposit is not paid yet — the inquiry is ${inquiry.status}` }
+  }
+
+  let channel: EventChannel | null = null
+  if (messageId != null) {
+    channel = await messageChannel(svc, messageId, inquiryId)
+    if (channel == null) return { ok: false, error: 'Message not found in this inquiry' }
+  }
+  return { ok: true, status: inquiry.status, channel }
+}
+
 // ─── markGuideNotifiedPaid ────────────────────────────────────────────────────
 
-export async function markGuideNotifiedPaid(messageId: string): Promise<ActionResult> {
+export async function markGuideNotifiedPaid(
+  inquiryId:  string,
+  messageId?: string | null,
+): Promise<ActionResult> {
   const { userId } = await requireAdmin()
   const svc = createServiceClient()
 
-  const { data: msg } = await svc
-    .from('messages')
-    .select('id, inquiry_id')
-    .eq('id', messageId)
-    .single()
-  if (msg == null) return { success: false, error: 'Message not found' }
+  const read = await readPaidInquiry(svc, inquiryId, messageId ?? null)
+  if (!read.ok) return { success: false, error: read.error }
+
+  // The card reads this event with maybeSingle — a second one would hide it.
+  const { data: existing } = await svc
+    .from('inquiry_events')
+    .select('id')
+    .eq('inquiry_id', inquiryId)
+    .eq('type', 'guide.notified_paid')
+    .limit(1)
+  if ((existing ?? []).length > 0) return { success: false, error: 'The guide is already marked as notified' }
 
   await emitEvent(svc, {
-    inquiryId: msg.inquiry_id,
+    inquiryId,
     type:      'guide.notified_paid',
     actor:     { kind: 'admin', id: userId },
     source:    'app',
-    messageId,
+    channel:   read.channel,
+    messageId: messageId ?? null,
   })
 
-  revalidatePath('/admin/inquiries/' + msg.inquiry_id)
+  revalidatePath('/admin/inquiries/' + inquiryId)
   return { success: true }
 }
 
 // ─── markContactsExchanged ────────────────────────────────────────────────────
 
-export async function markContactsExchanged(messageId: string): Promise<ActionResult> {
+export async function markContactsExchanged(
+  inquiryId:  string,
+  messageId?: string | null,
+): Promise<ActionResult> {
   const { userId } = await requireAdmin()
   const svc = createServiceClient()
 
-  const { data: msg } = await svc
-    .from('messages')
-    .select('id, inquiry_id')
-    .eq('id', messageId)
-    .single()
-  if (msg == null) return { success: false, error: 'Message not found' }
-
-  const inquiryId: string = msg.inquiry_id
+  const read = await readPaidInquiry(svc, inquiryId, messageId ?? null)
+  if (!read.ok) return { success: false, error: read.error }
+  if (read.status !== 'paid') return { success: false, error: 'Contacts are already exchanged' }
 
   await emitEvent(svc, {
     inquiryId,
     type:      'contacts.exchanged',
     actor:     { kind: 'admin', id: userId },
     source:    'app',
-    messageId,
+    channel:   read.channel,
+    messageId: messageId ?? null,
   })
 
-  try {
-    await transition(svc, inquiryId, 'handed_over', {
-      actor:  { kind: 'admin', id: userId },
-      reason: 'Contacts exchanged',
-    })
-  } catch (err) {
-    if (!(err instanceof TransitionError && err.message.includes('already'))) {
-      console.warn('[markContactsExchanged] transition warn:', err)
-    }
-  }
+  await proposeTransition(svc, inquiryId, 'handed_over', userId, 'Contacts exchanged', 'markContactsExchanged')
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   return { success: true }

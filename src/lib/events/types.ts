@@ -39,6 +39,8 @@ const EMITTED_EVENT_TYPES = [
   'offer.accepted',           // admin marks the angler's answer (FA-1.12)
   'offer.declined',           // as above; leads to inquiry.lost (FA-1.12)
   'offer.updated',            // admin edits the offer's options in place (FA-1.74); payload: offer_id, before, after
+  'offer.reverted',           // admin steps the offer back (FA-1.76): accepted→presented, presented→draft, declined→draft; payload: offer_id, from, to (+ option_id, link_id)
+  'offer.superseded',         // admin replaces a declined offer with a new one (FA-1.76); payload: offer_id, superseded_by
   'payment.link_sent',        // Stripe Payment Link generated from the app (FA-1.12)
   'payment.received',         // checkout.session.completed webhook; UnmatchedLinker as fallback
   'guide.notified_paid',      // message to the guide marked "told about the deposit" (FA-1.12)

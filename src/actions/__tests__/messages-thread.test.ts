@@ -160,7 +160,7 @@ describe('markClientAccepted — option from wrong offer', () => {
               eq: () => ({
                 // Second .eq() — returns null (option not in this offer)
                 eq: () => ({
-                  single: async () => ({ data: null, error: null }),
+                  maybeSingle: async () => ({ data: null, error: null }),
                 }),
               }),
             }),
@@ -173,20 +173,6 @@ describe('markClientAccepted — option from wrong offer', () => {
     const { markClientAccepted } = await import('@/actions/messages')
     const result = await markClientAccepted('offer-A', 'option-from-offer-B')
     expect(result).toEqual({ success: false, error: 'Option not found or does not belong to this offer' })
-  })
-})
-
-// ─── messages.ts — markOfferPresented ────────────────────────────────────────
-
-describe('markOfferPresented', () => {
-  it('rejects a call without messageId', async () => {
-    mockAdmin()
-    vi.mocked(createServiceClient).mockReturnValue({} as ReturnType<typeof createServiceClient>)
-
-    const { markOfferPresented } = await import('@/actions/messages')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await markOfferPresented('offer-1', '' as any)
-    expect(result).toEqual({ success: false, error: 'messageId is required to present an offer' })
   })
 })
 
@@ -313,34 +299,27 @@ describe('sendMessage', () => {
 
 // ─── FA-1.29: markClientAccepted does NOT transition to awaiting_payment ──────
 
+/** A query builder where every call chains and every ending resolves to `result`. */
+function chain(result: { data: unknown; error: unknown }) {
+  const q: Record<string, unknown> = {}
+  for (const m of ['select', 'eq', 'in', 'order', 'limit', 'update', 'insert']) q[m] = () => q
+  q.single      = async () => result
+  q.maybeSingle = async () => result
+  q.then        = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => Promise.resolve(result).then(res, rej)
+  return q
+}
+
 describe('markClientAccepted — FA-1.29 D1: no awaiting_payment transition', () => {
-  it('succeeds without ever calling transition()', async () => {
+  it('succeeds on a presented offer without ever calling transition()', async () => {
     mockAdmin()
+    const rows: Record<string, unknown> = {
+      offer_options:  { id: 'opt-1', offer_id: 'off-1' },
+      offers:         { id: 'off-1', inquiry_id: 'inq-1', status: 'presented' },
+      inquiries:      { id: 'inq-1', status: 'offer_presented', deposit_payment_link_id: null },
+      inquiry_events: { id: 'evt-1' },
+    }
     vi.mocked(createServiceClient).mockReturnValue({
-      from(table: string) {
-        if (table === 'offer_options') {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({ single: async () => ({ data: { id: 'opt-1', offer_id: 'off-1' }, error: null }) }),
-              }),
-            }),
-            update: () => ({ eq: () => ({ error: null }) }),
-          }
-        }
-        if (table === 'offers') {
-          return {
-            select: () => ({
-              eq: () => ({ single: async () => ({ data: { id: 'off-1', inquiry_id: 'inq-1' }, error: null }) }),
-            }),
-            update: () => ({ eq: () => ({ error: null }) }),
-          }
-        }
-        // inquiry_events
-        return {
-          insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'evt-1' }, error: null }) }) }),
-        }
-      },
+      from: (table: string) => chain({ data: rows[table], error: null }),
     } as unknown as ReturnType<typeof createServiceClient>)
 
     const { transition } = await import('@/lib/inquiries/state')
@@ -348,6 +327,7 @@ describe('markClientAccepted — FA-1.29 D1: no awaiting_payment transition', ()
     const result = await markClientAccepted('off-1', 'opt-1')
 
     expect(result.success).toBe(true)
+    expect(vi.mocked(transition)).not.toHaveBeenCalled()
     expect(vi.mocked(transition)).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
