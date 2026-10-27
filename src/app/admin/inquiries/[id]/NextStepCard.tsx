@@ -14,8 +14,12 @@ import {
   markGuideNotifiedPaid,
   markContactsExchanged,
   createPaymentLink,
+  backToDraft,
+  changeAcceptedOption,
+  reopenOffer,
 } from '@/actions/messages'
-import { setDepositAmount, type SetDepositAmountResult } from '@/actions/inquiries'
+import { setDepositAmount, updateInquiryStatus, type SetDepositAmountResult } from '@/actions/inquiries'
+import { nextStatuses, STATUS_LABELS, STATUS_MEANINGS, type InquiryStatus } from '@/lib/inquiries/state'
 import { ALLOWED_DEPOSIT_CURRENCIES, DEPOSIT_PERCENT, depositHintCents, formatDepositAmount } from '@/lib/inquiries/deposit'
 import { Button } from '@/components/ui/button'
 
@@ -34,9 +38,9 @@ export interface NextStepCardProps {
   offer:                  OfferForPanel | null
   /** ID of the latest inbound message (any counterpart) — linked as the offer's source when present */
   latestInboundMsgId:     string | null
-  /** ID of the latest outbound message to angler — used as message for markOfferPresented */
+  /** ID of the latest outbound message to angler — attached to markOfferPresented when present (optional, FA-1.76) */
   latestOutboundAnglerId: string | null
-  /** ID of the latest outbound message to guide — used for markGuideNotifiedPaid / markContactsExchanged */
+  /** ID of the latest outbound message to guide — attached to markGuideNotifiedPaid / markContactsExchanged when present (optional, FA-1.76) */
   latestOutboundGuideId:  string | null
   guideId:                string | null
   /** FA-1.28: deposit amount in minor units ×100 (null = not yet set) */
@@ -93,6 +97,7 @@ function Hint({ children }: { children: React.ReactNode }) {
 
 const PRIMARY   = 'h-11 px-5 rounded-xl text-sm font-bold f-body bg-accent text-white hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed'
 const SECONDARY = 'h-11 px-5 rounded-xl text-sm font-semibold f-body border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed'
+const LINK      = 'h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
 const INPUT     = 'h-11 px-3.5 rounded-xl text-sm f-body outline-none bg-muted/40 border border-input text-foreground placeholder:text-muted-foreground/50 disabled:opacity-50'
 
 function Spinner({ on }: { on: boolean }) {
@@ -306,6 +311,15 @@ export function NextStepCard({
   const [acceptFlash,    setAcceptFlash] = useState(false)
   const [acceptError,    setAcceptError] = useState<string | null>(null)
 
+  // ── Step back / restore state (FA-1.76) ───────────────────────────────────
+  const [revertPending,     startRevert]          = useTransition()
+  const [revertError,       setRevertError]       = useState<string | null>(null)
+  const [revertFlash,       setRevertFlash]       = useState<string | null>(null)
+  const [showChangeConfirm, setShowChangeConfirm] = useState(false)
+  const restoreTargets = nextStatuses('lost')
+  const [restoreTo,         setRestoreTo]         = useState<InquiryStatus>(restoreTargets[0] ?? 'qualifying')
+  const [showNewOfferForm,  setShowNewOfferForm]  = useState(false)
+
   // ── Deposit amount state ──────────────────────────────────────────────────
   const acceptedOption = offer?.options.find(o => o.is_accepted) ?? null
   const hintCents      = acceptedOption != null ? depositHintCents(acceptedOption.price_cents) : null
@@ -344,16 +358,18 @@ export function NextStepCard({
 
   // ─── Handlers (unchanged server actions) ─────────────────────────────────
 
-  function handleCreateGuideOffer(options: OfferOptionValue[]) {
+  function handleCreateGuideOffer(options: OfferOptionValue[], supersedesOfferId: string | null = null) {
     setOfferError(null)
     startOffer(async () => {
       const res = await markAsGuideOffer(inquiryId, {
         messageId: latestInboundMsgId,
         guideId:   guideId ?? undefined,
         options:   options.map(o => ({ label: o.label, priceCents: o.priceCents, currency: o.currency })),
+        supersedesOfferId,
       })
       if (res.success) {
         setShowOfferForm(false)
+        setShowNewOfferForm(false)
         flash(setOfferFlash)
         router.refresh()
       } else {
@@ -377,15 +393,11 @@ export function NextStepCard({
     })
   }
 
-  const presentMsgId = offer != null
-    ? (latestOutboundAnglerId ?? offer.source_message_id ?? latestInboundMsgId)
-    : null
-
   function handlePresentOffer() {
-    if (offer == null || presentMsgId == null) return
+    if (offer == null) return
     setPresentError(null)
     startPresent(async () => {
-      const res = await markOfferPresented(offer.id, presentMsgId)
+      const res = await markOfferPresented(offer.id, latestOutboundAnglerId)
       if (res.success) { flash(setPresentFlash); router.refresh() }
       else setPresentError(res.error)
     })
@@ -409,6 +421,45 @@ export function NextStepCard({
       if (res.success) { flash(setAcceptFlash); router.refresh() }
       else setAcceptError(res.error)
     })
+  }
+
+  function runRevert(action: () => Promise<{ success: true } | { success: false; error: string }>, done: string) {
+    setRevertError(null)
+    startRevert(async () => {
+      const res = await action()
+      if (res.success) {
+        setShowChangeConfirm(false)
+        setRevertFlash(done)
+        setTimeout(() => setRevertFlash(null), 4000)
+        router.refresh()
+      } else {
+        setRevertError(res.error)
+      }
+    })
+  }
+
+  function handleBackToDraft() {
+    if (offer == null) return
+    runRevert(() => backToDraft(offer.id), 'Offer back to draft')
+  }
+
+  function handleChangeAcceptedOption() {
+    if (offer == null) return
+    // With a deposit link out, ask first: the link is deactivated in Stripe (tj D2.5).
+    if (depositPaymentLinkId != null && !showChangeConfirm) {
+      setShowChangeConfirm(true)
+      return
+    }
+    runRevert(() => changeAcceptedOption(offer.id), 'Accepted option cleared — pick the option again')
+  }
+
+  function handleReopenOffer() {
+    if (offer == null) return
+    runRevert(() => reopenOffer(offer.id), 'Offer reopened')
+  }
+
+  function handleRestore() {
+    runRevert(() => updateInquiryStatus(inquiryId, restoreTo), `Inquiry restored to ${STATUS_LABELS[restoreTo]}`)
   }
 
   function handleSetDepositAmount() {
@@ -457,11 +508,9 @@ export function NextStepCard({
   }
 
   function handleGuideNotifiedPaid() {
-    const msgId = latestOutboundGuideId
-    if (msgId == null) return
     setNotifyError(null)
     startNotify(async () => {
-      const res = await markGuideNotifiedPaid(msgId)
+      const res = await markGuideNotifiedPaid(inquiryId, latestOutboundGuideId)
       if (res.success) {
         setGuideNotifiedPaid(true)
         flash(setNotifyFlash)
@@ -473,11 +522,9 @@ export function NextStepCard({
   }
 
   function handleContactsExchanged() {
-    const msgId = latestOutboundGuideId
-    if (msgId == null) return
     setContactsError(null)
     startContacts(async () => {
-      const res = await markContactsExchanged(msgId)
+      const res = await markContactsExchanged(inquiryId, latestOutboundGuideId)
       if (res.success) { flash(setContactsFlash); router.refresh() }
       else setContactsError(res.error)
     })
@@ -487,21 +534,20 @@ export function NextStepCard({
 
   const isPaid       = ['paid', 'handed_over', 'completed'].includes(inquiryStatus)
   const isHandedOver = ['handed_over', 'completed'].includes(inquiryStatus)
-  const isTerminal   = ['lost', 'cancelled'].includes(inquiryStatus)
 
   const guideFirstName = guideName != null && guideName.trim() !== '' ? guideName.trim().split(/\s+/)[0] : null
 
   // Which single stage view applies. `null` = no action for this stage → no frame.
-  type Stage = 'no_offer' | 'present' | 'decision' | 'deposit' | 'notify_guide' | 'contacts'
+  type Stage = 'restore' | 'no_offer' | 'present' | 'decision' | 'deposit' | 'declined' | 'notify_guide' | 'contacts'
   let stage: Stage | null = null
-  if (isHandedOver || isTerminal) stage = null
-  else if (isPaid) {
-    if (!guideNotifiedPaid) stage = 'notify_guide'
-    else if (latestOutboundGuideId != null) stage = 'contacts'
-  } else if (offer == null) stage = 'no_offer'
+  if (isHandedOver || inquiryStatus === 'cancelled') stage = null
+  else if (inquiryStatus === 'lost') stage = 'restore'
+  else if (isPaid) stage = guideNotifiedPaid ? 'contacts' : 'notify_guide'
+  else if (offer == null) stage = 'no_offer'
   else if (offer.status === 'draft') stage = 'present'
   else if (offer.status === 'presented') stage = 'decision'
   else if (offer.status === 'accepted' && acceptedOption != null) stage = 'deposit'
+  else if (offer.status === 'declined') stage = 'declined'
 
   if (stage == null) return null
 
@@ -516,6 +562,40 @@ export function NextStepCard({
     ? Math.round((depositAmountCents / acceptedOption.price_cents) * 100)
     : null
 
+  const changeOptionLink = (
+    <button type="button" onClick={handleChangeAcceptedOption} disabled={revertPending || showChangeConfirm} className={LINK}>
+      Change accepted option
+    </button>
+  )
+
+  /** The offer's options, each with "Client accepted" — stage present and decision. */
+  const acceptRows = offer != null && (
+    <div className="flex flex-col gap-2">
+      {offer.options.map((opt, i) => (
+        <div key={opt.id} className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
+          <div className="flex flex-col">
+            <span className="text-[15px] font-semibold text-foreground f-body">{opt.label}</span>
+            <span className="text-[13px] text-muted-foreground f-body">
+              Option {i + 1}{guideName != null ? ` · guide ${guideName}` : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-base font-bold text-foreground f-body">{formatDepositAmount(opt.price_cents, opt.currency)}</span>
+            <Button
+              type="button"
+              onClick={() => handleClientAccepted(opt.id)}
+              disabled={acceptPending || presentPending || revertPending}
+              className={PRIMARY}
+            >
+              <Spinner on={acceptPending} />
+              Client accepted
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -524,6 +604,48 @@ export function NextStepCard({
       className="rounded-2xl border border-border bg-card px-7 py-6 flex flex-col gap-4"
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground f-body">Next step</p>
+      {revertFlash != null && <FlashBanner message={revertFlash} />}
+
+      {/* ── Lost — restore when the angler comes back (FA-1.76, tj D5 a) ──── */}
+      {stage === 'restore' && (
+        <>
+          <Heading
+            title="Inquiry lost"
+            text={`If ${anglerFirstName} came back, restore the inquiry to where the conversation is now. The loss reason is cleared; the loss stays in the history.`}
+          />
+          <div className="flex flex-col gap-2" role="radiogroup" aria-label="Restore to">
+            {restoreTargets.map(s => (
+              <label
+                key={s}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer',
+                  restoreTo === s ? 'border-foreground' : 'border-border',
+                )}
+              >
+                <input
+                  type="radio"
+                  name="restore-to"
+                  value={s}
+                  checked={restoreTo === s}
+                  onChange={() => setRestoreTo(s)}
+                  disabled={revertPending}
+                />
+                <span className="flex flex-col">
+                  <span className="text-[15px] font-semibold text-foreground f-body">{STATUS_LABELS[s]}</span>
+                  <span className="text-[13px] text-muted-foreground f-body">{STATUS_MEANINGS[s]}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <ErrorLine message={revertError} />
+          <div className="flex justify-end">
+            <Button type="button" onClick={handleRestore} disabled={revertPending} className={PRIMARY}>
+              <Spinner on={revertPending} />
+              Restore inquiry
+            </Button>
+          </div>
+        </>
+      )}
 
       {/* ── No offer yet ─────────────────────────────────────────────────── */}
       {stage === 'no_offer' && (
@@ -559,9 +681,10 @@ export function NextStepCard({
       {stage === 'present' && offer != null && (
         <>
           {presentFlash && <FlashBanner message="Offer presented" />}
+          {acceptFlash && <FlashBanner message="Done" />}
           <Heading
             title={`Present the offer to ${anglerFirstName}`}
-            text={`Send ${anglerFirstName} the offer from Conversation, then mark it as presented here. The status moves to Offer presented.`}
+            text={`Send ${anglerFirstName} the offer — from Conversation, WhatsApp or by phone — and mark it as presented. If ${anglerFirstName} already said yes, mark the option they accepted. The status moves to Offer presented.`}
           />
           {editFlash && <FlashBanner message="Offer updated" />}
           {showEditForm ? (
@@ -576,34 +699,26 @@ export function NextStepCard({
             />
           ) : (
             <>
-              <div className="flex flex-col gap-2">
-                {offer.options.map((opt, i) => (
-                  <div key={opt.id} className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
-                    <div className="flex flex-col">
-                      <span className="text-[15px] font-semibold text-foreground f-body">{opt.label}</span>
-                      <span className="text-[13px] text-muted-foreground f-body">
-                        Option {i + 1}{guideName != null ? ` · guide ${guideName}` : ''}
-                      </span>
-                    </div>
-                    <span className="text-base font-bold text-foreground f-body">{formatDepositAmount(opt.price_cents, opt.currency)}</span>
-                  </div>
-                ))}
-              </div>
-              <ErrorLine message={presentError} />
+              {acceptRows}
+              <ErrorLine message={presentError ?? acceptError} />
               <div className="flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setShowEditForm(true)}
-                className="h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
+                className={LINK}
               >
                 Edit offer
               </button>
-                <Button type="button" onClick={handlePresentOffer} disabled={presentPending || presentMsgId == null} className={PRIMARY}>
+                <Button type="button" onClick={handlePresentOffer} disabled={presentPending || acceptPending} className={SECONDARY}>
                   <Spinner on={presentPending} />
                   Mark offer as presented
                 </Button>
               </div>
-              {presentMsgId == null && <Hint>Send {anglerFirstName} a message with the offer first.</Hint>}
+              <Hint>
+                {latestOutboundAnglerId != null
+                  ? `The latest message to ${anglerFirstName} is attached as the one that presents the offer.`
+                  : `No message to ${anglerFirstName} in Conversation — fine if the offer went out by WhatsApp or phone.`}
+              </Hint>
             </>
           )}
         </>
@@ -630,40 +745,22 @@ export function NextStepCard({
             />
           ) : (
             <>
-              <div className="flex flex-col gap-2">
-                {offer.options.map((opt, i) => (
-                  <div key={opt.id} className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
-                    <div className="flex flex-col">
-                      <span className="text-[15px] font-semibold text-foreground f-body">{opt.label}</span>
-                      <span className="text-[13px] text-muted-foreground f-body">
-                        Option {i + 1}{guideName != null ? ` · guide ${guideName}` : ''}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-base font-bold text-foreground f-body">{formatDepositAmount(opt.price_cents, opt.currency)}</span>
-                      <Button
-                        type="button"
-                        onClick={() => handleClientAccepted(opt.id)}
-                        disabled={acceptPending}
-                        className={PRIMARY}
-                      >
-                        <Spinner on={acceptPending} />
-                        Client accepted
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <ErrorLine message={acceptError} />
+              {acceptRows}
+              <ErrorLine message={acceptError ?? revertError} />
               <div className="flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => setShowEditForm(true)}
-                className="h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
-              >
-                Edit offer
-              </button>
-                <Button type="button" onClick={handleClientDeclined} disabled={acceptPending} className={SECONDARY}>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditForm(true)}
+                    className={LINK}
+                  >
+                    Edit offer
+                  </button>
+                  <button type="button" onClick={handleBackToDraft} disabled={revertPending || acceptPending} className={LINK}>
+                    Back to draft
+                  </button>
+                </div>
+                <Button type="button" onClick={handleClientDeclined} disabled={acceptPending || revertPending} className={SECONDARY}>
                   Client declined
                 </Button>
               </div>
@@ -814,7 +911,27 @@ export function NextStepCard({
                 </div>
               )}
 
-              <ErrorLine message={depositError} />
+              {showChangeConfirm && (
+                <div role="alertdialog" aria-labelledby="change-option-title" data-testid="change-option-confirm" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <p id="change-option-title" className="text-sm font-semibold f-body text-amber-800">Change the accepted option?</p>
+                    <p className="text-xs f-body text-amber-800">
+                      The deposit link is deactivated in Stripe, so {anglerFirstName} can no longer pay it. The status goes back to Offer presented and you mark the option {anglerFirstName} wants.
+                    </p>
+                  </div>
+                  <div className="flex justify-end gap-3">
+                    <Button type="button" onClick={() => setShowChangeConfirm(false)} disabled={revertPending} className={SECONDARY}>
+                      Keep it
+                    </Button>
+                    <Button type="button" onClick={handleChangeAcceptedOption} disabled={revertPending} className={PRIMARY}>
+                      <Spinner on={revertPending} />
+                      Deactivate link and change
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <ErrorLine message={depositError ?? revertError} />
 
               {amountSet && (
                 <div className="flex items-center justify-between gap-3 pt-1">
@@ -823,7 +940,7 @@ export function NextStepCard({
                       <button
                         type="button"
                         onClick={() => setShowAmountForm(true)}
-                        className="h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
+                        className={LINK}
                       >
                         Change amount
                       </button>
@@ -831,10 +948,11 @@ export function NextStepCard({
                     <button
                       type="button"
                       onClick={() => setShowEditForm(true)}
-                      className="h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
+                      className={LINK}
                     >
                       Edit offer
                     </button>
+                    {changeOptionLink}
                   </div>
                   {linkMatches ? (
                     <Button nativeButton={false} render={<Link href="?tab=conversation" scroll={false} />} className={PRIMARY}>
@@ -850,16 +968,62 @@ export function NextStepCard({
               )}
 
               {!amountSet && (
-                <div>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setShowEditForm(true)}
-                    className="h-11 px-2 text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
+                    className={LINK}
                   >
                     Edit offer
                   </button>
+                  {changeOptionLink}
                 </div>
               )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* ── Offer declined — the angler came back (FA-1.76) ──────────────── */}
+      {stage === 'declined' && offer != null && (
+        <>
+          {offerFlash && <FlashBanner message="New offer created" />}
+          <Heading
+            title={`${anglerFirstName} declined the offer`}
+            text="If the conversation goes on, reopen this offer to present it again, or make a new one. The declined offer stays in the history."
+          />
+          {showNewOfferForm ? (
+            <OfferOptionsForm
+              initial={[]}
+              submitLabel="Create new offer"
+              pending={offerPending}
+              error={offerError}
+              onSubmit={options => handleCreateGuideOffer(options, offer.id)}
+              onCancel={() => { setShowNewOfferForm(false); setOfferError(null) }}
+            />
+          ) : (
+            <>
+              <div className="flex flex-col gap-2">
+                {offer.options.map((opt, i) => (
+                  <div key={opt.id} className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3 opacity-70">
+                    <div className="flex flex-col">
+                      <span className="text-[15px] font-semibold text-foreground f-body">{opt.label}</span>
+                      <span className="text-[13px] text-muted-foreground f-body">Option {i + 1} · declined</span>
+                    </div>
+                    <span className="text-base font-bold text-foreground f-body">{formatDepositAmount(opt.price_cents, opt.currency)}</span>
+                  </div>
+                ))}
+              </div>
+              <ErrorLine message={revertError} />
+              <div className="flex justify-end gap-3">
+                <Button type="button" onClick={handleReopenOffer} disabled={revertPending} className={SECONDARY}>
+                  <Spinner on={revertPending} />
+                  Reopen offer
+                </Button>
+                <Button type="button" onClick={() => setShowNewOfferForm(true)} disabled={revertPending} className={PRIMARY}>
+                  New offer
+                </Button>
+              </div>
             </>
           )}
         </>
@@ -883,16 +1047,18 @@ export function NextStepCard({
             <Button
               type="button"
               onClick={handleGuideNotifiedPaid}
-              disabled={notifyPending || latestOutboundGuideId == null}
+              disabled={notifyPending}
               className={PRIMARY}
             >
               <Spinner on={notifyPending} />
               Notify guide
             </Button>
           </div>
-          {latestOutboundGuideId == null && (
-            <Hint>Send the guide a message from Conversation first — “Notify guide” marks that message as the notification.</Hint>
-          )}
+          <Hint>
+            {latestOutboundGuideId != null
+              ? 'The latest message to the guide is attached as the notification.'
+              : 'No message to the guide in Conversation — fine if you told them by WhatsApp or phone.'}
+          </Hint>
         </>
       )}
 
