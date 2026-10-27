@@ -130,13 +130,31 @@ describe('ALLOWED_TRANSITIONS', () => {
 
   it('terminal statuses have no way out', () => {
     expect(nextStatuses('completed')).toEqual([])
-    expect(nextStatuses('lost')).toEqual([])
     expect(nextStatuses('cancelled')).toEqual([])
+  })
+
+  // FA-1.76 (tj D5 a) — the angler comes back; lost re-enters the loop and nowhere else.
+  it('lost is restored into the loop only — qualifying, waiting_guide, offer_presented', () => {
+    expect([...nextStatuses('lost')].sort()).toEqual(['offer_presented', 'qualifying', 'waiting_guide'])
+  })
+
+  it.each([
+    ['lost',            'awaiting_payment'],
+    ['lost',            'paid'],
+    ['lost',            'handed_over'],
+    ['lost',            'completed'],
+    ['lost',            'new'],
+    ['lost',            'cancelled'],
+    ['cancelled',       'qualifying'],
+    ['cancelled',       'lost'],
+    ['offer_presented', 'paid'],
+  ] as const)('rejects %s → %s', (from, to) => {
+    expect(canTransition(from, to)).toBe(false)
   })
 
   it('every non-terminal status can be lost or cancelled', () => {
     for (const status of STATUSES) {
-      if (nextStatuses(status).length === 0) continue
+      if (nextStatuses(status).length === 0 || status === 'lost') continue
       expect(canTransition(status, 'lost')).toBe(true)
       expect(canTransition(status, 'cancelled')).toBe(true)
     }
@@ -253,6 +271,36 @@ describe('transition()', () => {
     expect(state.events).toHaveLength(0)
     // last patch is the rollback back to 'new'
     expect(state.patches.at(-1)).toMatchObject({ status: 'new' })
+  })
+
+  it.each(['qualifying', 'waiting_guide', 'offer_presented'] as const)(
+    'restores lost → %s and clears lost_reason_code / lost_reason',
+    async (to) => {
+      const { client, state } = fakeClient('lost')
+
+      await transition(client, 'inq-1', to, { actor: admin })
+
+      expect(state.status).toBe(to)
+      expect(state.patches[0]).toMatchObject({ status: to, lost_reason_code: null, lost_reason: null })
+      expect(state.events).toHaveLength(1)
+      expect(state.events[0]).toMatchObject({ type: 'status.changed', from_status: 'lost', to_status: to })
+    },
+  )
+
+  it.each([
+    ['lost',            'awaiting_payment'],
+    ['lost',            'paid'],
+    ['cancelled',       'qualifying'],
+    ['offer_presented', 'paid'],
+  ] as const)('red proof: transition() refuses %s → %s and writes nothing', async (from, to) => {
+    const { client, state } = fakeClient(from)
+
+    await expect(transition(client, 'inq-1', to, { actor: admin }))
+      .rejects.toThrow(`${from} → ${to} is not an allowed transition`)
+
+    expect(state.status).toBe(from)
+    expect(state.patches).toHaveLength(0)
+    expect(state.events).toHaveLength(0)
   })
 
   it('rejects a move to the status the inquiry already has', async () => {
