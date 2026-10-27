@@ -2,13 +2,14 @@
 id: FA-1.76
 title: Etapy oferty bez zbędnych blokad — pominięcie „presented”, cofanie kroków i zmiana zaakceptowanej pozycji, „Notify guide” / „Contacts exchanged” bez wiadomości, przywrócenie zapytania z lost
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-1.76-offer-stage-gates
+pr: 168
 depends_on: [FA-1.74]
 blocked_by_questions: []
 touches_db: false
