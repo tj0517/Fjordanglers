@@ -335,7 +335,10 @@ console.log('   ok → deposit_amount_cents=24000, deposit_currency=EUR')
 
 step(13, 'createPaymentLink → payment.link_sent + awaiting_payment (Stripe test)')
 const { createPaymentLink } = await import('@/actions/messages')
-const linkResult = await createPaymentLink(inquiryId)
+const linkResult = await createPaymentLink(inquiryId, {
+  name:        'FA-1.12 proof trip · 2 people',
+  description: 'FjordAnglers booking & curation fee. The trip balance is paid directly to your guide after arrival.',
+})
 if (!linkResult.success) throw new Error(`createPaymentLink: ${linkResult.error}`)
 console.log(`   payment link: ${linkResult.url}`)
 

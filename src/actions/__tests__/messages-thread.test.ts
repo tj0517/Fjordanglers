@@ -342,6 +342,8 @@ describe('markClientAccepted — FA-1.29 D1: no awaiting_payment transition', ()
 import { stripe } from '@/lib/stripe/client'
 import { draftDepositLinkMessage } from '@/lib/ai/draft-deposit-link'
 
+const PRODUCT = { name: 'Salmon week — 12 Jun · 2 people', description: 'Booking fee, edited by the admin.' }
+
 describe('createPaymentLink — FA-1.29', () => {
   it('returns error when deposit_amount_cents is null, no Stripe call', async () => {
     mockAdmin()
@@ -356,7 +358,7 @@ describe('createPaymentLink — FA-1.29', () => {
     } as unknown as ReturnType<typeof createServiceClient>)
 
     const { createPaymentLink } = await import('@/actions/messages')
-    const result = await createPaymentLink('inq-1')
+    const result = await createPaymentLink('inq-1', PRODUCT)
 
     expect(result).toEqual({ success: false, error: expect.stringContaining('Deposit amount not set') })
     expect(vi.mocked(stripe.paymentLinks.create)).not.toHaveBeenCalled()
@@ -408,7 +410,7 @@ describe('createPaymentLink — FA-1.29', () => {
     } as unknown as ReturnType<typeof createServiceClient>)
 
     const { createPaymentLink } = await import('@/actions/messages')
-    const result = await createPaymentLink('inq-1')
+    const result = await createPaymentLink('inq-1', PRODUCT)
 
     expect(result).toEqual({ success: true, url: existingLinkUrl })
     expect(vi.mocked(stripe.paymentLinks.create)).not.toHaveBeenCalled()
@@ -470,7 +472,7 @@ describe('createPaymentLink — FA-1.29', () => {
     } as unknown as ReturnType<typeof createServiceClient>)
 
     const { createPaymentLink } = await import('@/actions/messages')
-    const result = await createPaymentLink('inq-1')
+    const result = await createPaymentLink('inq-1', PRODUCT)
 
     expect(result).toMatchObject({ success: true, url: 'https://buy.stripe.com/new' })
     expect(vi.mocked(stripe.paymentLinks.update)).toHaveBeenCalledWith(oldLinkId, { active: false })
@@ -511,7 +513,7 @@ describe('createPaymentLink — FA-1.29', () => {
     } as unknown as ReturnType<typeof createServiceClient>)
 
     const { createPaymentLink } = await import('@/actions/messages')
-    await createPaymentLink('inq-isk')
+    await createPaymentLink('inq-isk', PRODUCT)
 
     expect(vi.mocked(stripe.prices.create)).toHaveBeenCalledWith(
       expect.objectContaining({ currency: 'isk', unit_amount: 50000, product: 'prod_isk' }),
@@ -550,17 +552,15 @@ describe('createPaymentLink — FA-1.29', () => {
     } as unknown as ReturnType<typeof createServiceClient>)
 
     const { createPaymentLink } = await import('@/actions/messages')
-    const result = await createPaymentLink('inq-new')
+    const result = await createPaymentLink('inq-new', PRODUCT)
 
     expect(result).toMatchObject({ success: true, url: 'https://buy.stripe.com/named' })
     // product.create must be called with name and description
-    expect(vi.mocked(stripe.products.create)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name:        expect.any(String),
-        description: expect.any(String),
-        metadata:    { inquiry_id: 'inq-new' },
-      }),
-    )
+    expect(vi.mocked(stripe.products.create)).toHaveBeenCalledWith({
+      name:        PRODUCT.name,
+      description: PRODUCT.description,
+      metadata:    { inquiry_id: 'inq-new' },
+    })
     // price.create must reference the product id, not product_data
     expect(vi.mocked(stripe.prices.create)).toHaveBeenCalledWith(
       expect.objectContaining({ product: 'prod_named', currency: 'eur', unit_amount: 30000 }),
@@ -612,7 +612,7 @@ describe('createPaymentLink — FA-1.29', () => {
     } as unknown as ReturnType<typeof createServiceClient>)
 
     const { createPaymentLink } = await import('@/actions/messages')
-    const result = await createPaymentLink('inq-1')
+    const result = await createPaymentLink('inq-1', PRODUCT)
 
     expect(result).toEqual({ success: true, url: existingLinkUrl })
     expect(vi.mocked(stripe.products.create)).not.toHaveBeenCalled()
@@ -667,7 +667,7 @@ describe('createPaymentLink — FA-1.29', () => {
     } as unknown as ReturnType<typeof createServiceClient>)
 
     const { createPaymentLink } = await import('@/actions/messages')
-    const result = await createPaymentLink('inq-df')
+    const result = await createPaymentLink('inq-df', PRODUCT)
 
     // Link is still created despite draft failure
     expect(result).toMatchObject({ success: true, url: 'https://buy.stripe.com/df' })
@@ -726,7 +726,7 @@ describe('createPaymentLink — FA-1.29', () => {
     } as unknown as ReturnType<typeof createServiceClient>)
 
     const { createPaymentLink } = await import('@/actions/messages')
-    const result = await createPaymentLink('inq-no')
+    const result = await createPaymentLink('inq-no', PRODUCT)
 
     expect(result).toMatchObject({ success: true })
     // messages table must never be updated — only inserted
@@ -789,7 +789,7 @@ describe('createPaymentLink — FA-1.29', () => {
     } as unknown as ReturnType<typeof createServiceClient>)
 
     const { createPaymentLink } = await import('@/actions/messages')
-    const result = await createPaymentLink('inq-1')
+    const result = await createPaymentLink('inq-1', PRODUCT)
 
     expect(result).toEqual({ success: false, error: expect.stringContaining('deactivate') })
     expect(vi.mocked(stripe.prices.create)).not.toHaveBeenCalled()

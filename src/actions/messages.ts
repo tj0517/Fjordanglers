@@ -53,11 +53,17 @@
  *   Admin marks the step where contacts were exchanged; message optional (D2.4).
  *   Emits contacts.exchanged + proposes handed_over.
  *
- * createPaymentLink(inquiryId)
+ * createPaymentLink(inquiryId, { name, description })
  *   Reads deposit amount + currency from the inquiry row (FA-1.28), creates (or re-uses)
  *   a Stripe Payment Link, inserts a draft message, emits payment.link_sent.
  *   One active link per inquiry: same amount/currency → returns existing link; changed
- *   amount/currency → deactivates old link, creates new one.
+ *   amount/currency → deactivates old link, creates new one. The product's name and
+ *   description come from the card (FA-1.77), validated before any Stripe call, and are
+ *   recorded in the event with the product id.
+ *
+ * updatePaymentLinkDetails(inquiryId, { name, description })
+ *   Renames the product behind the active link (FA-1.77 D3 a): products.update, the link
+ *   and its URL stay. Emits payment.link_details_updated with the values before and after.
  */
 
 import { revalidatePath } from 'next/cache'
@@ -72,11 +78,8 @@ import { env } from '@/lib/env'
 import { getGuidePhone } from '@/lib/guide-contacts'
 import { formatDepositAmount, isDepositCurrency } from '@/lib/inquiries/deposit'
 import { getInquiryExperience, tripTitleOf, TRIP_TITLE_FALLBACK } from '@/lib/inquiries/experience-lookup'
-import {
-  draftDepositLinkMessage,
-  buildStripeProductName,
-  buildStripeProductDescription,
-} from '@/lib/ai/draft-deposit-link'
+import { draftDepositLinkMessage } from '@/lib/ai/draft-deposit-link'
+import { checkProductDetails, linkProductFromEvents, type ProductDetails } from '@/lib/stripe/product-details'
 import { loadKnowledge } from '@/lib/ai/knowledge'
 import type { ConversationMessage } from '@/lib/ai/extract-trip'
 
@@ -1237,8 +1240,12 @@ export type CreatePaymentLinkResult =
 
 export async function createPaymentLink(
   inquiryId: string,
+  product:   ProductDetails,
 ): Promise<CreatePaymentLinkResult> {
   const { userId } = await requireAdmin()
+  const checked = checkProductDetails(product)
+  if (!checked.ok) return { success: false, error: checked.error }
+  const { name, description } = checked.details
   const svc = createServiceClient()
 
   const { data: inq } = await svc
@@ -1289,7 +1296,7 @@ export async function createPaymentLink(
     }
   }
 
-  // ── Fetch experience / trip title (reused for product name and draft) ─────
+  // ── Fetch experience / trip title for the draft ───────────────────────────
   const experience   = await getInquiryExperience({
     experience_page_id: inq.experience_page_id ?? null,
     trip_id:            inq.trip_id ?? null,
@@ -1301,20 +1308,21 @@ export async function createPaymentLink(
   // ── Create new Stripe link ────────────────────────────────────────────────
   // Product is created explicitly so we can set both name and description
   // (prices.create product_data has no description field — decision tj 2026-09-25).
+  // One product per link, so renaming it later (updatePaymentLinkDetails) touches one link.
   // All four deposit currencies (EUR, USD, ISK, NZD) use ×100 storage — which matches
   // Stripe's unit_amount convention for these currencies (Stripe docs: ISK requires
   // a two-decimal representation ending in 00, e.g. 500 for 5 ISK — same ×100 as EUR).
-  let paymentLink: { url: string; id: string }
+  let paymentLink: { url: string; id: string; productId: string }
   try {
-    const product = await stripe.products.create({
-      name:        buildStripeProductName(tripTitle, requestedDates, partySize),
-      description: buildStripeProductDescription(),
+    const stripeProduct = await stripe.products.create({
+      name,
+      description,
       metadata:    { inquiry_id: inquiryId },
     })
     const price = await stripe.prices.create({
       currency:    currency.toLowerCase(),
       unit_amount: amountCents,
-      product:     product.id,
+      product:     stripeProduct.id,
     })
     const link = await stripe.paymentLinks.create({
       line_items: [{ price: price.id, quantity: 1 }],
@@ -1324,7 +1332,7 @@ export async function createPaymentLink(
         redirect: { url: `${env.NEXT_PUBLIC_APP_URL}/inquiry/${inquiryId}/confirmed` },
       },
     })
-    paymentLink = { url: link.url, id: link.id }
+    paymentLink = { url: link.url, id: link.id, productId: stripeProduct.id }
   } catch (err) {
     console.error('[createPaymentLink] Stripe error:', err)
     return { success: false, error: err instanceof Error ? err.message : 'Stripe error' }
@@ -1416,7 +1424,7 @@ export async function createPaymentLink(
     actor:   { kind: 'admin', id: userId },
     source:  'app',
     channel: 'app',
-    payload: { amount_cents: amountCents, currency, link_id: paymentLink.id },
+    payload: { amount_cents: amountCents, currency, link_id: paymentLink.id, product_id: paymentLink.productId, name, description },
   })
 
   try {
@@ -1432,6 +1440,84 @@ export async function createPaymentLink(
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   return { success: true, url: paymentLink.url, draftId, draftError }
+}
+
+// ─── updatePaymentLinkDetails — FA-1.77 ──────────────────────────────────────
+
+/**
+ * Admin changes the name / description the angler sees on the active link's payment
+ * page. tj D3 (a): the product is updated in Stripe, the link and its URL stay — Stripe
+ * renders the payment page from the product ("The product's name and image are used to
+ * render the payment page", docs.stripe.com/products-prices/how-products-and-prices-work).
+ * No inquiry column changes; the event is the record.
+ */
+export async function updatePaymentLinkDetails(
+  inquiryId: string,
+  product:   ProductDetails,
+): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  const checked = checkProductDetails(product)
+  if (!checked.ok) return { success: false, error: checked.error }
+  const after = checked.details
+  const svc = createServiceClient()
+
+  const { data: inq } = await svc
+    .from('inquiries')
+    .select('deposit_payment_link_id, deposit_paid_at')
+    .eq('id', inquiryId)
+    .single()
+  if (inq == null) return { success: false, error: 'Inquiry not found' }
+  const linkId = inq.deposit_payment_link_id
+  if (linkId == null) return { success: false, error: 'No active payment link — create one first' }
+  if (inq.deposit_paid_at != null) return { success: false, error: 'The deposit is already paid' }
+
+  const { data: evtRows, error: evtErr } = await svc
+    .from('inquiry_events')
+    .select('type, payload')
+    .eq('inquiry_id', inquiryId)
+    .in('type', ['payment.link_sent', 'payment.link_details_updated'])
+    .order('occurred_at', { ascending: true })
+    .order('id', { ascending: true })
+  if (evtErr != null) return { success: false, error: evtErr.message }
+  const recorded = linkProductFromEvents(evtRows ?? [], linkId)
+
+  // Links created before FA-1.77 have no product id in the log: ask Stripe.
+  let productId = recorded.productId
+  let before    = recorded.details
+  try {
+    if (productId == null) {
+      const items = await stripe.paymentLinks.listLineItems(linkId, { limit: 1, expand: ['data.price.product'] })
+      const p = items.data[0]?.price?.product
+      if (p == null) return { success: false, error: 'Stripe returned no product for this link' }
+      if (typeof p === 'string') {
+        productId = p
+      } else {
+        productId = p.id
+        if (before == null && !('deleted' in p && p.deleted === true)) {
+          before = { name: p.name, description: p.description ?? '' }
+        }
+      }
+    }
+    if (before != null && before.name === after.name && before.description === after.description) {
+      return { success: true }
+    }
+    await stripe.products.update(productId, { name: after.name, description: after.description })
+  } catch (err) {
+    console.error('[updatePaymentLinkDetails] Stripe error:', err)
+    return { success: false, error: err instanceof Error ? err.message : 'Stripe error' }
+  }
+
+  await emitEvent(svc, {
+    inquiryId,
+    type:    'payment.link_details_updated',
+    actor:   { kind: 'admin', id: userId },
+    source:  'app',
+    channel: 'app',
+    payload: { link_id: linkId, product_id: productId, before, after },
+  })
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  return { success: true }
 }
 
 // ─── getDepositLinkDraft — FA-1.30 ───────────────────────────────────────────
