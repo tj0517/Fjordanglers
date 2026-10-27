@@ -9,6 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-1.77-payment-link-preview
+pr: 169
 depends_on: [FA-1.76]
 blocked_by_questions: []
 touches_db: false
