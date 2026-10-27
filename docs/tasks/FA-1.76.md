@@ -2,7 +2,7 @@
 id: FA-1.76
 title: Etapy oferty bez zbędnych blokad — pominięcie „presented”, cofanie kroków i zmiana zaakceptowanej pozycji, „Notify guide” / „Contacts exchanged” bez wiadomości, przywrócenie zapytania z lost
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -81,3 +81,4 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 - **2026-10-27, tj:** serwer MCP stripe nie działa (`CONNECTION_CLOSED` — brak `STRIPE_RESTRICTED_KEY` w środowisku Claude Code) — dla FA-1.76 opcjonalny; praca na mocku Stripe, odnotowane w „Not done” raportu.
 - **2026-10-27, wykonanie:** dev server do zrzutów uruchomiony metodą zaakceptowaną w FA-1.74 (preflight = A): odłączony worktree bez `.env.local`, env tylko z `supabase status -o env` + atrapy Stripe + `RESEND_DEV_FAKE=1`; kontenery Seaclouds zatrzymane przed startem stosu.
 - **2026-10-27, tj — decyzja „Needs a decision” z PR #168: opcja B.** „Change accepted option” czyści kwotę depozytu ustawioną dla wycofanej pozycji (wszystkie cztery kolumny: kwota, waluta, kurs, data kursu); stara wartość trafia do payloadu `offer.reverted` (`deposit_cleared`), karta pyta o kwotę od nowa z podpowiedzią 20% nowej pozycji. W tym samym PR; test akcji na lokalnej bazie (depozyt `null` po zmianie) i test karty (etap depozytu znów prosi o kwotę).
+- **2026-10-27, tj — accepted, close it:** odebrane przez tj 2026-10-27 — kod (state.ts tylko lost→LOOP, paid nietknięte), red proofs w state.test.ts, zrzuty 01/04/05 obejrzane w wf-review; czyszczenie depozytu przy zmianie pozycji dorobione w tym samym PR.
