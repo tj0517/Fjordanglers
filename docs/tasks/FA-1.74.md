@@ -2,13 +2,14 @@
 id: FA-1.74
 title: Oferta edytowalna — zmiana nazwy i ceny po utworzeniu, kilka pozycji w ofercie, oferta bez odpowiedzi w wątku
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-1.74-editable-offer
+pr: 167
 depends_on: []
 blocked_by_questions: []
 touches_db: false

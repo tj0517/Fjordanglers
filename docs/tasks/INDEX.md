@@ -106,7 +106,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.71 | Zdjęcie w opinii — wybór w adminie „na górze" / „z boku" (`testimonials.photo_layout`), baner rysuje pionowe zdjęcie kolumną z boku | S | opus | review | FA-1.68, FA-1.69 |
 | FA-1.72 | Auto-wysyłka odwrócona — wysyła domyślnie, STOP tylko przy krytycznym naruszeniu; score informacyjny, bez bramki destination, sufit 20, sędzia widzi to samo co szkic, bez uciętego JSON | M | opus | done | FA-1.47, FA-1.48 |
 | FA-1.73 | Szkic — imię guida wolno, dostępności nie; tytuł wycieczki to wskazówka, rejon/styl z wiadomości klienta (South Island ≠ Southland, Highland ≠ wybór klienta); luka Queenstown = wprost + Southland | M | opus | done | FA-1.72 |
-| FA-1.74 | Oferta edytowalna — zmiana nazwy/ceny po utworzeniu bez cofania etapu, kilka pozycji, oferta bez odpowiedzi w wątku | M | sonnet | in_progress | — |
+| FA-1.74 | Oferta edytowalna — zmiana nazwy/ceny po utworzeniu bez cofania etapu, kilka pozycji, oferta bez odpowiedzi w wątku | M | sonnet | review | — |
 | FA-1.76 | Etapy oferty — pominięcie „presented”, cofanie kroków i zmiana zaakceptowanej pozycji, notify/contacts bez wiadomości, przywrócenie z lost (wybór statusu); `paid` tylko ze Stripe | L | opus | todo | FA-1.74 |
 | FA-1.77 | Payment link — nazwa i opis produktu Stripe widoczne i edytowalne przed utworzeniem; zmiana na istniejącym linku bez zmiany adresu | M | sonnet | todo | FA-1.76 |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
