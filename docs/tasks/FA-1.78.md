@@ -2,7 +2,7 @@
 id: FA-1.78
 title: CI — obrazy lokalnego stacku z public.ecr.aws + ponawianie `supabase start` w jobie `db` (ghcr.io dławi pobieranie)
 stage: 1
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -74,3 +74,4 @@ Plus log joba `db` z GitHub Actions.
 - **2026-10-28, tj — decyzja 1 (A):** zmiana zakresu — obrazy z `public.ecr.aws`, ponawianie zostaje; wiersz deferred „zmiana rejestru” zamknięty w tym PR. Brakujący tag albo „registry fallback” w pierwszym przebiegu → STOP i log, bez kolejnych rejestrów.
 - **2026-10-28, tj — decyzja 2:** kryterium grepa zamienione na `grep -nE '\$\{\{ *(secrets\.|github\.token)|^\s*packages:'` (musi być pusty) — stary grep łapał trzy linie z `main` (nagłówek l. 14, tekst summary w `check` l. 93, komentarz joba `secrets`), których to zadanie nie dotyka.
 - **2026-10-28, tj — decyzja A (miejsce ustawienia):** rejestr przez `$GITHUB_ENV` w osobnym kroku zaraz po `setup-cli`, nie `env:` samego kroku `supabase start` — `db reset`, `db diff --local` i `gen types --local` też pobierają obrazy (zielony run #169: edge-runtime, postgres-meta). `supabase start` wypisuje `registry=…`, żeby log pokazywał efektywny rejestr.
+- **2026-10-28, tj:** accepted — close it (review PR #170, CI zielone na `f5509dd`).
