@@ -2,13 +2,14 @@
 id: FA-1.78
 title: CI — obrazy lokalnego stacku z public.ecr.aws + ponawianie `supabase start` w jobie `db` (ghcr.io dławi pobieranie)
 stage: 1
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: ci/fa-1.78-ghcr-login
+pr: 170
 depends_on: []
 blocked_by_questions: []
 touches_db: false
