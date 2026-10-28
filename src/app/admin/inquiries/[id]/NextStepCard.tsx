@@ -17,10 +17,12 @@ import {
   backToDraft,
   changeAcceptedOption,
   reopenOffer,
+  updatePaymentLinkDetails,
 } from '@/actions/messages'
 import { setDepositAmount, updateInquiryStatus, type SetDepositAmountResult } from '@/actions/inquiries'
 import { nextStatuses, STATUS_LABELS, STATUS_MEANINGS, type InquiryStatus } from '@/lib/inquiries/state'
 import { ALLOWED_DEPOSIT_CURRENCIES, DEPOSIT_PERCENT, depositHintCents, formatDepositAmount } from '@/lib/inquiries/deposit'
+import { PRODUCT_NAME_MAX, PRODUCT_DESCRIPTION_MAX, type ProductDetails } from '@/lib/stripe/product-details'
 import { Button } from '@/components/ui/button'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -55,6 +57,10 @@ export interface NextStepCardProps {
   depositPaymentLinkAmountCents: number | null
   /** FA-1.29: currency the active link was created for (from payment.link_sent event payload) */
   depositPaymentLinkCurrency:    string | null
+  /** FA-1.77: name/description the active link's payment page shows (null = link created before they were recorded) */
+  depositPaymentLinkProduct?:    ProductDetails | null
+  /** FA-1.77: today's pattern for a new link — buildStripeProductName / buildStripeProductDescription */
+  productDefaults?:              ProductDetails
   guideNotifiedPaid:      boolean
   /** Display only (FA-1.32) */
   anglerFirstName?:       string
@@ -102,6 +108,57 @@ const INPUT     = 'h-11 px-3.5 rounded-xl text-sm f-body outline-none bg-muted/4
 
 function Spinner({ on }: { on: boolean }) {
   return on ? <Loader2 size={12} className="animate-spin" /> : null
+}
+
+// ─── Stripe product fields (FA-1.77) ──────────────────────────────────────────
+//
+// What the angler reads on the Stripe payment page. No maxLength: the counter turns red
+// and the server refuses, so the limit is enforced in one place.
+
+function Counter({ length, max }: { length: number; max: number }) {
+  return (
+    <span className={cn('text-[11px] f-body tabular-nums', length > max ? 'text-destructive font-semibold' : 'text-muted-foreground/70')}>
+      {length}/{max}
+    </span>
+  )
+}
+
+function ProductFields({ value, onChange, disabled }: {
+  value:    ProductDetails
+  onChange: (next: ProductDetails) => void
+  disabled: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <label htmlFor="product-name" className="text-[13px] font-semibold text-foreground f-body">Product name</label>
+          <Counter length={value.name.trim().length} max={PRODUCT_NAME_MAX} />
+        </div>
+        <input
+          id="product-name"
+          value={value.name}
+          onChange={e => onChange({ ...value, name: e.target.value })}
+          disabled={disabled}
+          className={INPUT}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <label htmlFor="product-description" className="text-[13px] font-semibold text-foreground f-body">Description</label>
+          <Counter length={value.description.trim().length} max={PRODUCT_DESCRIPTION_MAX} />
+        </div>
+        <textarea
+          id="product-description"
+          rows={3}
+          value={value.description}
+          onChange={e => onChange({ ...value, description: e.target.value })}
+          disabled={disabled}
+          className={cn(INPUT, 'h-auto py-2.5 leading-relaxed resize-y')}
+        />
+      </div>
+    </div>
+  )
 }
 
 // ─── Offer options form (FA-1.74) ─────────────────────────────────────────────
@@ -284,6 +341,8 @@ export function NextStepCard({
   depositPaymentLinkUrl,
   depositPaymentLinkAmountCents,
   depositPaymentLinkCurrency,
+  depositPaymentLinkProduct = null,
+  productDefaults = { name: '', description: '' },
   guideNotifiedPaid: initialGuideNotifiedPaid,
   anglerFirstName = 'the angler',
   guideName = null,
@@ -350,6 +409,21 @@ export function NextStepCard({
   const [depositUrl,     setDepositUrl]   = useState<string | null>(depositPaymentLinkUrl ?? null)
   const [depositError,   setDepositError] = useState<string | null>(null)
   const [copied,         setCopied]       = useState(false)
+
+  // ── Stripe product name / description (FA-1.77) ───────────────────────────
+  // New link: today's pattern, editable. Refreshed defaults (dates, party size) restart it.
+  const [product,        setProduct]        = useState<ProductDetails>(productDefaults)
+  const defaultsKey = `${productDefaults.name}|${productDefaults.description}`
+  const [defaultsFor,    setDefaultsFor]    = useState(defaultsKey)
+  if (defaultsFor !== defaultsKey) {
+    setDefaultsFor(defaultsKey)
+    setProduct(productDefaults)
+  }
+  // Active link: Edit renames the product in Stripe, the link URL stays.
+  const [detailsForm,    setDetailsForm]    = useState<ProductDetails | null>(null)
+  const [detailsPending, startDetails]      = useTransition()
+  const [detailsError,   setDetailsError]   = useState<string | null>(null)
+  const [detailsFlash,   setDetailsFlash]   = useState(false)
 
   // ── Guide notified state ──────────────────────────────────────────────────
   const [guideNotifiedPaid, setGuideNotifiedPaid] = useState(initialGuideNotifiedPaid)
@@ -496,7 +570,7 @@ export function NextStepCard({
   function handleCreateDepositLink() {
     setDepositError(null)
     startDeposit(async () => {
-      const res = await createPaymentLink(inquiryId)
+      const res = await createPaymentLink(inquiryId, product)
       if (res.success) {
         setDepositUrl(res.url)
         if (res.draftError) {
@@ -507,6 +581,21 @@ export function NextStepCard({
         router.refresh()
       } else {
         setDepositError(res.error)
+      }
+    })
+  }
+
+  function handleSaveDetails() {
+    if (detailsForm == null) return
+    setDetailsError(null)
+    startDetails(async () => {
+      const res = await updatePaymentLinkDetails(inquiryId, detailsForm)
+      if (res.success) {
+        setDetailsForm(null)
+        flash(setDetailsFlash)
+        router.refresh()
+      } else {
+        setDetailsError(res.error)
       }
     })
   }
@@ -785,6 +874,7 @@ export function NextStepCard({
         <>
           {setAmountFlash && <FlashBanner message="Deposit amount saved" />}
           {depositFlash && <FlashBanner message="Deposit link created" />}
+          {detailsFlash && <FlashBanner message="Payment page updated — same link" />}
           {editFlash && <FlashBanner message="Offer updated" />}
 
           {!amountSet ? (
@@ -795,7 +885,7 @@ export function NextStepCard({
           ) : !linkMatches ? (
             <Heading
               title={`Create the deposit link for ${anglerFirstName}`}
-              text="Stripe creates a payment link for this amount. A draft message with the link lands in Conversation, ready to review and send."
+              text="Stripe creates a payment link for this amount, with the name and description below. A draft message with the link lands in Conversation, ready to review and send."
             />
           ) : (
             <Heading
@@ -920,6 +1010,56 @@ export function NextStepCard({
                     </Button>
                   </div>
                 </div>
+              )}
+
+              {amountSet && !linkMatches && (
+                <section aria-labelledby="product-new-title" data-testid="product-details-new" className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-0.5">
+                    <h3 id="product-new-title" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground f-body">Payment page</h3>
+                    <Hint>{anglerFirstName} sees this name and description on the Stripe payment page.</Hint>
+                  </div>
+                  <ProductFields value={product} onChange={setProduct} disabled={depositPending} />
+                </section>
+              )}
+
+              {linkMatches && (
+                <section aria-labelledby="product-active-title" data-testid="product-details-active" className="rounded-xl border border-border px-4 py-3.5 flex flex-col gap-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h3 id="product-active-title" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground f-body">Payment page</h3>
+                    {detailsForm == null && (
+                      <button
+                        type="button"
+                        onClick={() => { setDetailsError(null); setDetailsForm(depositPaymentLinkProduct ?? productDefaults) }}
+                        className="text-sm font-semibold f-body text-foreground underline underline-offset-4 cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                  {detailsForm != null ? (
+                    <>
+                      <ProductFields value={detailsForm} onChange={setDetailsForm} disabled={detailsPending} />
+                      <Hint>Saving changes the product in Stripe. The link stays the same — nothing to resend.</Hint>
+                      <ErrorLine message={detailsError} />
+                      <div className="flex justify-end gap-3">
+                        <Button type="button" onClick={() => { setDetailsForm(null); setDetailsError(null) }} disabled={detailsPending} className={SECONDARY}>
+                          Cancel
+                        </Button>
+                        <Button type="button" onClick={handleSaveDetails} disabled={detailsPending} className={PRIMARY}>
+                          <Spinner on={detailsPending} />
+                          Save name and description
+                        </Button>
+                      </div>
+                    </>
+                  ) : depositPaymentLinkProduct != null ? (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-[15px] font-semibold text-foreground f-body break-words">{depositPaymentLinkProduct.name}</p>
+                      <p className="text-sm text-muted-foreground f-body leading-relaxed break-words">{depositPaymentLinkProduct.description}</p>
+                    </div>
+                  ) : (
+                    <Hint>This link was created before its name and description were recorded here — Stripe has them. Edit to set them again.</Hint>
+                  )}
+                </section>
               )}
 
               {showChangeConfirm && (

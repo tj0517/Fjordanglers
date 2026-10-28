@@ -108,6 +108,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.73 | Szkic — imię guida wolno, dostępności nie; tytuł wycieczki to wskazówka, rejon/styl z wiadomości klienta (South Island ≠ Southland, Highland ≠ wybór klienta); luka Queenstown = wprost + Southland | M | opus | done | FA-1.72 |
 | FA-1.74 | Oferta edytowalna — zmiana nazwy/ceny po utworzeniu bez cofania etapu, kilka pozycji, oferta bez odpowiedzi w wątku | M | sonnet | done | — |
 | FA-1.76 | Etapy oferty — pominięcie „presented”, cofanie kroków i zmiana zaakceptowanej pozycji, notify/contacts bez wiadomości, przywrócenie z lost (wybór statusu); `paid` tylko ze Stripe | L | opus | done (PR #168) | FA-1.74 |
+| FA-1.77 | Payment link — nazwa i opis produktu Stripe widoczne i edytowalne przed utworzeniem; zmiana na istniejącym linku bez zmiany adresu | M | sonnet | done (PR #169) | FA-1.76 |
 | FA-1.77 | Payment link — nazwa i opis produktu Stripe widoczne i edytowalne przed utworzeniem; zmiana na istniejącym linku bez zmiany adresu | M | sonnet | todo | FA-1.76 |
 | FA-1.78 | CI — ponawianie `supabase start` w jobie `db` na przemian z ghcr.io i public.ecr.aws (oba rejestry dławią pobieranie, `toomanyrequests` na PR #169) | S | sonnet | done (PR #170) | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
