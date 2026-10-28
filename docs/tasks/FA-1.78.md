@@ -2,7 +2,7 @@
 id: FA-1.78
 title: CI — obrazy lokalnego stacku z public.ecr.aws + ponawianie `supabase start` w jobie `db` (ghcr.io dławi pobieranie)
 stage: 1
-status: done
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
@@ -75,3 +75,4 @@ Plus log joba `db` z GitHub Actions.
 - **2026-10-28, tj — decyzja 2:** kryterium grepa zamienione na `grep -nE '\$\{\{ *(secrets\.|github\.token)|^\s*packages:'` (musi być pusty) — stary grep łapał trzy linie z `main` (nagłówek l. 14, tekst summary w `check` l. 93, komentarz joba `secrets`), których to zadanie nie dotyka.
 - **2026-10-28, tj — decyzja A (miejsce ustawienia):** rejestr przez `$GITHUB_ENV` w osobnym kroku zaraz po `setup-cli`, nie `env:` samego kroku `supabase start` — `db reset`, `db diff --local` i `gen types --local` też pobierają obrazy (zielony run #169: edge-runtime, postgres-meta). `supabase start` wypisuje `registry=…`, żeby log pokazywał efektywny rejestr.
 - **2026-10-28, tj:** accepted — close it (review PR #170, CI zielone na `f5509dd`).
+- **2026-10-28, tj — ponowne otwarcie:** run 40663905106 (head `8eec31b`, job `db`): public.ecr.aws → `toomanyrequests: Data limit exceeded` na postgres, postgrest, kong i gotrue, we wszystkich 3 próbach. Decyzja tj: usunąć krok z `$GITHUB_ENV`; w pętli rejestr per próba (1: ghcr.io, 2: public.ecr.aws, 3: ghcr.io; 30 s / 60 s, `supabase stop --no-backup || true` między), echo rejestru w każdej próbie, po udanym starcie zwycięski rejestr do `$GITHUB_ENV` (dla `db reset` / `db diff` / `gen types`). Bez sekretów, logowań i zmian `permissions`. Cache obrazów między przebiegami → deferred, jeśli naprzemienne rejestry nie wystarczą. Status z powrotem `in_progress`.
