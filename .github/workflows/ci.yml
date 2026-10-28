@@ -196,10 +196,33 @@ jobs:
       # Startujemy tylko to, czego dotykają testy: postgres + kong (API 54421) + postgrest.
       # + gotrue: action tests log in for real as seed accounts (FA-1.56).
       # Reszta kontenerów to kilka minut pobierania obrazów za nic.
+      #
+      # Trzy próby na przemian z dwóch rejestrów (ghcr.io → public.ecr.aws → ghcr.io,
+      # przerwy 30 s, potem 60 s): oba potrafią dławić dłużej, niż CLI samo ponawia (~15 s).
+      # ghcr.io: `toomanyrequests` na postgres ponad 6 h (27 X 2026, run 40580173414);
+      # public.ecr.aws: `Data limit exceeded` na wszystkich obrazach (28 X 2026, run 40663905106).
+      # Rejestr, który wygrał, idzie do $GITHUB_ENV — `db reset`, `db diff` i `gen types`
+      # też pobierają obrazy (nadpisuje ghcr.io, które ustawia `setup-cli`). FA-1.78.
       - name: supabase start
         run: |
-          supabase start \
-            -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          registries=(ghcr.io public.ecr.aws ghcr.io)
+          for attempt in 1 2 3; do
+            registry=${registries[$((attempt - 1))]}
+            echo "supabase start — próba $attempt/3, registry=$registry"
+            if SUPABASE_INTERNAL_IMAGE_REGISTRY="$registry" supabase start \
+              -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor; then
+              echo "SUPABASE_INTERNAL_IMAGE_REGISTRY=$registry" >> "$GITHUB_ENV"
+              echo "registry=$registry wygrał (próba $attempt/3) — zapisany do \$GITHUB_ENV"
+              exit 0
+            fi
+            [ "$attempt" -eq 3 ] && break
+            delay=$((attempt * 30))
+            echo "supabase start nie wstał (próba $attempt/3, registry=$registry) — stop i ponowienie za ${delay} s"
+            supabase stop --no-backup || true
+            sleep "$delay"
+          done
+          echo "::error::supabase start nie wstał po 3 próbach"
+          exit 1
 
       # ── FAIL 1: migracja, która nie aplikuje się na czysto ────────────────
       - name: db reset — wszystkie migracje na pustej bazie

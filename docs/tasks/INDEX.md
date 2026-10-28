@@ -109,6 +109,8 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.74 | Oferta edytowalna — zmiana nazwy/ceny po utworzeniu bez cofania etapu, kilka pozycji, oferta bez odpowiedzi w wątku | M | sonnet | done | — |
 | FA-1.76 | Etapy oferty — pominięcie „presented”, cofanie kroków i zmiana zaakceptowanej pozycji, notify/contacts bez wiadomości, przywrócenie z lost (wybór statusu); `paid` tylko ze Stripe | L | opus | done (PR #168) | FA-1.74 |
 | FA-1.77 | Payment link — nazwa i opis produktu Stripe widoczne i edytowalne przed utworzeniem; zmiana na istniejącym linku bez zmiany adresu | M | sonnet | done (PR #169) | FA-1.76 |
+| FA-1.77 | Payment link — nazwa i opis produktu Stripe widoczne i edytowalne przed utworzeniem; zmiana na istniejącym linku bez zmiany adresu | M | sonnet | todo | FA-1.76 |
+| FA-1.78 | CI — ponawianie `supabase start` w jobie `db` na przemian z ghcr.io i public.ecr.aws (oba rejestry dławią pobieranie, `toomanyrequests` na PR #169) | S | sonnet | done (PR #170) | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | Migracje przez GitHub Actions — `deploy-db.yml`: dev auto po merge do `main`, prod `workflow_dispatch` za bramką Environment `production-db` (wzór DCS) | M | sonnet | done | FA-1.18 |
