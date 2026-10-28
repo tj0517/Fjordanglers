@@ -1,6 +1,6 @@
 ---
 id: FA-1.78
-title: CI — ponawianie `supabase start` w jobie `db` (ghcr.io dławi pobieranie obrazów)
+title: CI — obrazy lokalnego stacku z public.ecr.aws + ponawianie `supabase start` w jobie `db` (ghcr.io dławi pobieranie)
 stage: 1
 status: in_progress
 difficulty: S
@@ -17,7 +17,7 @@ estimate_h: 1
 owner: tj
 ---
 
-# FA-1.78 — CI: ponawianie `supabase start` w jobie `db`
+# FA-1.78 — CI: obrazy z public.ecr.aws i ponawianie `supabase start` w jobie `db`
 
 ## Kontekst — przeczytaj przed startem
 - `CLAUDE.md` — reguły nienegocjowalne
@@ -28,26 +28,27 @@ owner: tj
 Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
 
 ## Cel
-Job `db` na PR #169 (FA-1.77) padł dwa razy z rzędu na `supabase start`: pobieranie `ghcr.io/supabase/postgres:17.6.1.075` kończy się `toomanyrequests` (27 X 2026). Logowanie do ghcr.io tego nie naprawia (PR #170, run 40535196066: `Login Succeeded!`, potem znowu `toomanyrequests … allowed: 44000/minute`) — dławienie jest po stronie ghcr.io, nie limit anonimowy na IP. Po zadaniu job `db` próbuje `supabase start` do 3 razy (przerwy 30 s, potem 60 s, `supabase stop --no-backup || true` między próbami) i pada dopiero po trzeciej. Bez sekretów, bez tokenu, bez `permissions` na jobie; `SUPABASE_INTERNAL_IMAGE_REGISTRY` bez zmian.
+Job `db` na PR #169 (FA-1.77) padł dwa razy z rzędu na `supabase start`: pobieranie `ghcr.io/supabase/postgres:17.6.1.075` kończy się `toomanyrequests` (27 X 2026). Logowanie do ghcr.io nie pomaga (run 40535196066), trzy próby w ~2,5 min też nie (run 40580173414) — ghcr.io dławił ten obraz ponad 6 h. Po zadaniu job `db` pobiera obrazy Supabase z `public.ecr.aws` (domyślny rejestr CLI; `setup-cli` wymusza ghcr.io dla CLI 2.75.0), ustawione przez `$GITHUB_ENV` zaraz po `setup-cli`, więc obowiązuje w każdym następnym kroku (`start`, `db reset`, `db diff`, `gen types`). Ponawianie `supabase start` zostaje (3 próby, 30 s / 60 s, `supabase stop --no-backup || true` między). Bez sekretów, bez tokenu, bez `permissions` na jobie.
 
 ## Zakres
 - [ ] Odczyt stanu: job `db` w `ci.yml` (kolejność kroków, `permissions`), nagłówek pliku; `deploy-db.yml` nie robi `supabase start` — grep wklejony.
 - [ ] Logowanie do ghcr.io, `permissions` joba `db` i zmiana linii nagłówka — wycofane (decyzja tj 27 X 2026).
 - [ ] Krok `supabase start` w jobie `db`: pętla 3 prób, przerwy 30 s i 60 s, `supabase stop --no-backup || true` między próbami, błąd po trzeciej; komentarz po polsku z powodem i datą; `timeout-minutes: 20` bez zmian.
+- [ ] Krok zaraz po `setup-cli`: `SUPABASE_INTERNAL_IMAGE_REGISTRY=public.ecr.aws` do `$GITHUB_ENV`, komentarz po polsku z powodem (runy, `setup-cli` `src/main.ts:67`); `supabase start` wypisuje `registry=$SUPABASE_INTERNAL_IMAGE_REGISTRY`.
 - [ ] Wskazać (jedna linia), gdzie `SUPABASE_INTERNAL_IMAGE_REGISTRY` dostaje `ghcr.io`.
-- [ ] Zmiana rejestru (opcja B) → `docs/deferred-tasks.md` jako następny krok, jeśli ponowienia nie wystarczą.
+- [ ] Wiersz deferred „zmiana rejestru” zamknięty w tym PR.
 
 ## Gotowe, gdy
-- [ ] Job `db` zielony na head PR, w logu widać, że pętla ponowień zadziałała (próba 1 OK albo komunikat o ponowieniu) — wklejony fragment.
-- [ ] `grep -n 'secrets\.\|github.token\|packages:' .github/workflows/ci.yml` pusty — wklejony.
-- [ ] Diff `ci.yml` = tylko krok `supabase start` z pętlą — wklejony `--stat` i diff.
+- [ ] Job `db` zielony na head PR; w logu `registry=public.ecr.aws`, obrazy pobrane z `public.ecr.aws`, widać pętlę ponowień (próba 1 OK albo komunikat o ponowieniu) — wklejony fragment.
+- [ ] `grep -nE '\$\{\{ *(secrets\.|github\.token)|^\s*packages:' .github/workflows/ci.yml` pusty — wklejony.
+- [ ] Diff `ci.yml` = krok z rejestrem + krok `supabase start` z pętlą — wklejony `--stat` i diff.
 - [ ] CI zielone na head PR (`check`, `knip`, `db`, `secrets`) — lista wklejona.
 - [ ] Jedna linia: czy czerwony Vercel na #170 to znany wiersz deferred z FA-1.74 (brak klucza Supabase na Preview).
 
-Red proof dla pętli: lokalnie, z atrapą `supabase` (pada zawsze → exit 1 po 3 próbach). Samego dławienia ghcr.io nie da się wywołać na żądanie.
+Red proof dla pętli: lokalnie, z atrapą `supabase` (pada zawsze → exit 1 po 3 próbach). Dławienia rejestru nie da się wywołać na żądanie. Jeśli pierwszy przebieg padnie na brakującym tagu albo „registry fallback” w public.ecr.aws — STOP, log do tj, bez prób kolejnych rejestrów.
 
 ## Poza zakresem
-- Cache obrazów Dockera, zmiana rejestru obrazów Supabase, podniesienie `SUPABASE_CLI_VERSION`.
+- Cache obrazów Dockera, podniesienie `SUPABASE_CLI_VERSION`, rejestry inne niż ghcr.io / public.ecr.aws.
 - Zmiany w `deploy-db.yml`, w jobach `check`, `knip`, `sync`, `secrets`, w ustawieniach repo / Environments.
 - Nowe sekrety (PAT itp.).
 Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
@@ -59,7 +60,7 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 ## Weryfikacja
 ```
 git diff origin/main... -- .github/
-grep -n 'secrets\.\|github.token\|packages:' .github/workflows/ci.yml   # pusty
+grep -nE '\$\{\{ *(secrets\.|github\.token)|^\s*packages:' .github/workflows/ci.yml   # pusty
 ```
 Plus log joba `db` z GitHub Actions.
 
@@ -68,3 +69,7 @@ Plus log joba `db` z GitHub Actions.
 - **2026-10-27, tj — decyzja B:** token przebiegu jako `${{ github.token }}`, nie `secrets.GITHUB_TOKEN` — nagłówek `ci.yml` „zero `secrets.*`” (FA-1.20) zostaje prawdziwy i sprawdzalny jednym grepem; jedna linia nagłówka przeformułowana.
 - **2026-10-27, agent — wynik logowania:** PR #170, run 40535196066, job `db`: krok `docker/login-action@v3` → `Login Succeeded!` (log l. 301), potem `supabase start` → `toomanyrequests: retry-after: 561.535µs, allowed: 44000/minute` przy `ghcr.io/supabase/postgres:17.6.1.075` (l. 321–329). CLI `2.75.0` wysyła zapisane dane logowania przy pobieraniu (`internal/utils/docker.go:167`, `GetRegistryAuth`), więc pobranie było zalogowane — logowanie nie pomaga. `ghcr.io` ustawia `supabase/setup-cli` (`src/main.ts:67` przy SHA `1dedf2c`: `core.exportVariable(CLI_CONFIG_REGISTRY, 'ghcr.io')`); domyślny rejestr CLI to `public.ecr.aws`.
 - **2026-10-27, tj — zmiana zakresu:** logowanie i `packages: read` usunięte (dowiedzione, że nie pomagają; nagłówek `ci.yml` wraca do stanu z `main`). Zamiast tego 3 próby `supabase start` (30 s, 60 s, `supabase stop --no-backup || true` między), `timeout-minutes: 20` bez zmian, `SUPABASE_INTERNAL_IMAGE_REGISTRY` bez zmian. Zmiana rejestru (opcja B) → deferred jako następny krok, jeśli ponowienia nie wystarczą.
+- **2026-10-28, agent — wynik ponowień:** run 40580173414, job `db`: trzy próby (`próba 1/3` → 30 s → `2/3` → 60 s → `3/3`), każda `toomanyrequests` na `ghcr.io/supabase/postgres:17.6.1.075` (6 ponowień CLI, wszystkie na tym jednym obrazie; postgrest/kong/gotrue pobrane); `db` czerwony na każdym przebiegu od 14:42 UTC 27 X. Z maszyny tj bez logowania manifest `supabase/postgres:17.6.1.075` → 200 i w ghcr.io, i w public.ecr.aws.
+- **2026-10-28, tj — decyzja 1 (A):** zmiana zakresu — obrazy z `public.ecr.aws`, ponawianie zostaje; wiersz deferred „zmiana rejestru” zamknięty w tym PR. Brakujący tag albo „registry fallback” w pierwszym przebiegu → STOP i log, bez kolejnych rejestrów.
+- **2026-10-28, tj — decyzja 2:** kryterium grepa zamienione na `grep -nE '\$\{\{ *(secrets\.|github\.token)|^\s*packages:'` (musi być pusty) — stary grep łapał trzy linie z `main` (nagłówek l. 14, tekst summary w `check` l. 93, komentarz joba `secrets`), których to zadanie nie dotyka.
+- **2026-10-28, tj — decyzja A (miejsce ustawienia):** rejestr przez `$GITHUB_ENV` w osobnym kroku zaraz po `setup-cli`, nie `env:` samego kroku `supabase start` — `db reset`, `db diff --local` i `gen types --local` też pobierają obrazy (zielony run #169: edge-runtime, postgres-meta). `supabase start` wypisuje `registry=…`, żeby log pokazywał efektywny rejestr.
