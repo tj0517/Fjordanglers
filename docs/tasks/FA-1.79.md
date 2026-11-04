@@ -2,14 +2,14 @@
 id: FA-1.79
 title: Jeden host kanoniczny `www` — jedna stała adresu zamiast 58 wpisanych na sztywno; apex → www stałym 308 (ustawienie Vercela robi tj)
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-web
 branch: feat/fa-1.79-canonical-www
-pr:
+pr: 173
 depends_on: []
 blocked_by_questions: []
 touches_db: false
