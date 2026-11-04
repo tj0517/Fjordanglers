@@ -2,14 +2,14 @@
 id: FA-1.80
 title: Strony publiczne w cache — odczyt sesji poza drzewem renderu stron publicznych, `revalidate`/SSG zaczynają działać
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: opus
 model_approved:
 effort: high
 agent: fa-web
 branch: feat/fa-1.80-public-cache
-pr:
+pr: 174
 depends_on: []
 blocked_by_questions: []
 touches_db: false
