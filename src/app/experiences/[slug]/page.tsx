@@ -9,12 +9,12 @@
  * (experience_pages.page_version = 2). Rollback is switching the flag off.
  *
  * This file reads nothing request-scoped — no session, no request metadata, no
- * query string — so it is not what makes this route dynamic, and it has to stay
- * that way. It is not ISR today either: the build marks /experiences/[slug] as
- * ƒ (server-rendered on demand) on main and here alike, so `revalidate = 3600`
- * below currently changes nothing. The cause sits outside this file, in the
- * rendered tree (see docs/deferred-tasks.md, FA-1.52). The export stays as it
- * is, so the route caches the moment that cause is gone.
+ * query string — and it has to stay that way. FA-1.80 found two things that kept
+ * the route ƒ (server-rendered on every request): the nav read the session during
+ * render (now a client island, see components/layout/nav.tsx), and the route had
+ * no generateStaticParams, so Next never treated it as cacheable. With both gone
+ * the build marks it ● and `revalidate` below takes effect: each slug renders on
+ * its first request and is then served from the cache for an hour.
  *
  * The admin preview (?preview=v2) is a separate dynamic route: src/proxy.ts
  * rewrites to it, and ./preview/page.tsx checks admin on the server itself.
@@ -29,6 +29,12 @@ import ExperienceV1, { generateMetadata as v1Metadata } from './_v1/ExperienceV1
 import ExperienceV2, { generateMetadata as v2Metadata } from './_v2/ExperienceV2'
 
 export const revalidate = 3600
+
+// No slugs prebuilt (the build has no database in CI); an empty list is what makes the
+// route cacheable — unknown slugs render on first request, then are cached.
+export function generateStaticParams() {
+  return []
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
