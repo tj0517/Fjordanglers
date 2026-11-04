@@ -7,7 +7,7 @@
  *
  * Setup:
  *  1. Resend dashboard → Inbound → Create email (e.g. leads@fjordanglers.com)
- *  2. Webhook URL: https://fjordanglers.com/api/webhooks/email-inbound
+ *  2. Webhook URL: https://www.fjordanglers.com/api/webhooks/email-inbound
  *  3. Copy signing secret → RESEND_INBOUND_SECRET env var
  */
 

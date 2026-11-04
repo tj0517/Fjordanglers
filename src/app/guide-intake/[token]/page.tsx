@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getFormByToken } from '@/actions/guide-forms'
 import { IntakeFormClient } from './IntakeFormClient'
+import { SITE_URL } from '@/lib/site'
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ export default async function GuideIntakePage({
           <Link href="/" aria-label="FjordAnglers">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://fjordanglers.com/brand/white-logo.png"
+              src={`${SITE_URL}/brand/white-logo.png`}
               alt="FjordAnglers"
               style={{ height: '28px', width: 'auto' }}
             />

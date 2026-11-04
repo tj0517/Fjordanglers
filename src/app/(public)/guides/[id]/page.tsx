@@ -7,6 +7,7 @@ import { CountryFlag } from '@/components/ui/country-flag'
 import { heroFull, avatarImg, cardThumb } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
 import { currencySymbol } from '@/lib/format-price'
+import { SITE_URL } from '@/lib/site'
 
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -72,11 +73,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title: `${guide.full_name} — Fishing Guide in ${guide.country}`,
     description: desc,
-    alternates: { canonical: `https://fjordanglers.com/guides/${canonicalSlug}` },
+    alternates: { canonical: `${SITE_URL}/guides/${canonicalSlug}` },
     openGraph: {
       title: ogTitle,
       description: desc,
-      url: `https://fjordanglers.com/guides/${canonicalSlug}`,
+      url: `${SITE_URL}/guides/${canonicalSlug}`,
       images: ogImages,
     },
     twitter: {
@@ -129,7 +130,7 @@ export default async function GuideProfilePage({
     name: guide.full_name,
     ...(guide.bio != null ? { description: guide.bio } : {}),
     ...(guide.avatar_url != null ? { image: guide.avatar_url } : {}),
-    url: `https://fjordanglers.com/guides/${canonicalSlug}`,
+    url: `${SITE_URL}/guides/${canonicalSlug}`,
     jobTitle: 'Fishing Guide',
     address: {
       '@type': 'PostalAddress',
@@ -145,16 +146,16 @@ export default async function GuideProfilePage({
         reviewCount: guide.total_reviews,
       },
     } : {}),
-    worksFor: { '@type': 'Organization', name: 'FjordAnglers', url: 'https://fjordanglers.com' },
+    worksFor: { '@type': 'Organization', name: 'FjordAnglers', url: SITE_URL },
   }
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://fjordanglers.com' },
-      { '@type': 'ListItem', position: 2, name: 'Guides', item: 'https://fjordanglers.com/guides' },
-      { '@type': 'ListItem', position: 3, name: guide.full_name, item: `https://fjordanglers.com/guides/${canonicalSlug}` },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Guides', item: `${SITE_URL}/guides` },
+      { '@type': 'ListItem', position: 3, name: guide.full_name, item: `${SITE_URL}/guides/${canonicalSlug}` },
     ],
   }
 

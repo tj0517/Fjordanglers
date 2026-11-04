@@ -11,6 +11,7 @@ import {
   Section,
   Text,
 } from '@react-email/components'
+import { SITE_URL } from '@/lib/site'
 
 export interface PasswordResetEmailProps {
   resetUrl: string
@@ -26,7 +27,7 @@ export function PasswordResetEmail({ resetUrl }: PasswordResetEmailProps) {
         {/* ── Header ── */}
         <Section style={header}>
           <Img
-            src="https://fjordanglers.com/brand/white-logo.png"
+            src={`${SITE_URL}/brand/white-logo.png`}
             width={160}
             alt="FjordAnglers"
             style={{ display: 'block', margin: '0 auto', width: '160px', height: 'auto' }}

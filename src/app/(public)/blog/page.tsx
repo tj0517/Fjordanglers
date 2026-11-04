@@ -2,13 +2,14 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BLOG_POSTS } from '@/lib/blog-data'
+import { SITE_URL } from '@/lib/site'
 
 
 export const metadata: Metadata = {
   title: 'Fishing Journal — Tips, Guides & Destination Stories',
   description: 'Season dates, licence rules and tactics, written from the rivers we actually send people to.',
-  alternates: { canonical: 'https://fjordanglers.com/blog' },
-  openGraph: { url: 'https://fjordanglers.com/blog', type: 'website' },
+  alternates: { canonical: `${SITE_URL}/blog` },
+  openGraph: { url: `${SITE_URL}/blog`, type: 'website' },
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
