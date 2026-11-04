@@ -2,7 +2,7 @@
 id: FA-1.79
 title: Jeden host kanoniczny `www` — jedna stała adresu zamiast 58 wpisanych na sztywno; apex → www stałym 308 (ustawienie Vercela robi tj)
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -43,7 +43,7 @@ Dziś domena bez `www` odpowiada 307 na `www`, a wszystkie canonicale, OG, JSON-
 - [ ] `grep -rn "https://fjordanglers.com" src` zwraca 0 wierszy (poza stałą, jeśli trzyma wariant bez `www` do porównań) — wklejone.
 - [ ] Test sitemapy/robots zielony; red proof: test pada, gdy stała wskazuje host bez `www` — wklejony wynik obu przebiegów.
 - [ ] Lokalnie `curl -s localhost:3000/sitemap.xml | grep -o '<loc>[^<]*' | awk -F/ '{print $3}' | sort | uniq -c` → tylko `www.fjordanglers.com`; canonical na `/`, hubie, ofercie, artykule → `www` — wklejone.
-- [ ] Po merge i ustawieniu Vercela (tj): `curl -sI https://fjordanglers.com/trips` → 308 na `https://www.fjordanglers.com/trips`; na prod sitemapa 70×`www` — wkleja tj albo agent w notatkach.
+- [ ] **Po wdrożeniu (tj)** — nie warunek `review`/`done`: `curl -sI https://fjordanglers.com/trips` → 308 na `https://www.fjordanglers.com/trips`; na prod sitemapa 70×`www` — wkleja tj albo agent w notatkach.
 - [ ] CI zielone na head PR (`check`, `knip`, `db`, `secrets`) — lista wklejona.
 
 ## Poza zakresem
@@ -65,3 +65,4 @@ curl -s localhost:3000/sitemap.xml | grep -o '<loc>[^<]*' | awk -F/ '{print $3}'
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** D1 — host kanoniczny `www`, apex → www stałym 308 (audyt SEO §4). Właściwość GSC to `sc-domain:fjordanglers.com` (domenowa), obejmuje oba hosty.
+- **2026-11-04, tj:** the post-deploy criterion (308 + prod sitemap www) moved out of done — checked by tj after deploy; PR description also instructs tj to set NEXT_PUBLIC_APP_URL to www
