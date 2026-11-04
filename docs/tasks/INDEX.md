@@ -111,7 +111,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.77 | Payment link — nazwa i opis produktu Stripe widoczne i edytowalne przed utworzeniem; zmiana na istniejącym linku bez zmiany adresu | M | sonnet | done (PR #169) | FA-1.76 |
 | FA-1.78 | CI — ponawianie `supabase start` w jobie `db` na przemian z ghcr.io i public.ecr.aws (oba rejestry dławią pobieranie, `toomanyrequests` na PR #169) | S | sonnet | done (PR #170) | — |
 | FA-1.79 | Jeden host kanoniczny `www` — stała adresu zamiast 58 na sztywno; apex → www 308 w Vercelu (tj) | M | sonnet | todo | — |
-| FA-1.80 | Strony publiczne w cache — odczyt sesji poza renderem stron publicznych | M | sonnet | todo | — |
+| FA-1.80 | Strony publiczne w cache — odczyt sesji poza renderem stron publicznych | M | opus | in_progress | — |
 | FA-1.81 | Oferta v2 — dane strukturalne jak v1 (`TouristTrip`+`Offer`, `BreadcrumbList`, `FAQPage`, `og:url/type`) | M | sonnet | todo | — |
 | FA-1.82 | Huby Norwegii, Szwecji i Finlandii w kodzie + `FAQPage`/`BreadcrumbList`, linki do przewodników i artykułów | M | sonnet | todo | — (teksty: Krzysztof) |
 | FA-1.83 | Blog, krok 1 — tabela wpisów + publiczny czytnik (metadane, schema, sitemapa), przeniesienie artykułu, koniec stubów | L | opus | todo | FA-1.80 |

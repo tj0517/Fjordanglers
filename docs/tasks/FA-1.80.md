@@ -2,9 +2,9 @@
 id: FA-1.80
 title: Strony publiczne w cache — odczyt sesji poza drzewem renderu stron publicznych, `revalidate`/SSG zaczynają działać
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
-model: sonnet
+model: opus
 model_approved:
 effort: high
 agent: fa-web
@@ -42,7 +42,7 @@ Każda strona publiczna (blog, hub, oferta, główna) jest dziś renderowana prz
 ## Gotowe, gdy
 - [ ] `pnpm build`: `/`, `/trips`, `/guides`, `/[destination]`, `/blog`, `/blog/[slug]`, `/experiences/[slug]` nie są `ƒ` — tabela przed/po wklejona.
 - [ ] Zalogowany użytkownik dalej widzi swój stan w nawigacji (zrzut lub test), niezalogowany — przyciski logowania.
-- [ ] Po deployu: dwa kolejne `curl -s -D - -o /dev/null https://www.fjordanglers.com/iceland` → drugie `x-vercel-cache: HIT` (lub `STALE`) i `cache-control` bez `private, no-store`; to samo dla jednego artykułu i jednej oferty — wklejone.
+- [ ] Po wdrożeniu (tj): dwa kolejne `curl -s -D - -o /dev/null https://www.fjordanglers.com/iceland` → drugie `x-vercel-cache: HIT` (lub `STALE`) i `cache-control` bez `private, no-store`; to samo dla jednego artykułu i jednej oferty — wklejone.
 - [ ] CI zielone na head PR — lista wklejona.
 
 ## Poza zakresem
@@ -61,3 +61,4 @@ curl -s -D - -o /dev/null https://www.fjordanglers.com/iceland | grep -iE 'cache
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** zadanie z audytu SEO (F3); kolejność wg raportu (D6).
+- **2026-11-04, tj:** build criterion narrowed to /, /[destination], /blog, /blog/[slug], /experiences/[slug] — /trips and /guides stay ƒ (searchParams) but lose the session read; post-deploy cache check moved out of done — checked by tj after deploy; model opus · high
