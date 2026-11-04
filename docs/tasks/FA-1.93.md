@@ -44,6 +44,7 @@ Dziś każdy zalogowany użytkownik może zostać adminem na trzy sposoby: (1) z
 
 ## Gotowe, gdy
 - [ ] `angler@seed.test` robi `update profiles set role='admin'` na własnym wierszu → odmowa albo 0 zmienionych wierszy, odczyt po teście pokazuje `angler`; test sprawdza stan wiersza, nie kod odpowiedzi (FA-1.22: odmowa RLS przy UPDATE = 204); pokazany na czerwono przed migracją.
+- [ ] Użytkownik seeda **bez wiersza w `profiles`** wstawia własny profil z `role='admin'` (INSERT jego własną sesją) → odmowa, a odczyt po teście pokazuje brak wiersza albo wiersz `angler`; pokazane na czerwono przed migracją (trasa INSERT — wiadomość tj z 2026-11-04 po odczycie prod, pkt 1; nie była wymieniona w „Celu”, a polityka „User inserts own profile” sprawdza tylko `id`).
 - [ ] `grep -rn "from('profiles')" src` wklejony; każdy pozostały zapis idzie kluczem serwisowym w kodzie serwera.
 - [ ] Nowy użytkownik z `user_metadata.role = 'admin'` dostaje profil `angler` — test z red proofem.
 - [ ] Callback z `user_metadata.role = 'admin'` nie zmienia `profiles.role` (nowe konto ani istniejący admin) — test jednostkowy z red proofem na obecnym kodzie; `grep -n "metaRole\|user_metadata" src/app/auth/callback/route.ts` wklejony.
@@ -69,7 +70,15 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
     grep -n "metaRole\|user_metadata" src/app/auth/callback/route.ts
     pnpm test -- profiles-role auth-callback signUp
     SELECT policyname, cmd, roles, qual, with_check FROM pg_policies WHERE schemaname='public' AND tablename='profiles';
-    SELECT grantee, privilege_type, column_name FROM information_schema.column_privileges WHERE table_schema='public' AND table_name='profiles' AND grantee IN ('anon','authenticated') AND privilege_type IN ('UPDATE','INSERT');
+    SELECT c.relacl::text AS table_acl,
+           (SELECT string_agg(a.attname || ':' || a.attacl::text, ' | ') FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attacl IS NOT NULL) AS column_acls,
+           r.rolname,
+           has_table_privilege(r.rolname, c.oid, 'INSERT') AS can_insert,
+           has_table_privilege(r.rolname, c.oid, 'UPDATE') AS can_update_table,
+           has_column_privilege(r.rolname, c.oid, 'role', 'UPDATE') AS can_update_role,
+           has_column_privilege(r.rolname, c.oid, 'role', 'INSERT') AS can_insert_role
+    FROM pg_class c CROSS JOIN (VALUES ('anon'), ('authenticated')) AS r(rolname)
+    WHERE c.oid = 'public.profiles'::regclass;
     SELECT pg_get_functiondef('public.handle_new_user'::regproc);
 
 ## Notatki z realizacji
@@ -77,4 +86,8 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 - **2026-11-04, tj:** D1 — najprościej: callback przestaje zapisywać rolę (b); moduł kont poza adminem do wyrzucenia i przebudowy, bez dopracowywania ścieżek angler/guide.
 - **2026-11-04, tj:** D2 — Opus, high.
 - **2026-11-04, tj:** plik zadania, INDEX i deferred zapisuje agent w pierwszym commicie gałęzi (bez osobnego PR z zadaniem).
+- **2026-11-04, tj (po odczycie prod):** konto admina `t***@g***.com` (utworzone 2026-03-06, ostatnie logowanie 2026-10-09) to konto założyciela — brak incydentu; kontynuacja. Odczyt prod: `anon` i `authenticated` mają pełne granty tabeli `profiles` (`arwdDxtm`), brak ACL kolumn, RLS włączony; `handle_new_user` jest `SECURITY DEFINER` bez `search_path`, z `EXECUTE` dla `PUBLIC`, `anon`, `authenticated`; 0 kont z `role=admin` w `raw_user_meta_data`/`raw_app_meta_data`.
+- **2026-11-04, tj (po odczycie prod, pkt 1):** czwarta trasa — INSERT własnego profilu z `role='admin'` (polityka „User inserts own profile” sprawdza tylko `id`) — mieści się w punkcie zakresu „nie wstawiają profilu z rolą inną niż `angler`; dodane kryterium z red proofem (konto bez wiersza w `profiles`).
+- **2026-11-04, tj (po odczycie prod, pkt 2):** zapytanie `information_schema.column_privileges` zastąpione odczytem z katalogu (`relacl`, ACL kolumn, `has_table_privilege` / `has_column_privilege` dla `anon` i `authenticated`). Powód: ten widok pokazuje tylko uprawnienia widoczne dla roli odpytującej — na prod zwrócił `[]` mimo pełnych grantów (`relacl` pokazuje `anon=arwdDxtm`, `authenticated=arwdDxtm`), czyli pusty wynik byłby fałszywym „czysto”.
+- **2026-11-04, tj (po odczycie prod, pkt 3):** 5 kont `auth.users` bez wiersza w `profiles` → wiersz w `deferred-tasks.md` w tym PR; do czasu migracji to dokładnie te konta, które mogą użyć trasy INSERT. Agent nie tworzy ani nie zmienia tych wierszy.
 - **2026-11-04, Claude (wf-plan):** trzy wejścia ustalone odczytem `origin/main` (`e1a84ac2`); stan prod niepotwierdzony — odczyt z app zablokowany przez filtr uprawnień.
