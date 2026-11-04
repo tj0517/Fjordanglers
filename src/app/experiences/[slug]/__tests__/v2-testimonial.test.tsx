@@ -29,7 +29,7 @@ vi.mock('next/navigation', () => ({
   usePathname:     () => '/experiences/seed-nz',
   useSearchParams: () => new URLSearchParams(),
 }))
-vi.mock('@/components/layout/nav-with-user', () => ({ NavWithUser: () => null }))
+vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null }))
 vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
 vi.mock('@/components/offer/OfferLocationMap', () => ({ OfferLocationMap: () => null }))
 

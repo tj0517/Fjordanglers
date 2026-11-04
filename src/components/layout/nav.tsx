@@ -5,14 +5,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { signOut } from '@/actions/auth'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type NavUser = {
-  name: string | null
-  role: 'admin' | 'guide' | 'angler'
-  avatarUrl: string | null
-}
+import type { NavUser } from '@/lib/supabase/queries'
+import { useNavUser } from './use-nav-user'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -159,7 +153,9 @@ function UserMenu({ user }: { user: NavUser }) {
 
 // ─── SiteNav ──────────────────────────────────────────────────────────────────
 
-export function SiteNav({ user }: { user: NavUser | null }) {
+export function SiteNav() {
+  const navUser = useNavUser()
+  const user = navUser.status === 'ready' ? navUser.user : null
   const pathname = usePathname()
   const isHome           = pathname === '/'
   const isExperiencePage = pathname.startsWith('/experiences/')
@@ -287,7 +283,19 @@ export function SiteNav({ user }: { user: NavUser | null }) {
             Explore trips →
           </Link>
 
-          {/* User icon — desktop, logged-in only */}
+          {/* User icon — desktop, logged-in only. While the profile loads, a
+              same-size placeholder holds the slot so nothing jumps. */}
+          {navUser.status === 'pending' && (
+            <div className="nav-cta" aria-hidden="true" data-testid="nav-user-placeholder">
+              <div
+                style={{
+                  width: '42px', height: '42px', borderRadius: '50%',
+                  background: 'rgba(8,18,38,0.72)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                }}
+              />
+            </div>
+          )}
           {user && (
             <div className="nav-cta">
               <UserMenu user={user} />
