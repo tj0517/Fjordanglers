@@ -14,7 +14,8 @@
  * render (now a client island, see components/layout/nav.tsx), and the route had
  * no generateStaticParams, so Next never treated it as cacheable. With both gone
  * the build marks it ● and `revalidate` below takes effect: each slug renders on
- * its first request and is then served from the cache for an hour.
+ * its first request and is then served from the cache (the effective TTL is the
+ * shortest one in the tree — the 300 s data caches in queries.ts, not this file's 3600).
  *
  * The admin preview (?preview=v2) is a separate dynamic route: src/proxy.ts
  * rewrites to it, and ./preview/page.tsx checks admin on the server itself.
