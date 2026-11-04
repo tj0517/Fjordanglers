@@ -2,7 +2,7 @@
 id: FA-1.80
 title: Strony publiczne w cache — odczyt sesji poza drzewem renderu stron publicznych, `revalidate`/SSG zaczynają działać
 stage: 1
-status: review
+status: done
 difficulty: M
 model: opus
 model_approved:
@@ -65,3 +65,4 @@ curl -s -D - -o /dev/null https://www.fjordanglers.com/iceland | grep -iE 'cache
 - **2026-11-04, tj (decyzja 1):** dane użytkownika w nawigacji — opcja C. `GET /api/nav-user` zwraca wyłącznie `{ name, role, avatarUrl }` wołającego (brak sesji → 401/puste); odczyt `profiles` w warstwie danych, nie w pliku route. Odpowiedź nigdy nie cache'owalna (`Cache-Control: private, no-store`, route dynamiczny, test na nagłówek). Wiersz tylko po id z sesji, nigdy z query stringa. Brak `.from(...)` w kodzie klienta. Opcja B (metadane rejestracji) odrzucona: na prodzie jedyne konto admina nie ma roli w metadanych.
 - **2026-11-04, tj (decyzja 2):** stan przejściowy — „Log in” w HTML z serwera; po hydracji, jeśli istnieje lokalna sesja, natychmiast neutralny placeholder (rozmiar bloku awatara) do odpowiedzi `/api/nav-user`. Zrzuty: wylogowany, zalogowany (końcowy), placeholder jeśli da się złapać.
 - **2026-11-04, tj:** bez zmian w tabeli `profiles`, jej politykach i grantach (osobne pilne zadanie). `proxy.ts` bez zmian, chyba że kontrola `Set-Cookie` pokaże inaczej (wtedy STOP).
+- **2026-11-04, tj (review PR #174):** accepted. Proven: session read removed from the public render tree (`NavWithUser` deleted, nav is a client island), `/experiences/[slug]` gets an empty `generateStaticParams`; build table before/after — `/`, `/[destination]`, `/blog`, `/blog/[slug]`, `/experiences/[slug]`, `/legal/*` no longer ƒ; `/trips`, `/guides` stay ƒ (searchParams) without the session read; `GET /api/nav-user` is `private, no-store`, session-id lookup only, red proofs pasted; same-size placeholder while loading; local prod build HIT ×2 with no `Set-Cookie`, so `proxy.ts` untouched. No nav "Log in" link (tj). Post-deploy Vercel cache check (`/iceland`, one article, one offer) is tj's, after merge.
