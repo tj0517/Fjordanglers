@@ -17,6 +17,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { getProfileRole } from '@/lib/supabase/queries'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -37,23 +38,21 @@ export async function GET(request: NextRequest) {
       const userEmail = data.user?.email
       const userId    = data.user?.id
 
-      // For email signups: role comes from user_metadata set during signUp().
-      // For Google OAuth: default to 'angler' (guides sign up via invite flow).
-      const metaRole = (data.user?.user_metadata?.role as string | undefined) ?? 'angler'
-
       if (userEmail != null && userId != null) {
         try {
           const service = createServiceClient()
 
-          // ── Ensure profile row exists with correct role ─────────────────────
-          // NOTE: do NOT use ignoreDuplicates: true here — the DB trigger may
-          // auto-create the row with role='angler' before this runs, and we
-          // must overwrite that with the user's chosen role (guide/angler).
+          // ── Ensure the profile row exists — and nothing more ────────────────
+          // The role is never taken from user_metadata: users can edit their own
+          // metadata, so it is not evidence of anything (FA-1.93). The DB trigger
+          // normally creates this row as 'angler'; this only covers an account that
+          // has none, and ignoreDuplicates keeps it from touching an existing row,
+          // so it can neither promote nor demote anyone.
           await service
             .from('profiles')
             .upsert(
-              { id: userId, role: metaRole },
-              { onConflict: 'id' },
+              { id: userId, role: 'angler' },
+              { onConflict: 'id', ignoreDuplicates: true },
             )
 
           // ── Auto-link guide listing if invite_email matches ─────────────────
@@ -84,7 +83,10 @@ export async function GET(request: NextRequest) {
       // Session established — send to role-appropriate destination.
       // Guides go straight to the dashboard ONLY when no explicit `next` was set
       // (e.g. password reset passes next=/reset-password and must not be overridden).
-      const destination = (explicitNext == null && metaRole === 'guide') ? '/dashboard' : next
+      // The role is the one stored in profiles (read after the writes above, so a guide
+      // that was just auto-linked is seen as a guide).
+      const role = userId != null ? await getProfileRole(supabase, userId) : null
+      const destination = (explicitNext == null && role === 'guide') ? '/dashboard' : next
       return NextResponse.redirect(`${origin}${destination}`)
     }
 

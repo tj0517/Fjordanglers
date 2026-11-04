@@ -1493,3 +1493,22 @@ export async function getNavUser(
 
   return { name: data.full_name, role, avatarUrl: data.avatar_url }
 }
+
+/**
+ * The role stored in profiles for the given user, or null when there is no profile row or the
+ * value is not one we know. Read through a caller-supplied client; never cached. The role is
+ * decided only by server code and the database (FA-1.93) — this is how callers learn it, they
+ * never derive it from user_metadata, which the user can edit.
+ */
+export async function getProfileRole(
+  client: SupabaseClient<Database>,
+  userId: string,
+): Promise<NavUser['role'] | null> {
+  const { data } = await client
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  return NAV_ROLES.find(r => r === data?.role) ?? null
+}
