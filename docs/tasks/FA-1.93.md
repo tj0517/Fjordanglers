@@ -2,14 +2,14 @@
 id: FA-1.93
 title: Rolę nadaje tylko serwer — użytkownik nie zmieni swojej roli, rejestracja i logowanie nie przyjmą `admin` z danych konta
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: fix/fa-1.93-role-server-only
-pr:
+pr: 175
 depends_on: []
 blocked_by_questions: []
 touches_db: true
