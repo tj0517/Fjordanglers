@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getGuides, getPlatformStats } from '@/lib/supabase/queries'
 import { GuidesFilters } from './guides-filters'
 import { CountryFlag } from '@/components/ui/country-flag'
+import { SITE_URL } from '@/lib/site'
 
 
 const PAGE_SIZE = 12
@@ -108,9 +109,9 @@ export const metadata = {
   title: 'Independent Fishing Guides in Iceland, Scandinavia, Patagonia and New Zealand',
   description:
     'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
-  alternates: { canonical: 'https://fjordanglers.com/guides' },
+  alternates: { canonical: `${SITE_URL}/guides` },
   openGraph: {
-    url: 'https://fjordanglers.com/guides',
+    url: `${SITE_URL}/guides`,
     type: 'website',
     title: 'Independent Fishing Guides in Iceland, Scandinavia, Patagonia and New Zealand',
     description: 'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
@@ -142,7 +143,7 @@ export default async function GuidesPage({
     '@type': 'ItemList',
     name: 'FjordAnglers guides',
     description: 'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
-    url: 'https://fjordanglers.com/guides',
+    url: `${SITE_URL}/guides`,
     numberOfItems: total,
     itemListElement: guides.map((guide, i) => ({
       '@type': 'ListItem',
@@ -150,7 +151,7 @@ export default async function GuidesPage({
       item: {
         '@type': 'Person',
         name: guide.full_name,
-        url: `https://fjordanglers.com/guides/${guide.slug ?? guide.id}`,
+        url: `${SITE_URL}/guides/${guide.slug ?? guide.id}`,
         ...(guide.avatar_url != null && { image: guide.avatar_url }),
         ...(guide.bio != null && { description: guide.bio }),
         address: { '@type': 'PostalAddress', addressCountry: guide.country },

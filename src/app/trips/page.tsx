@@ -6,6 +6,7 @@ import ExpPageMapSection from './exp-page-map-section'
 import type { ExpPage } from '@/components/trips/exp-card'
 import { COUNTRIES } from '@/lib/countries'
 import { WebEventTracker } from '@/components/analytics/WebEventTracker'
+import { SITE_URL } from '@/lib/site'
 
 const PAGE_SIZE = 12
 
@@ -113,11 +114,11 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     // Overrides the root layout's Nordic-specific keywords — without this, every
     // /trips?country=... page (Patagonia and NZ included) inherits them too.
     keywords: matched != null ? [matched, 'guided fishing trip'] : ['guided fishing trip', 'fishing guide'],
-    alternates: { canonical: 'https://fjordanglers.com/trips' },
+    alternates: { canonical: `${SITE_URL}/trips` },
     openGraph: {
       title,
       description,
-      url: 'https://fjordanglers.com/trips',
+      url: `${SITE_URL}/trips`,
       images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: `${title} | FjordAnglers` }],
     },
     twitter: {
@@ -184,7 +185,7 @@ export default async function TripsPage({
       item: {
         '@type': 'TouristTrip',
         name: exp.experience_name,
-        url: `https://fjordanglers.com/experiences/${exp.slug ?? exp.id}`,
+        url: `${SITE_URL}/experiences/${exp.slug ?? exp.id}`,
         ...(exp.hero_image_url != null ? { image: exp.hero_image_url } : {}),
         ...(exp.price_from != null ? {
           offers: {

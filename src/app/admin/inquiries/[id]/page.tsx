@@ -42,6 +42,7 @@ import { ExternalOfferToggle } from '../ExternalOfferToggle'
 import { EventTimeline } from '@/components/admin/inquiry/EventTimeline'
 import { STATUS_LABELS, isInquiryStatus, type InquiryStatus } from '@/lib/inquiries/state'
 import { ThreadView } from './ThreadView'
+import { SITE_URL } from '@/lib/site'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
 
@@ -689,7 +690,7 @@ export default async function AdminInquiryDetailPage({
             <ReviewLinkGenerator
               inquiryId={inquiry.id}
               existingToken={existingReview?.token ?? null}
-              existingBaseUrl={process.env.NEXT_PUBLIC_APP_URL ?? 'https://fjordanglers.com'}
+              existingBaseUrl={process.env.NEXT_PUBLIC_APP_URL ?? SITE_URL}
               submittedAt={existingReview?.submitted_at ?? null}
             />
           }

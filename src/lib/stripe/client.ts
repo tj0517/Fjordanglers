@@ -7,6 +7,7 @@
 
 import Stripe from 'stripe'
 import { env } from '@/lib/env'
+import { SITE_URL } from '@/lib/site'
 
 export const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   // Pinned to the version shipped with stripe@20.4.0
@@ -16,6 +17,6 @@ export const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   appInfo: {
     name: 'FjordAnglers',
     version: '0.1.0',
-    url: 'https://fjordanglers.com',
+    url: SITE_URL,
   },
 })

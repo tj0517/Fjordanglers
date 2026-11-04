@@ -14,11 +14,12 @@ import { ExperiencesSlider } from '@/components/home/experiences-slider'
 import { BgVideo } from '@/components/home/bg-video'
 import { ContactExpertButton } from '@/components/ui/contact-expert-button'
 import TestimonialBanner from '@/components/testimonial-banner'
+import { SITE_URL } from '@/lib/site'
 
 export const revalidate = 300
 
 export const metadata = {
-  alternates: { canonical: 'https://fjordanglers.com' },
+  alternates: { canonical: SITE_URL },
 }
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────

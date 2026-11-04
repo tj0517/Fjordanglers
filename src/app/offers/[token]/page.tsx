@@ -13,6 +13,7 @@ import { OfferOptionsPanel } from './OfferOptionsPanel'
 import { OfferLocationMap } from '@/components/offer/OfferLocationMap'
 import { currencyForCountry, fetchEurRate, fmtConverted } from '@/lib/fx'
 import { CheckCircle2, Calendar, Users, Shield, ChevronRight } from 'lucide-react'
+import { SITE_URL } from '@/lib/site'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -147,7 +148,7 @@ export default async function OfferPage({
           <Link href="/" aria-label="FjordAnglers">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://fjordanglers.com/brand/white-logo.png"
+              src={`${SITE_URL}/brand/white-logo.png`}
               alt="FjordAnglers"
               width={140}
               height={32}

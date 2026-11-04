@@ -19,6 +19,7 @@ import { emitEvent } from '@/lib/events/emit'
 import { matchInboundPhone } from '@/lib/inquiry-matcher'
 import { whatsappAdapter } from '@/lib/channels/whatsapp'
 import type { InboundMessage } from '@/lib/channels/types'
+import { SITE_URL } from '@/lib/site'
 
 // ─── Mutable env stub ─────────────────────────────────────────────────────────
 
@@ -114,7 +115,7 @@ function makeRequest(body: string, opts: { signature?: string; omitSig?: boolean
   if (!opts.omitSig && opts.signature != null) {
     headers['x-hub-signature-256'] = opts.signature
   }
-  return new Request('https://fjordanglers.com/api/webhooks/whatsapp', {
+  return new Request(`${SITE_URL}/api/webhooks/whatsapp`, {
     method: 'POST', headers, body,
   })
 }
