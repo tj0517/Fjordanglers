@@ -3,6 +3,7 @@ import { DESTINATION_HUBS } from '@/lib/destinations'
 import { getDestinationHub } from '@/lib/supabase/queries'
 import { WebEventTracker } from '@/components/analytics/WebEventTracker'
 import DestinationHubView from '@/components/destination-hub/destination-hub-view'
+import { SITE_URL } from '@/lib/site'
 
 export const revalidate = 60
 
@@ -12,24 +13,22 @@ export function generateStaticParams() {
   return DESTINATION_HUBS.map(hub => ({ destination: hub.slug }))
 }
 
-const BASE = 'https://fjordanglers.com'
-
 export async function generateMetadata({ params }: { params: Promise<{ destination: string }> }) {
   const { destination } = await params
   const data = await getDestinationHub(destination)
   if (data == null) return {}
 
   const { hub } = data
-  const ogImage = data.ogImage ?? `${BASE}/brand/og-default.png`
+  const ogImage = data.ogImage ?? `${SITE_URL}/brand/og-default.png`
 
   return {
     title: hub.metaTitle,
     description: hub.metaDescription,
-    alternates: { canonical: `${BASE}/${hub.slug}` },
+    alternates: { canonical: `${SITE_URL}/${hub.slug}` },
     openGraph: {
       title: hub.metaTitle,
       description: hub.metaDescription,
-      url: `${BASE}/${hub.slug}`,
+      url: `${SITE_URL}/${hub.slug}`,
       images: [{ url: ogImage, width: 1200, height: 630, alt: hub.h1 }],
     },
     twitter: {
@@ -63,7 +62,7 @@ export default async function DestinationHubPage({
       item: {
         '@type': 'TouristTrip',
         name: offer.page.experience_name,
-        url: `${BASE}/experiences/${offer.page.slug}`,
+        url: `${SITE_URL}/experiences/${offer.page.slug}`,
         ...(offer.page.hero_image_url != null ? { image: offer.page.hero_image_url } : {}),
       },
     })),

@@ -46,6 +46,7 @@ import { ExperienceFunnelProvider } from '@/components/analytics/experience-funn
 import { fromPrice } from '@/lib/pricing/experience-price'
 // The inquiry section of S14. The CTAs keep the href even though they also open the wizard.
 import { INQUIRY_ANCHOR } from '@/components/experience-v2/inquiry-anchor'
+import { SITE_URL } from '@/lib/site'
 
 
 /**
@@ -76,7 +77,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: title.endsWith('| FjordAnglers') ? { absolute: title } : title,
     description: page.metaDescription
       ?? `Guided fishing in ${page.region}, ${page.country}. Free inquiry, answer within ${page.responseSlaHours} h, deposit only after you accept the offer.`,
-    alternates: { canonical: `https://fjordanglers.com/experiences/${slug}` },
+    alternates: { canonical: `${SITE_URL}/experiences/${slug}` },
     openGraph: {
       title,
       description: page.metaDescription ?? undefined,

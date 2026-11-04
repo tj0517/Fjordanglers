@@ -12,7 +12,7 @@
  *
  * Setup:
  *  1. developers.facebook.com → App → WhatsApp → Configuration → Webhook
- *  2. URL: https://fjordanglers.com/api/webhooks/whatsapp
+ *  2. URL: https://www.fjordanglers.com/api/webhooks/whatsapp
  *  3. Verify Token = WHATSAPP_VERIFY_TOKEN env var
  *  4. Subscribe to "messages" field
  *  5. WHATSAPP_APP_SECRET = App Settings → Basic → App Secret

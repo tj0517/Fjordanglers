@@ -4,15 +4,19 @@ import { NextRequest } from 'next/server'
 // Unit test: Supabase and Resend are never reached. The API key is a dummy.
 const OWNER = 'ops.owner@example.com'
 
-vi.mock('@/lib/env', () => ({
-  env: {
-    CRON_SECRET: 'cron-secret',
-    OWNER_EMAIL: 'ops.owner@example.com',
-    NEXT_PUBLIC_APP_URL: 'https://fjordanglers.com',
-    RESEND_API_KEY: 'test-dummy-key',
-    FA_FROM_EMAIL: 'FjordAnglers <contact@fjordanglers.com>',
-  },
-}))
+// vi.mock is hoisted above the imports, so the constant is imported inside the factory.
+vi.mock('@/lib/env', async () => {
+  const { SITE_URL } = await import('@/lib/site')
+  return {
+    env: {
+      CRON_SECRET: 'cron-secret',
+      OWNER_EMAIL: 'ops.owner@example.com',
+      NEXT_PUBLIC_APP_URL: SITE_URL,
+      RESEND_API_KEY: 'test-dummy-key',
+      FA_FROM_EMAIL: 'FjordAnglers <contact@fjordanglers.com>',
+    },
+  }
+})
 
 // One overdue inquiry; the query chain ends in order(), which resolves the rows.
 const overdueRows = [

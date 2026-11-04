@@ -19,6 +19,7 @@ import { formatPrice, currencySymbol } from '@/lib/format-price'
 import { COUNTRIES, getRegionGroup } from '@/lib/countries'
 import { WebEventTracker } from '@/components/analytics/WebEventTracker'
 import { availabilityWindow } from '@/lib/availability-window'
+import { SITE_URL } from '@/lib/site'
 
 /**
  * /experiences/[slug] — Public editorial experience page, template v1.
@@ -81,11 +82,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     // Overrides the root layout's Nordic-specific keywords — without this, every
     // page (Patagonia and NZ included) inherits "fishing guide Scandinavia" etc.
     keywords: [page.country, page.region, `${fishingType} guide`].filter(Boolean),
-    alternates: { canonical: `https://fjordanglers.com/experiences/${slug}` },
+    alternates: { canonical: `${SITE_URL}/experiences/${slug}` },
     openGraph: {
       title,
       description,
-      url: `https://fjordanglers.com/experiences/${slug}`,
+      url: `${SITE_URL}/experiences/${slug}`,
       images: ogImage ? [{ url: ogImage, width: 1200, height: 630, alt: page.experience_name }] : [],
     },
     twitter: { card: 'summary_large_image' as const, title, description, images: ogImage ? [ogImage] : [] },
@@ -277,7 +278,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
       ? [{ id: '0', url: page.hero_image_url, is_cover: true }]
       : []
 
-  const faOrg = { '@type': 'Organization', name: 'FjordAnglers', url: 'https://fjordanglers.com' }
+  const faOrg = { '@type': 'Organization', name: 'FjordAnglers', url: SITE_URL }
 
   const tripSchema = {
     '@context': 'https://schema.org',
@@ -285,7 +286,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
     name: page.experience_name,
     description: page.meta_description ?? `Guided fishing trip in ${page.region}, ${page.country}. Book with verified local guides via FjordAnglers.`,
     ...(page.hero_image_url != null ? { image: page.hero_image_url } : {}),
-    url: `https://fjordanglers.com/experiences/${slug}`,
+    url: `${SITE_URL}/experiences/${slug}`,
     touristType: ['Fishing', 'Outdoor Activity'],
     ...(rawPage.location_lat != null && rawPage.location_lng != null ? {
       location: {
@@ -312,7 +313,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
         price: page.price_from,
         priceCurrency: page.currency,
         availability: 'https://schema.org/InStock',
-        url: `https://fjordanglers.com/experiences/${slug}`,
+        url: `${SITE_URL}/experiences/${slug}`,
         seller: faOrg,
       },
     } : {}),
@@ -321,7 +322,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
       subjectOf: {
         '@type': 'Person',
         name: guide.full_name,
-        url: `https://fjordanglers.com/guides/${guide.slug ?? guide.id}`,
+        url: `${SITE_URL}/guides/${guide.slug ?? guide.id}`,
       },
     } : {}),
   }
@@ -330,9 +331,9 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://fjordanglers.com' },
-      { '@type': 'ListItem', position: 2, name: 'Trips', item: 'https://fjordanglers.com/trips' },
-      { '@type': 'ListItem', position: 3, name: page.experience_name, item: `https://fjordanglers.com/experiences/${slug}` },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Trips', item: `${SITE_URL}/trips` },
+      { '@type': 'ListItem', position: 3, name: page.experience_name, item: `${SITE_URL}/experiences/${slug}` },
     ],
   }
 

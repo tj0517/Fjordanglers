@@ -3,6 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { SiteNav } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
+import { SITE_URL } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
@@ -217,7 +218,7 @@ export default function TermsOfServicePage() {
             <Prose>
               Fjordanglers is operated as a sole proprietorship (Jednoosobowa Działalność Gospodarcza) registered
               in Poland. Website:{' '}
-              <SLink href="https://fjordanglers.com" external>fjordanglers.com</SLink>
+              <SLink href={SITE_URL} external>fjordanglers.com</SLink>
             </Prose>
             <WarningCard>
               <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.72)' }}>
@@ -1025,7 +1026,7 @@ export default function TermsOfServicePage() {
               <ul className="flex flex-col gap-3">
                 {[
                   { label: 'Email',   value: 'contact@fjordanglers.com', href: 'mailto:contact@fjordanglers.com' },
-                  { label: 'Website', value: 'fjordanglers.com',          href: 'https://fjordanglers.com' },
+                  { label: 'Website', value: 'fjordanglers.com',          href: SITE_URL },
                 ].map(item => (
                   <li key={item.label} className="flex items-center gap-3 text-sm f-body">
                     <span className="font-semibold flex-shrink-0" style={{ color: '#0A2E4D', minWidth: '80px' }}>

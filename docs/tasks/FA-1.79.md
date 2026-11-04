@@ -2,14 +2,14 @@
 id: FA-1.79
 title: Jeden host kanoniczny `www` — jedna stała adresu zamiast 58 wpisanych na sztywno; apex → www stałym 308 (ustawienie Vercela robi tj)
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-web
 branch: feat/fa-1.79-canonical-www
-pr:
+pr: 173
 depends_on: []
 blocked_by_questions: []
 touches_db: false
@@ -43,7 +43,7 @@ Dziś domena bez `www` odpowiada 307 na `www`, a wszystkie canonicale, OG, JSON-
 - [ ] `grep -rn "https://fjordanglers.com" src` zwraca 0 wierszy (poza stałą, jeśli trzyma wariant bez `www` do porównań) — wklejone.
 - [ ] Test sitemapy/robots zielony; red proof: test pada, gdy stała wskazuje host bez `www` — wklejony wynik obu przebiegów.
 - [ ] Lokalnie `curl -s localhost:3000/sitemap.xml | grep -o '<loc>[^<]*' | awk -F/ '{print $3}' | sort | uniq -c` → tylko `www.fjordanglers.com`; canonical na `/`, hubie, ofercie, artykule → `www` — wklejone.
-- [ ] Po merge i ustawieniu Vercela (tj): `curl -sI https://fjordanglers.com/trips` → 308 na `https://www.fjordanglers.com/trips`; na prod sitemapa 70×`www` — wkleja tj albo agent w notatkach.
+- [ ] **Po wdrożeniu (tj)** — nie warunek `review`/`done`: `curl -sI https://fjordanglers.com/trips` → 308 na `https://www.fjordanglers.com/trips`; na prod sitemapa 70×`www` — wkleja tj albo agent w notatkach.
 - [ ] CI zielone na head PR (`check`, `knip`, `db`, `secrets`) — lista wklejona.
 
 ## Poza zakresem
@@ -65,3 +65,5 @@ curl -s localhost:3000/sitemap.xml | grep -o '<loc>[^<]*' | awk -F/ '{print $3}'
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** D1 — host kanoniczny `www`, apex → www stałym 308 (audyt SEO §4). Właściwość GSC to `sc-domain:fjordanglers.com` (domenowa), obejmuje oba hosty.
+- **2026-11-04, tj:** the post-deploy criterion (308 + prod sitemap www) moved out of done — checked by tj after deploy; PR description also instructs tj to set NEXT_PUBLIC_APP_URL to www
+- **2026-11-04, tj (review PR #173):** accepted. Proven: SITE_URL constant in `src/lib/site.ts`, all 58 hard-coded apex URLs + 2 test files routed through it, transactional links (`getAppUrl` / `NEXT_PUBLIC_APP_URL`) untouched; sitemap/robots host test with red proof; local sitemap 21×www and www canonicals on `/`, hub, v2 offer, article; CI green on `cabf6c0`. The one remaining grep hit (`sitemap-robots-host.test.ts:49`) is the test's own negative assertion — accepted as a justified exception. Post-deploy check (Vercel 308 apex → www, prod `NEXT_PUBLIC_APP_URL` → www, prod sitemap all www) is tj's, after merge; check the Resend/Meta webhook URLs first.

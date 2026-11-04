@@ -7,6 +7,7 @@ import { BLOG_POSTS } from '@/lib/blog-data'
 import { NorwayRegulationsContent, NORWAY_SECTIONS } from '@/lib/blog-content/norway-regulations-2026'
 import { ReadingProgress } from '@/components/blog/reading-progress'
 import { TableOfContents } from '@/components/blog/table-of-contents'
+import { SITE_URL } from '@/lib/site'
 
 const ARTICLE_CONTENT: Record<string, React.ComponentType> = {
   'fishing-regulations-norway-2026': NorwayRegulationsContent,
@@ -30,18 +31,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return {}
 
   const isStub = !ARTICLE_CONTENT[slug]
-  const absImg = `https://fjordanglers.com${post.img}`
+  const absImg = `${SITE_URL}${post.img}`
 
   return {
     title: post.title,
     description: post.excerpt,
     ...(isStub ? { robots: { index: false, follow: false } } : {}),
-    alternates: { canonical: `https://fjordanglers.com/blog/${slug}` },
+    alternates: { canonical: `${SITE_URL}/blog/${slug}` },
     openGraph: {
       title: `${post.title} | FjordAnglers`,
       description: post.excerpt,
       type: 'article',
-      url: `https://fjordanglers.com/blog/${slug}`,
+      url: `${SITE_URL}/blog/${slug}`,
       images: [{ url: absImg, width: 1200, height: 630, alt: post.title }],
     },
     twitter: {
@@ -61,7 +62,7 @@ export default async function BlogPostPage({ params }: Props) {
   const ContentComponent = ARTICLE_CONTENT[slug]
   const sections = ARTICLE_SECTIONS[slug]
 
-  const absImg = `https://fjordanglers.com${post.img}`
+  const absImg = `${SITE_URL}${post.img}`
 
   const articleSchema = {
     '@context': 'https://schema.org',
@@ -69,25 +70,25 @@ export default async function BlogPostPage({ params }: Props) {
     headline: post.title,
     description: post.excerpt,
     image: absImg,
-    author: { '@type': 'Organization', name: 'FjordAnglers', url: 'https://fjordanglers.com' },
+    author: { '@type': 'Organization', name: 'FjordAnglers', url: SITE_URL },
     publisher: {
       '@type': 'Organization',
       name: 'FjordAnglers',
-      logo: { '@type': 'ImageObject', url: 'https://fjordanglers.com/brand/sygnet.png' },
+      logo: { '@type': 'ImageObject', url: `${SITE_URL}/brand/sygnet.png` },
     },
     datePublished: new Date(post.date).toISOString(),
     dateModified: new Date(post.date).toISOString(),
-    url: `https://fjordanglers.com/blog/${slug}`,
-    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://fjordanglers.com/blog/${slug}` },
+    url: `${SITE_URL}/blog/${slug}`,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE_URL}/blog/${slug}` },
   }
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://fjordanglers.com' },
-      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://fjordanglers.com/blog' },
-      { '@type': 'ListItem', position: 3, name: post.title, item: `https://fjordanglers.com/blog/${slug}` },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE_URL}/blog` },
+      { '@type': 'ListItem', position: 3, name: post.title, item: `${SITE_URL}/blog/${slug}` },
     ],
   }
 

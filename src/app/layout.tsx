@@ -4,6 +4,7 @@ import Script from 'next/script'
 import { CookieBanner } from '@/components/ui/cookie-banner'
 import { GclidCapture } from '@/components/analytics/GclidCapture'
 import './globals.css'
+import { SITE_URL } from '@/lib/site'
 
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID
 
@@ -24,7 +25,7 @@ const dmSans = localFont({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://fjordanglers.com'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'FjordAnglers. Fishing guides who own the boat.',
     template: '%s | FjordAnglers',
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     // alternateLocale removed — no translated pages exist yet; add back when /pl/ and /de/ routes are built
-    url: 'https://fjordanglers.com',
+    url: SITE_URL,
     siteName: 'FjordAnglers',
     title: 'FjordAnglers. Fishing guides who own the boat.',
     description: 'Owner-guides in Iceland, Norway, Sweden, Finland, Patagonia and New Zealand. Send your dates, we check with the guide and reply within 24 hours. No payment to enquire.',
@@ -94,12 +95,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               '@context': 'https://schema.org',
               '@type': 'WebSite',
               name: 'FjordAnglers',
-              url: 'https://fjordanglers.com',
+              url: SITE_URL,
               potentialAction: {
                 '@type': 'SearchAction',
                 target: {
                   '@type': 'EntryPoint',
-                  urlTemplate: 'https://fjordanglers.com/trips?country={search_term_string}',
+                  urlTemplate: `${SITE_URL}/trips?country={search_term_string}`,
                 },
                 'query-input': 'required name=search_term_string',
               },
@@ -115,8 +116,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               '@context': 'https://schema.org',
               '@type': ['Organization', 'LocalBusiness'],
               name: 'FjordAnglers',
-              url: 'https://fjordanglers.com',
-              logo: 'https://fjordanglers.com/brand/sygnet.png',
+              url: SITE_URL,
+              logo: `${SITE_URL}/brand/sygnet.png`,
               description: 'FjordAnglers puts anglers in direct contact with independent fishing guides in Iceland, Scandinavia, Patagonia and New Zealand. Each guide is met and checked by the founders before listing.',
               email: 'contact@fjordanglers.com',
               address: {

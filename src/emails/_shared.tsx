@@ -17,6 +17,7 @@ import {
   Section,
   Text,
 } from '@react-email/components'
+import { SITE_URL } from '@/lib/site'
 
 // ─── Layout component ─────────────────────────────────────────────────────────
 
@@ -34,7 +35,7 @@ export function EmailLayout({
       <Body style={body}>
         <Section style={header}>
           <Img
-            src="https://fjordanglers.com/brand/white-logo.png"
+            src={`${SITE_URL}/brand/white-logo.png`}
             width={160}
             alt="FjordAnglers"
             style={{ display: 'block', margin: '0 auto', width: '160px', height: 'auto' }}
