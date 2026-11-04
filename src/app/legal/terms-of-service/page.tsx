@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { NavWithUser } from '@/components/layout/nav-with-user'
+import { SiteNav } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
 import { SITE_URL } from '@/lib/site'
 
@@ -176,7 +176,7 @@ export default function TermsOfServicePage() {
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
 
-      <NavWithUser />
+      <SiteNav />
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <header className="px-5 md:px-8 pt-14 pb-12 max-w-[860px] mx-auto">

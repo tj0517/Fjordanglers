@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { NavWithUser } from '@/components/layout/nav-with-user'
+import { SiteNav } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExpPageMapSection from './exp-page-map-section'
@@ -204,7 +204,7 @@ export default async function TripsPage({
       <WebEventTracker country={matchedCountry} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
 
-      <NavWithUser />
+      <SiteNav />
 
       {/* Spacer for fixed nav */}
       <div style={{ height: '72px' }} />

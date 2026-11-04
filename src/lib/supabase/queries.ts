@@ -1462,3 +1462,34 @@ export async function isAdminUser(
 
   return data?.role === 'admin'
 }
+
+/** What the site nav shows about the signed-in user (display only). */
+export type NavUser = {
+  name: string | null
+  role: 'admin' | 'guide' | 'angler'
+  avatarUrl: string | null
+}
+
+const NAV_ROLES: readonly NavUser['role'][] = ['admin', 'guide', 'angler']
+
+/**
+ * The caller's own nav profile (FA-1.80). `userId` must come from the verified
+ * session (`auth.getUser()`), never from request input. Read through the
+ * caller-supplied request-scoped client; never cached — it is per-user data.
+ * Returns null when there is no profile row or the role is not one the nav knows.
+ */
+export async function getNavUser(
+  client: SupabaseClient<Database>,
+  userId: string,
+): Promise<NavUser | null> {
+  const { data } = await client
+    .from('profiles')
+    .select('role, full_name, avatar_url')
+    .eq('id', userId)
+    .maybeSingle()
+
+  const role = NAV_ROLES.find(r => r === data?.role)
+  if (data == null || role == null) return null
+
+  return { name: data.full_name, role, avatarUrl: data.avatar_url }
+}

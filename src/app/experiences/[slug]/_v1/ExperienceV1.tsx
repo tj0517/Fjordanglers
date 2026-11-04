@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { NavWithUser } from '@/components/layout/nav-with-user'
+import { SiteNav } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
 import { createServiceClient } from '@/lib/supabase/server'
 import { MapPin, Check, X as XIcon, ChevronDown } from 'lucide-react'
@@ -357,7 +357,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
       {faqSchema != null && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}
-      <NavWithUser />
+      <SiteNav />
       {/* ─── MOBILE GALLERY (below nav, compact height) ── */}
       {topImages.length > 0 && (
         <div className="md:hidden pt-[72px] relative">

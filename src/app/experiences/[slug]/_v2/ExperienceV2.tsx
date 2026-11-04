@@ -7,7 +7,7 @@
  * (CLAUDE.md rule 3), and the guide's price override is folded into the price rows
  * server-side, so it never reaches the browser.
  *
- * The frame is the site's own: `NavWithUser` on top, `SiteFooter` below, and the same
+ * The frame is the site's own: `SiteNav` on top, `SiteFooter` below, and the same
  * `ExperienceGallery` v1 uses (bento + lightbox). The title sits above the gallery, the way
  * the reference pages do, so the sticky offer card starts below the photos with air around
  * it instead of touching them.
@@ -24,7 +24,7 @@ import { env } from '@/lib/env'
 import { getExperienceV2, getRelatedExperiencePages } from '@/lib/supabase/queries'
 import { getTestimonial } from '@/lib/supabase/testimonials'
 import { fetchIndicativeRates } from '@/lib/fx'
-import { NavWithUser } from '@/components/layout/nav-with-user'
+import { SiteNav } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { CurrencyProvider } from '@/components/experience-v2/currency-context'
@@ -160,7 +160,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
    <ExperienceFunnelProvider version={2} slug={slug} sections={FUNNEL_SECTIONS_V2}>
     <CurrencyProvider baseCurrency={page.currency} rates={rates}>
      <InquiryWizardProvider page={wizardPage}>
-      <NavWithUser />
+      <SiteNav />
 
       {/* The site's warm sand — the same ground v1 and the home page stand on. */}
       <main style={{ background: '#F3EDE4', color: 'var(--fa-navy)' }} className="pb-24 md:pb-16">
