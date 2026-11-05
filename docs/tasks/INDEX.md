@@ -119,7 +119,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.85 | Treść hubów w bazie + edytor w panelu (O-42 → b) | M | sonnet | todo | FA-1.82, FA-1.84 |
 | FA-1.86 | Przewodnicy — slugi dla 6, slug obowiązkowy, scalenie Josh Hart, ukrycie 2 pustych, koniec UUID, profile bez oferty poza indeksem | M | sonnet | todo | — |
 | FA-1.87 | Atrybucja organiku — referrer i strona lądowania przy zapytaniu i zdarzeniach, kanał wyliczany | M | sonnet | todo | — |
-| FA-1.88 | Higiena sitemapy i listingów — tylko indeksowalne, prawdziwe `lastModified`, canonical stron 2+, opis `/trips`, `og:image` | S | sonnet | in_progress | FA-1.79 |
+| FA-1.88 | Higiena sitemapy i listingów — tylko indeksowalne, prawdziwe `lastModified`, canonical stron 2+, opis `/trips`, `og:image` | S | sonnet | review (PR #177) | FA-1.79 |
 | FA-1.89 | Oferty — alias dla wycofanego adresu chilijskiego, jeden H1 w v1, generator slugów bez „--” | S | sonnet | todo | — |
 | FA-1.90 | Linkowanie wewnętrzne — oferty/przewodnicy przy artykułach i hubach, blog na głównej | M | sonnet | todo | FA-1.82, FA-1.83 |
 | FA-1.91 | Strony techniczne poza indeksem — `noindex`/404 dla tokenów, `alt` pinów, bez `SearchAction` | S | sonnet | todo | — |

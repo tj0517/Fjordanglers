@@ -2,14 +2,14 @@
 id: FA-1.88
 title: Higiena sitemapy i listingów — tylko indeksowalne adresy, prawdziwe `lastModified`, własny canonical stron 2+ listingów, opis `/trips`, domyślne `og:image`
 stage: 1
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-1.88-sitemap-hygiene
-pr:
+pr: 177
 depends_on: [FA-1.79]
 blocked_by_questions: []
 touches_db: false
