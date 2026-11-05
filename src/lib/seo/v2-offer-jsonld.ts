@@ -40,7 +40,7 @@ export function v2FromPrice(page: Pick<V2Page, 'offerMode' | 'prices' | 'feePct'
 }
 
 /** The price to publish, or null when the page itself shows none. */
-export function v2OfferPrice(page: V2Page): OfferPrice | null {
+function v2OfferPrice(page: V2Page): OfferPrice | null {
   if (page.offerMode === 'fixed') {
     const from = v2FromPrice(page)
     return from == null ? null : { kind: 'single', amount: amountFromCents(from.totalCents), currency: from.currency }
@@ -57,7 +57,7 @@ export function v2OfferPrice(page: V2Page): OfferPrice | null {
  * Home → hub → offer when a hub covers the country (labelled with the hub's own `h1`, tj D2,
  * 2026-11-05); Home → Trips → offer otherwise, as v1 does.
  */
-export function v2ParentCrumb(country: string): { label: string; url: string } {
+function v2ParentCrumb(country: string): { label: string; url: string } {
   const hubSlug = getHubSlugForCountry(country)
   const hub = hubSlug != null ? getHubForSlug(hubSlug) : undefined
 
