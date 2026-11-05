@@ -112,7 +112,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.78 | CI — ponawianie `supabase start` w jobie `db` na przemian z ghcr.io i public.ecr.aws (oba rejestry dławią pobieranie, `toomanyrequests` na PR #169) | S | sonnet | done (PR #170) | — |
 | FA-1.80 | Strony publiczne w cache — odczyt sesji poza renderem stron publicznych | M | opus | done (PR #174) | — |
 | FA-1.79 | Jeden host kanoniczny `www` — stała adresu zamiast 58 na sztywno; apex → www 308 w Vercelu (tj) | M | sonnet | done (PR #173) | — |
-| FA-1.81 | Oferta v2 — dane strukturalne jak v1 (`TouristTrip`+`Offer`, `BreadcrumbList`, `FAQPage`, `og:url/type`) | M | sonnet | in_progress | — |
+| FA-1.81 | Oferta v2 — dane strukturalne jak v1 (`TouristTrip`+`Offer`, `BreadcrumbList`, `FAQPage`, `og:url/type`) | M | sonnet | review | — |
 | FA-1.82 | Huby Norwegii, Szwecji i Finlandii w kodzie + `FAQPage`/`BreadcrumbList`, linki do przewodników i artykułów | M | sonnet | todo | — (teksty: Krzysztof) |
 | FA-1.83 | Blog, krok 1 — tabela wpisów + publiczny czytnik (metadane, schema, sitemapa), przeniesienie artykułu, koniec stubów | L | opus | todo | FA-1.80 |
 | FA-1.84 | Blog, krok 2 — edytor w `/admin` (szkic/publikacja, zdjęcia, podgląd, SEO) | L | opus | todo | FA-1.83 |

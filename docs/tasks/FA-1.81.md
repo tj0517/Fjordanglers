@@ -2,14 +2,14 @@
 id: FA-1.81
 title: Oferta v2 — dane strukturalne jak v1 (`TouristTrip` + `Offer`, `BreadcrumbList`, `FAQPage`, `og:url`/`og:type`)
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-web
 branch: feat/fa-1.81-v2-structured-data
-pr:
+pr: 176
 depends_on: []
 blocked_by_questions: []
 touches_db: false
