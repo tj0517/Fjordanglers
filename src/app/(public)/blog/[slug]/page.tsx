@@ -4,14 +4,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { BLOG_POSTS } from '@/lib/blog-data'
 
-import { NorwayRegulationsContent, NORWAY_SECTIONS } from '@/lib/blog-content/norway-regulations-2026'
+import { NORWAY_SECTIONS } from '@/lib/blog-content/norway-regulations-2026'
+import { ARTICLE_CONTENT, isBlogStub } from '@/lib/blog-articles'
 import { ReadingProgress } from '@/components/blog/reading-progress'
 import { TableOfContents } from '@/components/blog/table-of-contents'
 import { SITE_URL } from '@/lib/site'
-
-const ARTICLE_CONTENT: Record<string, React.ComponentType> = {
-  'fishing-regulations-norway-2026': NorwayRegulationsContent,
-}
 
 const ARTICLE_SECTIONS: Record<string, readonly { id: string; label: string }[]> = {
   'fishing-regulations-norway-2026': NORWAY_SECTIONS,
@@ -30,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = BLOG_POSTS.find(p => p.slug === slug)
   if (!post) return {}
 
-  const isStub = !ARTICLE_CONTENT[slug]
+  const isStub = isBlogStub(slug)
   const absImg = `${SITE_URL}${post.img}`
 
   return {
