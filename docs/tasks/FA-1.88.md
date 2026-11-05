@@ -2,7 +2,7 @@
 id: FA-1.88
 title: Higiena sitemapy i listingów — tylko indeksowalne adresy, prawdziwe `lastModified`, własny canonical stron 2+ listingów, opis `/trips`, domyślne `og:image`
 stage: 1
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
@@ -59,3 +59,6 @@ curl -s localhost:3000/sitemap.xml | grep -o '<loc>[^<]*' | sed 's/<loc>//' | wh
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** zadanie z audytu SEO; po FA-1.79, przed zgłoszeniem sitemapy w GSC.
+- **2026-11-05, tj:** model Sonnet · effort medium.
+- **2026-11-05, tj:** D1 — `lastModified` w sitemapie tylko tam, gdzie jest prawdziwa data: oferty i przewodnicy → ich `updated_at`, a gdy jest null → pole pominięte (bez zastępczego „teraz”); wpisy bloga → `date` wpisu z `blog-data.ts`; strony statyczne (home, `/trips`, `/guides`, `/blog`, prawne) i huby → pole pominięte.
+- **2026-11-05, tj:** D2 — opis `/trips` bez filtra kraju: jedno stałe zdanie wymieniające kraje aktywnych ofert (funkcja warstwy danych `getActiveDestinationCountries`), bez „20+” i bez liczby. Dokładny szablon idzie do opisu PR do mojej akceptacji.
