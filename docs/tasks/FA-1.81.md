@@ -42,7 +42,7 @@ Szablon v2 nie emituje żadnych danych strukturalnych oferty, więc każda ofert
 ## Gotowe, gdy
 - [ ] Test zielony; red proof: test pada po usunięciu buildera z v2 — oba przebiegi wklejone.
 - [ ] `curl` lokalnej oferty v2 → JSON-LD z `TouristTrip`, `BreadcrumbList` (+ `FAQPage`, jeśli oferta ma FAQ), każdy blok parsuje się przez `JSON.parse` — wklejone.
-- [ ] Wynik JSON-LD v1 identyczny przed/po (diff wklejony).
+- [ ] JSON-LD v1 po sparsowaniu identyczny jak przed refaktorem (test na dwóch fixture'ach), a jego bajty różnią się wyłącznie zescapowanymi `<` / `>` / `&` (`\u003c` / `\u003e` / `\u0026`) — diff golden fixture wklejony (D3 po decyzji o escapowaniu z 2026-11-05; wcześniej: „diff przed/po”).
 - [ ] `curl` strony v2 = 200 (FA-1.54) i CI zielone — wklejone.
 
 ## Poza zakresem
@@ -65,3 +65,6 @@ curl -s localhost:3000/experiences/<slug-v2> | grep -o '"@type":"[A-Za-z]*"' | s
 - **2026-11-05, tj:** D1 — cena w `offers` = cena, którą pokazuje strona: `fixed` → „od” z opłatą FA (to samo co `fromTotalCents`) jako `Offer`; `custom` → zapisany zakres (`customRange`, bez opłaty) jako `AggregateOffer` (`lowPrice`/`highPrice`); brak ceny → bez `offers`.
 - **2026-11-05, tj:** D2 — kraj bez huba (`getHubSlugForCountry` = null) → okruszek Home → Trips (`/trips`) → oferta, jak w v1; z hubem: Home → hub → oferta. Etykieta okruszka huba — otwarta, pytam przed wyborem.
 - **2026-11-05, tj:** D3 — tożsamość wyniku v1 dowodzi test z golden fixture (wynik z kodu na `main`, nie przepisany); zamiast „diff v1 przed/po” (seed nie ma aktywnej oferty v1, `curl` lokalnie niemożliwy) kryterium to: test golden zielony i `git diff main -- <fixture>` pusty po refaktorze.
+- **2026-11-05, tj:** etykieta okruszka huba = **A**: `h1` huba (np. „Iceland Fly Fishing Trips”); bez nowego pola w `destinations.ts`.
+- **2026-11-05, tj:** escapowanie = **C**: wspólny serializer escapuje `<` `>` `&` jako `\u003c` `\u003e` `\u0026` dla v1 i v2, bez flagi, jedno zachowanie. Golden fixture aktualizowany świadomie, w osobnym commicie (diff = wyłącznie te zamiany); test: po `JSON.parse` nowy wynik v1 równy oryginałowi sprzed refaktoru; red proof z `</script>` w odpowiedzi FAQ; kryterium D3 zmienione (wyżej); wiersz deferred (security) dla pozostałych stron z gołym `JSON.stringify` w `ld+json`. To zastępuje wcześniejsze „v1 identyczny co do bajta / pusty `git diff` fixture’a” z D3.
+- **2026-11-05, Claude:** golden przechowywał wynik sparsowany (czytelny), więc zmiana escapowania nie zmieniłaby pliku. Żeby diff pokazywał dokładnie zamiany znaków, osobny commit najpierw przekłada golden na surowe napisy 1:1 (bez zmiany treści — każdy napis = `JSON.stringify` wersji sparsowanej z `main`), a plik sparsowany zostaje bez zmian jako oryginał-referencja dla testu równości po `JSON.parse`.
