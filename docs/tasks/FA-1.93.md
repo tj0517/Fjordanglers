@@ -2,7 +2,7 @@
 id: FA-1.93
 title: Rolę nadaje tylko serwer — użytkownik nie zmieni swojej roli, rejestracja i logowanie nie przyjmą `admin` z danych konta
 stage: 1
-status: review
+status: done
 difficulty: M
 model: opus
 model_approved:
@@ -94,3 +94,4 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 - **2026-11-04, tj (zatwierdzenie planu migracji):** (a) mechanizm = uprawnienia na poziomie kolumn (`GRANT INSERT (id, full_name, avatar_url)` i `GRANT UPDATE (full_name, avatar_url)` dla `authenticated`; polityki bez zmian); (b) pełne `REVOKE ALL` dla `anon` i `authenticated` na `profiles` (w tym DELETE/TRUNCATE; poza `SELECT`), `service_role` bez zmian; (c) poprawka `supabase/seed.sql` w tym PR — jawny `UPDATE profiles SET role='admin'` dla `admin@seed.test`, bo dotąd rolę nadawał trigger z metadanych. Dodatek: kryterium z red proofem dla `admin.createUser` (trigger po `REVOKE EXECUTE`) i dla `admin@seed.test` po resecie.
 - **2026-11-04, tj:** `email_confirm: true` w `signUp` (konto bez weryfikacji maila) + autolink po `invite_email` = wiersz bezpieczeństwa w deferred (nie otwarte pytanie), właściciel: przebudowa modułu kont. Druga pozycja: polityka „Public reads all profiles” + grant SELECT dla `anon` ujawniają każdemu `full_name` i `role` wszystkich profili (w tym kto jest adminem) — poza zakresem, ten sam właściciel.
 - **2026-11-04, Claude (wf-plan):** trzy wejścia ustalone odczytem `origin/main` (`e1a84ac2`); stan prod niepotwierdzony — odczyt z app zablokowany przez filtr uprawnień.
+- **2026-11-05, tj:** przyjęte — PR #175; red proofy lokalnie (profiles-role, auth-callback, signUp), odczyt prod po migrate-prod (komentarz w #175): brak uprawnień do role dla anon/authenticated, handle_new_user z search_path='' i bez EXECUTE dla PUBLIC/anon/authenticated. Zmergowane przed odbiorem; zamknięcie w pierwszym commicie następnego zadania.
