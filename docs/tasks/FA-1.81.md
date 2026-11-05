@@ -2,11 +2,11 @@
 id: FA-1.81
 title: Oferta v2 — dane strukturalne jak v1 (`TouristTrip` + `Offer`, `BreadcrumbList`, `FAQPage`, `og:url`/`og:type`)
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
-effort: medium
+effort: high
 agent: fa-web
 branch: feat/fa-1.81-v2-structured-data
 pr:
@@ -61,3 +61,7 @@ curl -s localhost:3000/experiences/<slug-v2> | grep -o '"@type":"[A-Za-z]*"' | s
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** zadanie z audytu SEO (F11); przed migracją kolejnych ofert na v2.
+- **2026-11-05, tj:** model Sonnet · effort high.
+- **2026-11-05, tj:** D1 — cena w `offers` = cena, którą pokazuje strona: `fixed` → „od” z opłatą FA (to samo co `fromTotalCents`) jako `Offer`; `custom` → zapisany zakres (`customRange`, bez opłaty) jako `AggregateOffer` (`lowPrice`/`highPrice`); brak ceny → bez `offers`.
+- **2026-11-05, tj:** D2 — kraj bez huba (`getHubSlugForCountry` = null) → okruszek Home → Trips (`/trips`) → oferta, jak w v1; z hubem: Home → hub → oferta. Etykieta okruszka huba — otwarta, pytam przed wyborem.
+- **2026-11-05, tj:** D3 — tożsamość wyniku v1 dowodzi test z golden fixture (wynik z kodu na `main`, nie przepisany); zamiast „diff v1 przed/po” (seed nie ma aktywnej oferty v1, `curl` lokalnie niemożliwy) kryterium to: test golden zielony i `git diff main -- <fixture>` pusty po refaktorze.
