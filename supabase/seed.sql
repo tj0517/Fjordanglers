@@ -214,8 +214,10 @@ ON CONFLICT (id) DO NOTHING;
 --   angler@seed.test / seed-angler-password-2026   (profiles.role = 'angler')
 --
 -- The profiles rows are NOT inserted here: auth.users has an AFTER INSERT trigger
--- (public.handle_new_user, baseline lines 264-277) that creates them from
--- raw_user_meta_data ->> 'role'. One writer, so the two can never drift.
+-- (public.handle_new_user) that creates them. Since FA-1.93 that trigger always creates an
+-- 'angler' and ignores any role in raw_user_meta_data (users can edit their own metadata), so
+-- the admin's role is set by the explicit UPDATE right below the auth.users insert — the seed
+-- runs as postgres, which the column grants on profiles do not restrict.
 -- pgcrypto lives in the `extensions` schema (baseline line 33), hence the qualified calls.
 -- All UUIDs are v4 (version digit = 4, variant = 8), like the rest of this file.
 -- ═════════════════════════════════════════════════════════════════════════════
@@ -231,7 +233,7 @@ INSERT INTO auth.users (
    extensions.crypt('seed-admin-password-2026', extensions.gen_salt('bf')),
    now(),
    '{"provider":"email","providers":["email"]}',
-   '{"role":"admin","full_name":"Adam Seed (admin)"}',
+   '{"full_name":"Adam Seed (admin)"}',
    now(), now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000',
@@ -240,9 +242,12 @@ INSERT INTO auth.users (
    extensions.crypt('seed-angler-password-2026', extensions.gen_salt('bf')),
    now(),
    '{"provider":"email","providers":["email"]}',
-   '{"role":"angler","full_name":"Anna Seed (angler)"}',
+   '{"full_name":"Anna Seed (angler)"}',
    now(), now(), '', '', '', '')
 ON CONFLICT (id) DO NOTHING;
+
+-- FA-1.93: the only place an admin is made in the seed. The trigger above created this row as 'angler'.
+UPDATE public.profiles SET role = 'admin' WHERE id = '9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a01';
 
 -- Identities: without them gotrue refuses a password sign-in, and the RLS proof would be
 -- limited to faking claims with `SET LOCAL request.jwt.claims`.
