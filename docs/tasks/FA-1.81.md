@@ -2,7 +2,7 @@
 id: FA-1.81
 title: Oferta v2 — dane strukturalne jak v1 (`TouristTrip` + `Offer`, `BreadcrumbList`, `FAQPage`, `og:url`/`og:type`)
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -68,3 +68,4 @@ curl -s localhost:3000/experiences/<slug-v2> | grep -o '"@type":"[A-Za-z]*"' | s
 - **2026-11-05, tj:** etykieta okruszka huba = **A**: `h1` huba (np. „Iceland Fly Fishing Trips”); bez nowego pola w `destinations.ts`.
 - **2026-11-05, tj:** escapowanie = **C**: wspólny serializer escapuje `<` `>` `&` jako `\u003c` `\u003e` `\u0026` dla v1 i v2, bez flagi, jedno zachowanie. Golden fixture aktualizowany świadomie, w osobnym commicie (diff = wyłącznie te zamiany); test: po `JSON.parse` nowy wynik v1 równy oryginałowi sprzed refaktoru; red proof z `</script>` w odpowiedzi FAQ; kryterium D3 zmienione (wyżej); wiersz deferred (security) dla pozostałych stron z gołym `JSON.stringify` w `ld+json`. To zastępuje wcześniejsze „v1 identyczny co do bajta / pusty `git diff` fixture’a” z D3.
 - **2026-11-05, Claude:** golden przechowywał wynik sparsowany (czytelny), więc zmiana escapowania nie zmieniłaby pliku. Żeby diff pokazywał dokładnie zamiany znaków, osobny commit najpierw przekłada golden na surowe napisy 1:1 (bez zmiany treści — każdy napis = `JSON.stringify` wersji sparsowanej z `main`), a plik sparsowany zostaje bez zmian jako oryginał-referencja dla testu równości po `JSON.parse`.
+- **2026-11-05, tj:** przyjęte — PR #176; red proofs wklejone (builder v2 13/16 → 16/16, escape </script> 3/5 → zielone, og:url/type 1 czerwony); curl obu stron seed v2 = 200, TouristTrip + Offer/AggregateOffer + BreadcrumbList, wszystkie bloki parsują się; golden v1: oryginał niezmieniony od a024ae1, aktualizacja de642b6 = tylko escape < > &; CI na 8f60fbc zielone (check z buildem, db, knip, secrets). Podgląd Vercela „Error” przy zielonym buildzie w CI — sprawdzam przed merge.
