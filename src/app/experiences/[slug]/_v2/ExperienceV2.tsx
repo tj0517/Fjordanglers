@@ -43,7 +43,8 @@ import OfferInquiry from '@/components/experience-v2/offer-inquiry'
 import OfferMoreTrips from '@/components/experience-v2/offer-more-trips'
 import { InquiryWizardProvider, type InquiryWizardPage } from '@/components/inquiry-wizard/inquiry-wizard'
 import { ExperienceFunnelProvider } from '@/components/analytics/experience-funnel'
-import { fromPrice } from '@/lib/pricing/experience-price'
+import { serializeJsonLd } from '@/lib/seo/offer-jsonld'
+import { v2Description, v2FromPrice, v2OfferJsonLd } from '@/lib/seo/v2-offer-jsonld'
 // The inquiry section of S14. The CTAs keep the href even though they also open the wizard.
 import { INQUIRY_ANCHOR } from '@/components/experience-v2/inquiry-anchor'
 import { SITE_URL } from '@/lib/site'
@@ -75,12 +76,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return {
     title: title.endsWith('| FjordAnglers') ? { absolute: title } : title,
-    description: page.metaDescription
-      ?? `Guided fishing in ${page.region}, ${page.country}. Free inquiry, answer within ${page.responseSlaHours} h, deposit only after you accept the offer.`,
+    description: v2Description(page),
     alternates: { canonical: `${SITE_URL}/experiences/${slug}` },
     openGraph: {
       title,
       description: page.metaDescription ?? undefined,
+      url: `${SITE_URL}/experiences/${slug}`,
+      // 'website' is the only Next.js Open Graph type that fits an offer page (there is no 'product').
+      type: 'website' as const,
       images: page.heroImageUrl != null ? [{ url: page.heroImageUrl }] : undefined,
     },
   }
@@ -120,9 +123,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
     licenseUrl:       page.license?.links.find(link => link.url != null)?.url ?? null,
     offerMode:        page.offerMode,
     currency:         page.currency,
-    fromTotalCents:   page.offerMode === 'fixed'
-      ? fromPrice({ prices: page.prices, feePct: page.feePct, maxAnglersPerGuide: page.maxAnglersPerGuide })?.totalCents ?? null
-      : null,
+    fromTotalCents:   v2FromPrice(page)?.totalCents ?? null,
     priceFromCents:     page.priceFromCents,
     priceToCents:       page.priceToCents,
     minDays:            page.minDays,
@@ -156,10 +157,18 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
   // `slug` is the one this page was rendered under — the public route has already redirected
   // a retired alias, so it is the canonical one; the preview renders the same component, so
   // ?preview=v2 reports page_version 2 as well.
+  // Structured data: the same trip / breadcrumb / FAQ blocks v1 emits, built by the shared builder (FA-1.81).
+  const jsonLd = v2OfferJsonLd(page, slug)
+
   return (
    <ExperienceFunnelProvider version={2} slug={slug} sections={FUNNEL_SECTIONS_V2}>
     <CurrencyProvider baseCurrency={page.currency} rates={rates}>
      <InquiryWizardProvider page={wizardPage}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.trip) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.breadcrumb) }} />
+      {jsonLd.faq != null && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.faq) }} />
+      )}
       <SiteNav />
 
       {/* The site's warm sand — the same ground v1 and the home page stand on. */}

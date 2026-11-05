@@ -20,6 +20,7 @@ import { COUNTRIES, getRegionGroup } from '@/lib/countries'
 import { WebEventTracker } from '@/components/analytics/WebEventTracker'
 import { availabilityWindow } from '@/lib/availability-window'
 import { SITE_URL } from '@/lib/site'
+import { buildOfferJsonLd, serializeJsonLd } from '@/lib/seo/offer-jsonld'
 
 /**
  * /experiences/[slug] — Public editorial experience page, template v1.
@@ -278,84 +279,41 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
       ? [{ id: '0', url: page.hero_image_url, is_cover: true }]
       : []
 
-  const faOrg = { '@type': 'Organization', name: 'FjordAnglers', url: SITE_URL }
-
-  const tripSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'TouristTrip',
-    name: page.experience_name,
+  // JSON-LD: trip, breadcrumb and FAQ come from the builder v2 uses too (FA-1.81). v1's output is
+  // pinned byte-for-byte by __tests__/__golden__/v1-offer-jsonld.json — do not change what it emits here.
+  const jsonLd = buildOfferJsonLd({
+    siteUrl:     SITE_URL,
+    slug,
+    name:        page.experience_name,
     description: page.meta_description ?? `Guided fishing trip in ${page.region}, ${page.country}. Book with verified local guides via FjordAnglers.`,
-    ...(page.hero_image_url != null ? { image: page.hero_image_url } : {}),
-    url: `${SITE_URL}/experiences/${slug}`,
-    touristType: ['Fishing', 'Outdoor Activity'],
-    ...(rawPage.location_lat != null && rawPage.location_lng != null ? {
-      location: {
-        '@type': 'Place',
-        name: rawPage.location_area ?? `${rawPage.region}, ${rawPage.country}`,
-        geo: {
-          '@type': 'GeoCoordinates',
-          latitude: rawPage.location_lat,
-          longitude: rawPage.location_lng,
-        },
-        address: {
-          '@type': 'PostalAddress',
-          addressCountry: rawPage.country,
-          addressRegion: rawPage.region,
-        },
-      },
-    } : {}),
-    ...(page.season_start != null && page.season_end != null ? {
-      temporalCoverage: `${page.season_start}/${page.season_end}`,
-    } : {}),
-    ...(page.price_from != null && page.price_type !== 'request' ? {
-      offers: {
-        '@type': 'Offer',
-        price: page.price_from,
-        priceCurrency: page.currency,
-        availability: 'https://schema.org/InStock',
-        url: `${SITE_URL}/experiences/${slug}`,
-        seller: faOrg,
-      },
-    } : {}),
-    provider: faOrg,
-    ...(guide != null ? {
-      subjectOf: {
-        '@type': 'Person',
-        name: guide.full_name,
-        url: `${SITE_URL}/guides/${guide.slug ?? guide.id}`,
-      },
-    } : {}),
-  }
-
-  const breadcrumbSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
-      { '@type': 'ListItem', position: 2, name: 'Trips', item: `${SITE_URL}/trips` },
-      { '@type': 'ListItem', position: 3, name: page.experience_name, item: `${SITE_URL}/experiences/${slug}` },
-    ],
-  }
-
-  // FAQPage retained for AI/LLM citation benefit only.
-  // Google ended FAQ rich results for all sites on May 7, 2026 — no SERP feature is rendered.
-  const faqSchema = faq.length > 0 ? {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: faq.map(item => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: { '@type': 'Answer', text: item.answer },
-    })),
-  } : null
+    imageUrl:    page.hero_image_url,
+    location: rawPage.location_lat != null && rawPage.location_lng != null
+      ? {
+          name:    rawPage.location_area ?? `${rawPage.region}, ${rawPage.country}`,
+          lat:     rawPage.location_lat,
+          lng:     rawPage.location_lng,
+          country: rawPage.country,
+          region:  rawPage.region,
+        }
+      : null,
+    temporalCoverage: page.season_start != null && page.season_end != null
+      ? `${page.season_start}/${page.season_end}`
+      : null,
+    price: page.price_from != null && page.price_type !== 'request'
+      ? { kind: 'single', amount: page.price_from, currency: page.currency }
+      : null,
+    guide:       guide != null ? { name: guide.full_name, slug: guide.slug, id: guide.id } : null,
+    parentCrumb: { label: 'Trips', url: `${SITE_URL}/trips` },
+    faq,
+  })
 
   return (
     <ExperienceFunnelProvider version={1} slug={slug} sections={FUNNEL_SECTIONS_V1}>
       <WebEventTracker country={page.country} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(tripSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      {faqSchema != null && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.trip) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.breadcrumb) }} />
+      {jsonLd.faq != null && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.faq) }} />
       )}
       <SiteNav />
       {/* ─── MOBILE GALLERY (below nav, compact height) ── */}

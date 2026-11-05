@@ -112,7 +112,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.78 | CI — ponawianie `supabase start` w jobie `db` na przemian z ghcr.io i public.ecr.aws (oba rejestry dławią pobieranie, `toomanyrequests` na PR #169) | S | sonnet | done (PR #170) | — |
 | FA-1.80 | Strony publiczne w cache — odczyt sesji poza renderem stron publicznych | M | opus | done (PR #174) | — |
 | FA-1.79 | Jeden host kanoniczny `www` — stała adresu zamiast 58 na sztywno; apex → www 308 w Vercelu (tj) | M | sonnet | done (PR #173) | — |
-| FA-1.81 | Oferta v2 — dane strukturalne jak v1 (`TouristTrip`+`Offer`, `BreadcrumbList`, `FAQPage`, `og:url/type`) | M | sonnet | todo | — |
+| FA-1.81 | Oferta v2 — dane strukturalne jak v1 (`TouristTrip`+`Offer`, `BreadcrumbList`, `FAQPage`, `og:url/type`) | M | sonnet | done (PR #176) | — |
 | FA-1.82 | Huby Norwegii, Szwecji i Finlandii w kodzie + `FAQPage`/`BreadcrumbList`, linki do przewodników i artykułów | M | sonnet | todo | — (teksty: Krzysztof) |
 | FA-1.83 | Blog, krok 1 — tabela wpisów + publiczny czytnik (metadane, schema, sitemapa), przeniesienie artykułu, koniec stubów | L | opus | todo | FA-1.80 |
 | FA-1.84 | Blog, krok 2 — edytor w `/admin` (szkic/publikacja, zdjęcia, podgląd, SEO) | L | opus | todo | FA-1.83 |
@@ -124,7 +124,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.90 | Linkowanie wewnętrzne — oferty/przewodnicy przy artykułach i hubach, blog na głównej | M | sonnet | todo | FA-1.82, FA-1.83 |
 | FA-1.91 | Strony techniczne poza indeksem — `noindex`/404 dla tokenów, `alt` pinów, bez `SearchAction` | S | sonnet | todo | — |
 | FA-1.92 | Lżejsze obrazy i szybszy LCP — kompresja `public/`, priorytet LCP, mniej JS na ofercie | M | sonnet | todo | FA-1.80 |
-| FA-1.93 | Rolę nadaje tylko serwer — użytkownik nie zmieni swojej roli (`profiles`), `handle_new_user` i `auth/callback` nie przyjmą `admin` z danych konta (pilne, przed SEO) | M | opus | review | — |
+| FA-1.93 | Rolę nadaje tylko serwer — użytkownik nie zmieni swojej roli (`profiles`), `handle_new_user` i `auth/callback` nie przyjmą `admin` z danych konta (pilne, przed SEO) | M | opus | done (PR #175) | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | Migracje przez GitHub Actions — `deploy-db.yml`: dev auto po merge do `main`, prod `workflow_dispatch` za bramką Environment `production-db` (wzór DCS) | M | sonnet | done | FA-1.18 |

@@ -1,0 +1,141 @@
+{
+  "full": [
+    {
+      "@context": "https://schema.org",
+      "@type": "TouristTrip",
+      "name": "Golden Salmon Weekend",
+      "description": "Two days on the Laxá with a local guide — salmon and sea-run char.",
+      "image": "https://images.example.test/golden-hero.jpg",
+      "url": "https://www.fjordanglers.com/experiences/v1-golden-full",
+      "touristType": [
+        "Fishing",
+        "Outdoor Activity"
+      ],
+      "location": {
+        "@type": "Place",
+        "name": "Laxá valley",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 65.6,
+          "longitude": -17.1
+        },
+        "address": {
+          "@type": "PostalAddress",
+          "addressCountry": "Iceland",
+          "addressRegion": "Northeast"
+        }
+      },
+      "temporalCoverage": "2026-06-01/2026-09-15",
+      "offers": {
+        "@type": "Offer",
+        "price": 450,
+        "priceCurrency": "EUR",
+        "availability": "https://schema.org/InStock",
+        "url": "https://www.fjordanglers.com/experiences/v1-golden-full",
+        "seller": {
+          "@type": "Organization",
+          "name": "FjordAnglers",
+          "url": "https://www.fjordanglers.com"
+        }
+      },
+      "provider": {
+        "@type": "Organization",
+        "name": "FjordAnglers",
+        "url": "https://www.fjordanglers.com"
+      },
+      "subjectOf": {
+        "@type": "Person",
+        "name": "Jón Golden",
+        "url": "https://www.fjordanglers.com/guides/jon-golden"
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://www.fjordanglers.com"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Trips",
+          "item": "https://www.fjordanglers.com/trips"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Golden Salmon Weekend",
+          "item": "https://www.fjordanglers.com/experiences/v1-golden-full"
+        }
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Do I need a fishing licence?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes — we arrange the day licence for you."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is included?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tackle <b>included</b> & waders on request: \"just ask\"."
+          }
+        }
+      ]
+    }
+  ],
+  "request": [
+    {
+      "@context": "https://schema.org",
+      "@type": "TouristTrip",
+      "name": "Request-only Char Trip",
+      "description": "Guided fishing trip in Finnmark, Norway. Book with verified local guides via FjordAnglers.",
+      "url": "https://www.fjordanglers.com/experiences/v1-golden-request",
+      "touristType": [
+        "Fishing",
+        "Outdoor Activity"
+      ],
+      "provider": {
+        "@type": "Organization",
+        "name": "FjordAnglers",
+        "url": "https://www.fjordanglers.com"
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://www.fjordanglers.com"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Trips",
+          "item": "https://www.fjordanglers.com/trips"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Request-only Char Trip",
+          "item": "https://www.fjordanglers.com/experiences/v1-golden-request"
+        }
+      ]
+    }
+  ]
+}
