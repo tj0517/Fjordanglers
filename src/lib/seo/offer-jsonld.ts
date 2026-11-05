@@ -52,9 +52,17 @@ export function amountFromCents(cents: number): number {
   return cents / 100
 }
 
-/** The text that goes between `<script type="application/ld+json">` tags. One place to change how it is serialised. */
+/**
+ * The text that goes between `<script type="application/ld+json">` tags.
+ *
+ * Offer names and FAQ answers come from the database. A bare `JSON.stringify` leaves `<` as it is,
+ * so a `</script>` in a FAQ answer would close the tag and let the rest of the text into the HTML.
+ * `<`, `>` and `&` are therefore written as \u003c, \u003e, \u0026 — still valid JSON, and a parser
+ * reads back exactly the original characters (FA-1.81, tj decision C). These three characters occur
+ * in `JSON.stringify` output only inside strings, so the replacement can never touch structure.
+ */
 export function serializeJsonLd(schema: Record<string, unknown>): string {
-  return JSON.stringify(schema)
+  return JSON.stringify(schema).replace(/[<>&]/g, c => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)
 }
 
 function offersOf(price: OfferPrice, siteUrl: string, url: string): Record<string, unknown> {
