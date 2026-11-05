@@ -7,6 +7,8 @@ import type { ExpPage } from '@/components/trips/exp-card'
 import { COUNTRIES } from '@/lib/countries'
 import { WebEventTracker } from '@/components/analytics/WebEventTracker'
 import { SITE_URL } from '@/lib/site'
+import { getActiveDestinationCountries } from '@/lib/supabase/queries'
+import { listingCanonicalUrl } from '@/lib/listing-canonical'
 
 const PAGE_SIZE = 12
 
@@ -93,7 +95,19 @@ function Pagination({
 export const revalidate = 60
 
 const DEFAULT_TITLE = 'Guided Fishing Trips with Local Guides'
-const DEFAULT_DESCRIPTION = 'Browse 20+ hand-picked guided fishing trips across Norway, Sweden, Iceland and Finland. Salmon, sea trout, pike & fly fishing. Filter by country.'
+
+/**
+ * The one fixed sentence for /trips without a country filter. It names the countries
+ * that have an active offer right now (data layer, ordered Nordic → Patagonia → NZ),
+ * so it cannot go stale when an offer goes live or is taken down. No count, no "20+".
+ */
+function defaultDescription(countries: readonly string[]): string {
+  const where =
+    countries.length === 0 ? '' :
+    countries.length === 1 ? ` in ${countries[0]}` :
+    ` in ${countries.slice(0, -1).join(', ')} and ${countries[countries.length - 1]}`
+  return `Browse hand-picked guided fishing trips with local guides${where}, and filter by country.`
+}
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams
@@ -106,7 +120,10 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     : DEFAULT_TITLE
   const description = matched != null
     ? `Browse guided fishing trips in ${matched} with verified local guides. Filter by species, price and dates.`
-    : DEFAULT_DESCRIPTION
+    : defaultDescription(await getActiveDestinationCountries())
+
+  // Page N ≥ 2 is its own canonical; any country filter stays on /trips (FA-1.88).
+  const canonical = listingCanonicalUrl(`${SITE_URL}/trips`, params.page, [params.country])
 
   return {
     title,
@@ -114,11 +131,11 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     // Overrides the root layout's Nordic-specific keywords — without this, every
     // /trips?country=... page (Patagonia and NZ included) inherits them too.
     keywords: matched != null ? [matched, 'guided fishing trip'] : ['guided fishing trip', 'fishing guide'],
-    alternates: { canonical: `${SITE_URL}/trips` },
+    alternates: { canonical },
     openGraph: {
       title,
       description,
-      url: `${SITE_URL}/trips`,
+      url: canonical,
       images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: `${title} | FjordAnglers` }],
     },
     twitter: {

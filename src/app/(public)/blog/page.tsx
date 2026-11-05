@@ -9,7 +9,12 @@ export const metadata: Metadata = {
   title: 'Fishing Journal — Tips, Guides & Destination Stories',
   description: 'Season dates, licence rules and tactics, written from the rivers we actually send people to.',
   alternates: { canonical: `${SITE_URL}/blog` },
-  openGraph: { url: `${SITE_URL}/blog`, type: 'website' },
+  openGraph: {
+    url: `${SITE_URL}/blog`,
+    type: 'website',
+    // Page-level openGraph replaces the layout's wholesale, so the default image is restated here.
+    images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: 'Fishing Journal | FjordAnglers' }],
+  },
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
