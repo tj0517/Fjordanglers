@@ -1,37 +1,45 @@
 import type { MetadataRoute } from 'next'
 import { createServiceClient } from '@/lib/supabase/server'
-import { BLOG_POSTS } from '@/lib/blog-data'
+import { getIndexableBlogPosts, parseBlogPostDate } from '@/lib/blog-articles'
 import { DESTINATION_HUBS } from '@/lib/destinations'
 import { SITE_URL } from '@/lib/site'
 
 export const revalidate = 3600
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date()
+/**
+ * `lastModified` is only ever a real modification date (FA-1.88): the row's
+ * `updated_at`, or the blog post's own date. No date → no field. Never "now" —
+ * a sitemap that re-dates every URL on every fetch teaches crawlers to ignore `lastmod`.
+ */
+function lastModifiedFrom(date: Date | string | null | undefined): Pick<MetadataRoute.Sitemap[number], 'lastModified'> {
+  if (date == null) return {}
+  const d = date instanceof Date ? date : new Date(date)
+  return Number.isNaN(d.getTime()) ? {} : { lastModified: d }
+}
 
-  // ── Static pages ──────────────────────────────────────────────────────────
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // ── Static pages (no real modification date → no lastModified) ────────────
   const destinationHubPages: MetadataRoute.Sitemap = DESTINATION_HUBS.map(hub => ({
     url:             `${SITE_URL}/${hub.slug}`,
-    lastModified:    now,
     changeFrequency: 'weekly' as const,
     priority:        0.85,
   }))
 
   const staticPages: MetadataRoute.Sitemap = [
-    { url: SITE_URL,                              lastModified: now, changeFrequency: 'weekly',  priority: 1.00 },
-    { url: `${SITE_URL}/trips`,                   lastModified: now, changeFrequency: 'daily',   priority: 0.90 },
-    { url: `${SITE_URL}/guides`,                  lastModified: now, changeFrequency: 'daily',   priority: 0.90 },
-    { url: `${SITE_URL}/blog`,                    lastModified: now, changeFrequency: 'weekly',  priority: 0.65 },
-    { url: `${SITE_URL}/legal/privacy-policy`,    lastModified: now, changeFrequency: 'monthly', priority: 0.30 },
-    { url: `${SITE_URL}/legal/terms-of-service`,  lastModified: now, changeFrequency: 'monthly', priority: 0.30 },
-    { url: `${SITE_URL}/legal/cookie-policy`,     lastModified: now, changeFrequency: 'monthly', priority: 0.30 },
-    { url: `${SITE_URL}/legal/legal-notice`,      lastModified: now, changeFrequency: 'monthly', priority: 0.30 },
+    { url: SITE_URL,                              changeFrequency: 'weekly',  priority: 1.00 },
+    { url: `${SITE_URL}/trips`,                   changeFrequency: 'daily',   priority: 0.90 },
+    { url: `${SITE_URL}/guides`,                  changeFrequency: 'daily',   priority: 0.90 },
+    { url: `${SITE_URL}/blog`,                    changeFrequency: 'weekly',  priority: 0.65 },
+    { url: `${SITE_URL}/legal/privacy-policy`,    changeFrequency: 'monthly', priority: 0.30 },
+    { url: `${SITE_URL}/legal/terms-of-service`,  changeFrequency: 'monthly', priority: 0.30 },
+    { url: `${SITE_URL}/legal/cookie-policy`,     changeFrequency: 'monthly', priority: 0.30 },
+    { url: `${SITE_URL}/legal/legal-notice`,      changeFrequency: 'monthly', priority: 0.30 },
   ]
 
-  // ── Blog posts (static data) ───────────────────────────────────────────────
-  const blogPages: MetadataRoute.Sitemap = BLOG_POSTS.map(post => ({
+  // ── Blog posts (static data; stubs are noindex, so they are not listed) ───
+  const blogPages: MetadataRoute.Sitemap = getIndexableBlogPosts().map(post => ({
     url:             `${SITE_URL}/blog/${post.slug}`,
-    lastModified:    now,
+    ...lastModifiedFrom(parseBlogPostDate(post.date)),
     changeFrequency: 'monthly' as const,
     priority:        0.65,
   }))
@@ -55,14 +63,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     experiencePages = (expRes.data ?? []).map(exp => ({
       url:             `${SITE_URL}/experiences/${exp.slug}`,
-      lastModified:    exp.updated_at ? new Date(exp.updated_at) : now,
+      ...lastModifiedFrom(exp.updated_at),
       changeFrequency: 'weekly' as const,
       priority:        0.95,
     }))
 
     guidePages = (guideRes.data ?? []).map(guide => ({
       url:             `${SITE_URL}/guides/${(guide as { slug?: string | null }).slug ?? guide.id}`,
-      lastModified:    guide.updated_at ? new Date(guide.updated_at) : now,
+      ...lastModifiedFrom(guide.updated_at),
       changeFrequency: 'weekly' as const,
       priority:        0.90,
     }))

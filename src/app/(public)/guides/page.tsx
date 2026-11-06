@@ -1,9 +1,11 @@
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getGuides, getPlatformStats } from '@/lib/supabase/queries'
 import { GuidesFilters } from './guides-filters'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { SITE_URL } from '@/lib/site'
+import { listingCanonicalUrl } from '@/lib/listing-canonical'
 
 
 const PAGE_SIZE = 12
@@ -105,17 +107,28 @@ const GrainOverlay = () => (
 
 // ─── METADATA ─────────────────────────────────────────────────────────────────
 
-export const metadata = {
-  title: 'Independent Fishing Guides in Iceland, Scandinavia, Patagonia and New Zealand',
-  description:
-    'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
-  alternates: { canonical: `${SITE_URL}/guides` },
-  openGraph: {
-    url: `${SITE_URL}/guides`,
-    type: 'website',
-    title: 'Independent Fishing Guides in Iceland, Scandinavia, Patagonia and New Zealand',
-    description: 'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
-  },
+const GUIDES_TITLE = 'Independent Fishing Guides in Iceland, Scandinavia, Patagonia and New Zealand'
+const GUIDES_DESCRIPTION =
+  'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.'
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
+  const params = await searchParams
+  // Page N ≥ 2 is its own canonical; any country/language filter stays on /guides (FA-1.88).
+  const canonical = listingCanonicalUrl(`${SITE_URL}/guides`, params.page, [params.country, params.language])
+
+  return {
+    title: GUIDES_TITLE,
+    description: GUIDES_DESCRIPTION,
+    alternates: { canonical },
+    openGraph: {
+      url: canonical,
+      type: 'website',
+      title: GUIDES_TITLE,
+      description: GUIDES_DESCRIPTION,
+      // Page-level openGraph replaces the layout's wholesale, so the default image is restated here.
+      images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: `${GUIDES_TITLE} | FjordAnglers` }],
+    },
+  }
 }
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
