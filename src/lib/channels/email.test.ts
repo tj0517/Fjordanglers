@@ -8,7 +8,7 @@ vi.mock('@/lib/env', () => ({
   },
 }))
 
-import { emailAdapter } from './email'
+import { emailAdapter, textToHtml } from './email'
 
 const TO = 'jan.kowalski@example.com'
 
@@ -55,6 +55,32 @@ describe('channels/email adapter without RESEND_DEV_FAKE', () => {
     expect(body.to).toBe(TO)
     expect(body.subject).toBe('Hi')
     expect(body.text).toBe('Hello')
+    // HTML twin — without it Resend cannot inject its open-tracking pixel
+    expect(body.html).toBe(textToHtml('Hello'))
     expect(result.externalId).toBe('re_test_123')
+  })
+})
+
+describe('textToHtml — HTML twin of channel emails (enables Resend open tracking)', () => {
+  it('escapes HTML so a message body cannot inject markup', () => {
+    const html = textToHtml('<script>alert(1)</script> & "x"')
+    expect(html).not.toContain('<script>')
+    expect(html).toContain('&lt;script&gt;')
+    expect(html).toContain('&amp; &quot;x&quot;')
+  })
+
+  it('keeps line breaks and paragraphs', () => {
+    const html = textToHtml('Hi Anna,\nline two\n\nBest,\nTymon')
+    expect(html).toContain('<p style="margin:0 0 1em 0">Hi Anna,<br>line two</p>')
+    expect(html).toContain('Best,<br>Tymon</p>')
+  })
+
+  it('normalises CRLF', () => {
+    expect(textToHtml('a\r\nb')).toContain('a<br>b')
+  })
+
+  it('links URLs without swallowing trailing punctuation or quotes', () => {
+    const html = textToHtml('See "https://fjordanglers.com/offers/abc?x=1&y=2". Thanks')
+    expect(html).toContain('<a href="https://fjordanglers.com/offers/abc?x=1&amp;y=2">https://fjordanglers.com/offers/abc?x=1&amp;y=2</a>&quot;. Thanks')
   })
 })

@@ -14,6 +14,42 @@ function newMessageId(): string {
   return `<${randomUUID()}@mail.fjordanglers.com>`
 }
 
+/**
+ * Plain-text body → minimal HTML twin. Resend's open tracking works by
+ * injecting a pixel into the HTML part — a text-only email can never be
+ * marked "opened". No template styling: the message should still read like
+ * a personal 1:1 email. Links are made clickable; everything is escaped.
+ */
+const URL_RE = /\bhttps?:\/\/[^\s<>"']*[^\s<>"'.,;:!?)\]]/g
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+export function textToHtml(body: string): string {
+  const text = body.replace(/\r\n?/g, '\n')
+  let out = ''
+  let last = 0
+  for (const m of text.matchAll(URL_RE)) {
+    const i = m.index ?? 0
+    out += escapeHtml(text.slice(last, i))
+    const url = escapeHtml(m[0])
+    out += `<a href="${url}">${url}</a>`
+    last = i + m[0].length
+  }
+  out += escapeHtml(text.slice(last))
+  const paragraphs = out
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 1em 0">${p.replace(/\n/g, '<br>')}</p>`)
+    .join('\n')
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222">${paragraphs}</div>`
+}
+
 async function sendRaw({
   to,
   subject,
@@ -30,6 +66,7 @@ async function sendRaw({
     to,
     subject,
     text:    body,
+    html:    textToHtml(body),
     headers: headers ?? {},
   }
 
