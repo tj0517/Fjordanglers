@@ -2,14 +2,14 @@
 id: FA-1.82
 title: Huby Norwegii, Szwecji i Finlandii w kodzie + jakość hubów (`FAQPage`, `BreadcrumbList`, linki do przewodników i artykułów)
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-web
 branch: feat/fa-1.82-nordic-hubs
-pr:
+pr: 180
 depends_on: []
 blocked_by_questions: []
 touches_db: false
