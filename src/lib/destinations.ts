@@ -46,7 +46,7 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     slug: 'patagonia',
     group: 'Patagonia',
     h1: 'Patagonia Fly Fishing Trips',
-    intro: 'Guides in Argentina and Chile. Juan Leobono guides the Upper Limay, the Manso and the lakes of Nahuel Huapi National Park from Bariloche. Alex Prior has guided the Aysén spring creeks and freestone rivers out of Coyhaique since 1989. Javier Leppe guides Chinook salmon and sea-run browns in Chilean Tierra del Fuego, walk and wade. Natales Fly Fishing, an Orvis-endorsed outfitter in Puerto Natales, guides Torres del Paine and the Río Penitente. Another guide covers Punta Arenas and Tierra del Fuego.',
+    intro: 'Guides in Argentina and Chile. Juan Leobono guides the Upper Limay, the Manso and the lakes of Nahuel Huapi National Park from Bariloche. Alex Prior has guided the Aysén spring creeks and freestone rivers out of Coyhaique since 1989. Javier Leppe guides Chinook salmon and sea-run browns in Chilean Tierra del Fuego, walk and wade. Natales Fly Fishing, an Orvis-endorsed outfitter in Puerto Natales, guides Torres del Paine and the Río Penitente.',
     metaTitle: 'Patagonia Fly Fishing Trips',
     metaDescription: 'Fly fishing guides in Patagonia: Juan Leobono in Bariloche, Alex Prior in Coyhaique, Javier Leppe and Natales Fly Fishing. Trout, sea-run browns, Chinook.',
     seasonMonths: [10, 11, 12, 1, 2, 3, 4, 5],
@@ -157,7 +157,7 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     h1: 'Guided Fishing Trips in Sweden',
     intro: 'Five guides, from the Baltic coast to Lapland. Berra Mårdh and Dan Bjurshammar (FiskeDan) guide pike and perch around Stockholm and Lake Mälaren. Joakim Åberg guides zander, perch and pike on the lakes of Alingsås, 50 km east of Gothenburg. Piotr Wawrzyniuk, known as Pexfish, guides sea trout and pike in Blekinge and Skåne. Kalix Jakt & Fisketurism (KJOFT) in Kalix guides salmon, trout and char in Swedish Lapland. You talk to the guide who takes you out.',
     metaTitle: 'Guided Fishing Trips in Sweden',
-    metaDescription: 'Fishing guides in Sweden: Berra Mårdh, FiskeDan, Joakim Åberg, Pexfish and Kalix Jakt & Fisketurism (KJOFT). Pike, perch, zander, sea trout and salmon.',
+    metaDescription: 'Guided fishing in Sweden: Stockholm and Lake Mälaren, Alingsås near Gothenburg, Blekinge, and Kalix in Lapland. Pike, zander, perch, sea trout, salmon.',
     // The bar is the union of the offers' months; no peak months (tj, 2026-11-09). The note says it is a union.
     seasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     peakMonths: [],
