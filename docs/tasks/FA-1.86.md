@@ -9,7 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-1.86-guide-slugs
-pr:
+pr: 181
 depends_on: []
 blocked_by_questions: []
 touches_db: true
