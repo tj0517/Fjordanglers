@@ -2,7 +2,7 @@
 id: FA-1.82
 title: Huby Norwegii, Szwecji i Finlandii w kodzie + jakość hubów (`FAQPage`, `BreadcrumbList`, linki do przewodników i artykułów)
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -37,7 +37,7 @@ Popyt na Norwegię i Szwecję trafia dziś na `/trips` i strony pojedynczych ofe
 ## Zakres
 - [ ] Odczyt stanu: `DESTINATION_HUBS` (slugi, `countries`), liczba aktywnych ofert per kraj (SELECT, wynik wklejony).
 - [ ] Trzy wpisy hubów: `norway`, `sweden`, `finland` (`group: 'Nordic'`, `countries` jednoelementowe); Islandia bez zmian.
-- [ ] Pola redakcyjne (intro, sezon, szczyt, gatunki, FAQ, meta) dla 6 hubów z tekstów dostarczonych przez tj/Krzysztofa (Notion „Content — SEO i social”); bez tekstu → STOP, nie piszesz treści sam.
+- [ ] Pola redakcyjne (intro, sezon, szczyt, gatunki, FAQ, meta) dla 6 hubów. Teksty szkicuje agent ze źródeł (prod: bio przewodników i treść ofert; repo: artykuły; audyt SEO), każde twierdzenie ze źródłem; STOP przed testami i PR — tj zatwierdza teksty.
 - [ ] `FAQPage` (gdy FAQ niepuste) i `BreadcrumbList` w JSON-LD hubu.
 - [ ] Sekcja przewodników kraju z linkami do profili; miejsce na linki do artykułów (puste do FA-1.83).
 - [ ] Stopka: linki krajów na huby zamiast `/trips?country=`.
@@ -57,7 +57,7 @@ Popyt na Norwegię i Szwecję trafia dziś na `/trips` i strony pojedynczych ofe
 Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 
 ## Bramki STOP
-- Brak tekstu redakcyjnego dla któregoś hubu — STOP, nie generujesz treści sam.
+- Teksty szkicuje agent ze źródeł (prod: bio przewodników i treść ofert; repo: artykuły; audyt SEO), każde twierdzenie ze źródłem; STOP przed testami i PR — tj zatwierdza teksty.
 
 ## Weryfikacja
 ```
@@ -68,3 +68,4 @@ grep -n "trips?country" src/components/layout/footer.tsx
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** D2 — najpierw huby w kodzie przed 15.11, tabela i edytor później (FA-1.85, razem z edytorem bloga). Teksty pisze Krzysztof w Notionie, do kodu wkleja agent. O-42 wraca na (b) w FA-1.85.
+- **2026-11-09, tj:** w Notionie brak tekstów hubów — opcja C: szkice pisze agent ze źródeł, tj zatwierdza przed merge'em (termin 15.11).
