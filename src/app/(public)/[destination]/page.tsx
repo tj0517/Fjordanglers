@@ -4,6 +4,8 @@ import { getDestinationHub } from '@/lib/supabase/queries'
 import { WebEventTracker } from '@/components/analytics/WebEventTracker'
 import DestinationHubView from '@/components/destination-hub/destination-hub-view'
 import { SITE_URL } from '@/lib/site'
+import { buildHubJsonLd } from '@/lib/seo/hub-jsonld'
+import { serializeJsonLd } from '@/lib/seo/offer-jsonld'
 
 export const revalidate = 60
 
@@ -51,30 +53,16 @@ export default async function DestinationHubPage({
   const data = await getDestinationHub(destination)
   if (data == null) notFound()
 
-  const itemListSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: data.hub.h1,
-    numberOfItems: data.offers.length,
-    itemListElement: data.offers.map((offer, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      item: {
-        '@type': 'TouristTrip',
-        name: offer.page.experience_name,
-        url: `${SITE_URL}/experiences/${offer.page.slug}`,
-        ...(offer.page.hero_image_url != null ? { image: offer.page.hero_image_url } : {}),
-      },
-    })),
-  }
+  const jsonLd = buildHubJsonLd(data, SITE_URL)
 
   return (
     <div style={{ background: '#F3EDE4' }}>
       <WebEventTracker />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.itemList) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.breadcrumb) }} />
+      {jsonLd.faq != null && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.faq) }} />
+      )}
 
       {/* Spacer for fixed nav */}
       <div style={{ height: '72px' }} />

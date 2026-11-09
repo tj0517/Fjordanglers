@@ -2,8 +2,8 @@
  * The country hub (FA-1.65) — what `/[destination]` renders, from one `getDestinationHub()`
  * result and nothing else, so the same view renders a fixture in the tests.
  *
- * Order (task FA-1.65, "Goal"): hero → season → species → trips → FAQ → reviews →
- * how it works → more destinations → contact. A section with no data is not rendered at all —
+ * Order (task FA-1.65, "Goal"): hero → season → species → trips → guides → FAQ → articles →
+ * reviews → how it works → more destinations → contact (guides and articles: FA-1.82). A section with no data is not rendered at all —
  * no empty heading. The six sections FA-1.66 measures carry `data-section`; the three that
  * every hub has carry `data-block`, so the anchors stay exactly the six it expects. So does
  * the testimonial that stands in for empty reviews (FA-1.69).
@@ -16,6 +16,7 @@
  * `section_view`, `hub_card_click`) come from `HubFunnelProvider`.
  */
 
+import Image from 'next/image'
 import Link from 'next/link'
 import OfferSection from '@/components/experience-v2/offer-section'
 import SeasonBar from '@/components/experience-v2/offer-season-bar'
@@ -124,6 +125,76 @@ function Faq({ data }: { data: DestinationHubData }) {
     <OfferSection section="faq" anchor="faq" eyebrow="Good to know" title="Questions anglers ask">
       <div className="max-w-[760px]"><FaqList faq={faq} /></div>
     </OfferSection>
+  )
+}
+
+/** The guides whose offers the hub lists, each linking to the profile (FA-1.82). */
+function Guides({ data }: { data: DestinationHubData }) {
+  if (data.guides.length === 0) return null
+
+  return (
+    <section data-block="guides" className="mt-14 border-t pt-10 sm:pt-12" style={{ borderColor: 'rgba(10,46,77,0.08)' }}>
+      <h2 className="f-display text-[26px] font-bold leading-[1.1] tracking-[-0.01em] sm:text-[32px] mb-6">Your guides</h2>
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {data.guides.map(guide => (
+          <li key={guide.id}>
+            <Link
+              href={`/guides/${guide.slug ?? guide.id}`}
+              className="flex h-full items-start gap-4 rounded-2xl bg-white px-5 py-4 transition-transform hover:-translate-y-0.5"
+              style={{ color: '#0A2E4D', boxShadow: '0 1px 2px rgba(10,46,77,0.06), 0 12px 32px -12px rgba(10,46,77,0.14)' }}
+            >
+              {guide.avatarUrl != null ? (
+                <span className="relative block h-12 w-12 flex-none overflow-hidden rounded-full" style={{ background: '#EDE6DB' }}>
+                  <Image src={guide.avatarUrl} alt="" fill sizes="48px" className="object-cover" />
+                </span>
+              ) : (
+                <span
+                  aria-hidden
+                  className="flex h-12 w-12 flex-none items-center justify-center rounded-full text-[16px] font-semibold f-body"
+                  style={{ background: 'rgba(10,46,77,0.10)' }}
+                >
+                  {guide.name.charAt(0)}
+                </span>
+              )}
+              <span className="min-w-0">
+                <span className="block text-[16px] font-semibold f-body">{guide.name}</span>
+                {guide.tagline != null && guide.tagline.trim() !== '' && (
+                  <span className="mt-1 block text-[14px] leading-snug f-body" style={{ color: 'rgba(10,46,77,0.68)' }}>
+                    {guide.tagline}
+                  </span>
+                )}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** Articles the hub's config lists; nothing until there are some (FA-1.83). */
+function Articles({ data }: { data: DestinationHubData }) {
+  const articles = data.hub.articles ?? []
+  if (articles.length === 0) return null
+
+  return (
+    <section data-block="articles" className="mt-14 border-t pt-10 sm:pt-12" style={{ borderColor: 'rgba(10,46,77,0.08)' }}>
+      <h2 className="f-display text-[26px] font-bold leading-[1.1] tracking-[-0.01em] sm:text-[32px] mb-6">Read before you go</h2>
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {articles.map(article => (
+          <li key={article.slug}>
+            <Link
+              href={`/blog/${article.slug}`}
+              className="flex items-center justify-between gap-3 rounded-2xl bg-white px-5 py-4 text-[15px] font-semibold f-body transition-transform hover:-translate-y-0.5"
+              style={{ color: '#0A2E4D', boxShadow: '0 1px 2px rgba(10,46,77,0.06), 0 12px 32px -12px rgba(10,46,77,0.14)' }}
+            >
+              {article.title}
+              <span aria-hidden>→</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -257,7 +328,9 @@ export default function DestinationHubView({ data }: { data: DestinationHubData 
           )}
           <Season data={data} />
           <HubTrips offers={data.offers} species={data.species} />
+          <Guides data={data} />
           <Faq data={data} />
+          <Articles data={data} />
           <Reviews data={data} />
           <HowItWorks />
           <MoreDestinations data={data} />
