@@ -46,12 +46,12 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     slug: 'patagonia',
     group: 'Patagonia',
     h1: 'Patagonia Fly Fishing Trips',
-    intro: 'Two owner-guides, one in Bariloche and one in Coyhaique. Juan Leobono rows the Upper Limay and Manso. Alex Prior has guided the Aysén spring creeks since 1989. Guided days from $550 for two anglers, two and three day floats, hotel packages in Bariloche. Season runs November to April.',
+    intro: 'Guides in Argentina and Chile. Juan Leobono guides the Upper Limay, the Manso and the lakes of Nahuel Huapi National Park from Bariloche. Alex Prior has guided the Aysén spring creeks and freestone rivers out of Coyhaique since 1989. Javier Leppe guides Chinook salmon and sea-run browns in Chilean Tierra del Fuego, walk and wade. Natales Fly Fishing, an Orvis-endorsed outfitter in Puerto Natales, guides Torres del Paine and the Río Penitente. Another guide covers Punta Arenas and Tierra del Fuego.',
     metaTitle: 'Patagonia Fly Fishing Trips',
-    metaDescription: 'Two owner-guides in Bariloche and Coyhaique. Juan Leobono rows the Upper Limay. Alex Prior guides the Aysén spring creeks. From $550 for two anglers.',
+    metaDescription: 'Fly fishing guides in Patagonia: Juan Leobono in Bariloche, Alex Prior in Coyhaique, Javier Leppe and Natales Fly Fishing in Chile. Trout, sea-run browns, Chinook.',
     seasonMonths: [10, 11, 12, 1, 2, 3, 4, 5],
     peakMonths: [11, 12, 1, 2, 3],
-    seasonNote: 'In Chile the season runs from 16 October to 14 April. Around Bariloche in Argentina it runs from November to May: dry fly from late November to January, migratory browns on the Limay from mid-March to May.',
+    seasonNote: 'Natales Fly Fishing gives the Magallanes season as 16 October to 14 April. Alex Prior fishes Aysén from November to April. Around Bariloche in Argentina the offer runs from November to May: dry fly from late November to January, migratory browns on the Limay from mid-March to May.',
     // `species` stays empty: the chips are derived from the hub's live offers, and each one filters at least one offer.
     species: [],
     faq: [
@@ -61,7 +61,7 @@ export const DESTINATION_HUBS: DestinationHub[] = [
       },
       {
         question: 'When is the fishing season in Patagonia?',
-        answer: 'In Chile the season runs from 16 October to 14 April, with peak conditions between December and March. The Bariloche offer in Argentina runs from November to May.',
+        answer: 'Natales Fly Fishing gives the Magallanes season as 16 October to 14 April, with peak conditions between December and March. Alex Prior fishes Aysén from November to April. The Bariloche offer in Argentina runs from November to May.',
       },
       {
         question: 'Are gear and fishing licences included?',
@@ -87,7 +87,7 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     metaDescription: 'Andri Fannberg and Brynjar Arnarsson guide from Reykjavík. Brown trout, arctic char and Atlantic salmon. You talk to the guide who takes you out.',
     seasonMonths: [4, 5, 6, 7, 8, 9],
     peakMonths: [5, 6, 7],
-    seasonNote: 'The guides\' seasons run from April or May to September. June and July are named as best by three guides, May by two. Salmon fishing follows fixed daily hours; trout and char days are more flexible.',
+    seasonNote: 'Guided seasons run from April or May to September; May to July are the months guides most often name as best. Salmon fishing follows fixed daily hours; trout and char days are more flexible.',
     // `species` stays empty: the chips are derived from the hub's live offers, and each one filters at least one offer.
     species: [],
     faq: [
@@ -121,15 +121,19 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     intro: 'Four guides, four different Norways. Toni Corenius guides fly fishing in Finnmark, from single-day salmon beats to multi-day tundra expeditions. Inge Rønning guides trophy brown trout on the Mistra River in eastern Norway. Øystein Davidsen guides shore fishing around Egersund. Marcin of Go Fishing Norway guides pike and sea fishing around Kristiansand. You talk to the guide who takes you out.',
     metaTitle: 'Guided Fishing Trips in Norway',
     metaDescription: 'Four guides in Norway: Toni Corenius in Finnmark, Inge Rønning on the Mistra, Øystein Davidsen in Egersund and Go Fishing Norway. Trout, salmon, pike, sea fish.',
-    // No season bar: the offers' seasons run from May–August to all year, so one bar would say nothing. The FAQ names each.
-    seasonMonths: [],
+    // The bar is the union of the offers' months; no peak months (tj, 2026-11-09). The note says it is a union.
+    seasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     peakMonths: [],
+    seasonNote: 'The bar shows every month in which at least one guide fishes. Seasons differ by guide and water: the Mistra trout run is in May and June, Finnmark fishing is in May–June and September–October. Each guide\'s months are in the FAQ below.',
     // `species` stays empty: the chips are derived from the hub's live offers, and each one filters at least one offer.
     species: [],
+    articles: [
+      { slug: 'fishing-regulations-norway-2026', title: 'Fishing in Norway 2026: Regulations, Licenses, and Limits – A Complete Guide' },
+    ],
     faq: [
       {
         question: 'When is the fishing season in Norway?',
-        answer: 'It depends on the guide and the water. Inge Rønning guides the Mistra River from May to August, and the trout run is in May and June. Toni Corenius fishes Finnmark from May to October, best in May, June, September and October. Go Fishing Norway runs from April to November, best from June to August. Øystein Davidsen guides shore fishing around Egersund all year, best from May to September.',
+        answer: 'It depends on the guide and the water. Inge Rønning guides the Mistra River from May to August, and the trout run is in May and June. Toni Corenius fishes Finnmark in May–June and September–October, best in May, June, September and October. Go Fishing Norway runs from April to November, best from June to August. Øystein Davidsen guides shore fishing around Egersund all year, best from May to September.',
       },
       {
         question: 'Do I need a fishing licence in Norway?',
@@ -151,18 +155,19 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     group: 'Nordic',
     countries: ['Sweden'],
     h1: 'Guided Fishing Trips in Sweden',
-    intro: 'Five guides, from the Baltic coast to Lapland. Berra Mårdh and Dan Bjurshammar (FiskeDan) guide pike and perch around Stockholm and Lake Mälaren. Joakim Åberg guides zander, perch and pike on the lakes of Alingsås, 50 km east of Gothenburg. Piotr Wawrzyniuk, known as Pexfish, guides sea trout and pike in Blekinge and Skåne. KJOFT in Kalix guides salmon, trout and char in Swedish Lapland. You talk to the guide who takes you out.',
+    intro: 'Five guides, from the Baltic coast to Lapland. Berra Mårdh and Dan Bjurshammar (FiskeDan) guide pike and perch around Stockholm and Lake Mälaren. Joakim Åberg guides zander, perch and pike on the lakes of Alingsås, 50 km east of Gothenburg. Piotr Wawrzyniuk, known as Pexfish, guides sea trout and pike in Blekinge and Skåne. Kalix Jakt & Fisketurism (KJOFT) in Kalix guides salmon, trout and char in Swedish Lapland. You talk to the guide who takes you out.',
     metaTitle: 'Guided Fishing Trips in Sweden',
-    metaDescription: 'Five guides in Sweden: Berra Mårdh and FiskeDan near Stockholm, Joakim Åberg near Gothenburg, Pexfish in Blekinge, KJOFT in Lapland. Pike, zander, salmon.',
-    // No season bar: four of the five offers run (nearly) all year, so one bar would say nothing. The FAQ names each.
-    seasonMonths: [],
+    metaDescription: 'Five guides in Sweden: Berra Mårdh and FiskeDan near Stockholm, Joakim Åberg near Gothenburg, Pexfish in Blekinge, Kalix Jakt & Fisketurism (KJOFT) in Lapland. Pike, zander, salmon.',
+    // The bar is the union of the offers' months; no peak months (tj, 2026-11-09). The note says it is a union.
+    seasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     peakMonths: [],
+    seasonNote: 'The bar shows every month in which at least one guide fishes. Seasons differ by guide and water: lake fishing around Alingsås runs from April to December, sea trout in Blekinge is best from January to March. Each guide\'s months are in the FAQ below.',
     // `species` stays empty: the chips are derived from the hub's live offers, and each one filters at least one offer.
     species: [],
     faq: [
       {
         question: 'When is the fishing season in Sweden?',
-        answer: 'It depends on the guide. Berra Mårdh guides all year, best from April to September. Dan Bjurshammar (FiskeDan) runs from March to November, best from April to August. Joakim Åberg runs from April to December, best from May to September. Pexfish fishes from January to October: sea trout from January to March, lake fishing from May to October. KJOFT in Kalix is best from June to August and also guides ice fishing.',
+        answer: 'It depends on the guide. Berra Mårdh guides all year, best from April to September. Dan Bjurshammar (FiskeDan) runs from March to November, best from April to August. Joakim Åberg runs from April to December, best from May to September. Pexfish fishes from January to October: sea trout from January to March, lake fishing from May to October. Kalix Jakt & Fisketurism (KJOFT) is best from June to August and also guides ice fishing.',
       },
       {
         question: 'Is the fishing licence included?',
@@ -187,9 +192,10 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     intro: 'Three offers, from Helsinki to Lapland. Lapland Fishing LTD guides salmon, grayling, pike and ice fishing around the River Kemi, with pickup from Rovaniemi. SouthEast Fishing Finland guides pike, perch and zander on Lake Saimaa from Lappeenranta, with live sonar on board. A third offer fishes the Baltic archipelago and lakes near Helsinki for pike, zander, perch and sea trout.',
     metaTitle: 'Guided Fishing Trips in Finland',
     metaDescription: 'Guided fishing in Finland: Lapland Fishing LTD on the River Kemi, SouthEast Fishing Finland on Lake Saimaa, and a Helsinki offer. Salmon, pike, zander, perch.',
-    // No season bar: one offer states no season and the others differ (May–October, May–November). The FAQ names each.
-    seasonMonths: [],
+    // The bar is the union of the offers' months; no peak months (tj, 2026-11-09). The note says it is a union.
+    seasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     peakMonths: [],
+    seasonNote: 'The bar shows every month in which at least one guide fishes. Seasons differ by guide and water: Lapland Fishing LTD fishes from May to October, plus ice fishing in March and April, and SouthEast Fishing Finland runs from May to November. Each guide\'s months are in the FAQ below.',
     // `species` stays empty: the chips are derived from the hub's live offers, and each one filters at least one offer.
     species: [],
     faq: [
@@ -216,9 +222,9 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     slug: 'new-zealand',
     group: 'New Zealand',
     h1: 'New Zealand Fly Fishing Trips',
-    intro: 'Josh Hart guides the Tongariro and the Taupō rivers on the North Island. Kristina Placko walks the Southland spring creeks around Lumsden and Mossburn. Full days from 1 100 NZD for two anglers, gear included. Sight fishing to visible trout in clear water.',
+    intro: 'Guides on the North and South Islands. Josh Hart guides the Tongariro and Tauranga-Taupō rivers from Tūrangi, and the Whakapapa and Whanganui beyond. Dustin Habener of Wild Waters Fly guides the rivers and lakes around Taupō and the coastal flats of Tauranga Harbour, for trout and kingfish. Kristina Placko and Daryl Paskell guide walk-and-stalk brown trout fishing in Southland, from Lumsden.',
     metaTitle: 'New Zealand Fly Fishing Trips',
-    metaDescription: 'Josh Hart on the Tongariro and Taupō. Kristina Placko on Southland spring creeks. Full days from 1100 NZD for two anglers, gear included.',
+    metaDescription: 'Fly fishing guides in New Zealand: Josh Hart and Dustin Habener around Taupō, Kristina Placko and Daryl Paskell in Southland. Trout, and kingfish on the coast.',
     seasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     peakMonths: [11, 12, 1, 2, 3],
     seasonNote: 'Taupō fishes all year, and its winter run of rainbow trout from June to August is its signature period. Southland guiding runs from October to April: Kristina Placko does not guide from May to September.',
@@ -227,7 +233,7 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     faq: [
       {
         question: 'Do I need a fishing licence in New Zealand?',
-        answer: 'Yes, a freshwater fishing licence is required by law and is bought online before the trip; Fish & Game NZ sells it. Dustin Habener and Kristina Placko both confirm which licence your water needs. Sea fishing needs no licence.',
+        answer: 'Yes. A valid freshwater fishing licence is required by law in New Zealand, and you can buy it online before your trip. Dustin Habener can advise which type you need for where you fish. In Southland, Kristina Placko says licences are bought online from Fish & Game NZ, and most guided days use a standard non-resident day licence. Sea fishing needs no licence.',
       },
       {
         question: 'When is the best time to fish in New Zealand?',
