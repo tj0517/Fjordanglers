@@ -1065,7 +1065,7 @@ export type HubOffer = {
 }
 
 /** A guide whose public profile the hub links to (FA-1.82). */
-export type HubGuide = {
+type HubGuide = {
   id:        string
   /** `/guides/<slug>` when the guide has one (the profile redirects an id to it), else the id. */
   slug:      string | null

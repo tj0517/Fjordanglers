@@ -187,13 +187,20 @@ describe('breadcrumb (tj D2)', () => {
   })
 
   it('country without a hub → Home → Trips → the offer, as in v1', async () => {
-    const { blocks } = await render(fixedPage({ country: 'Norway', slug: 'seed-norway' }))
+    // Denmark has no hub (Norway had none until FA-1.82).
+    const { blocks } = await render(fixedPage({ country: 'Denmark', slug: 'seed-denmark' }))
 
     expect(crumbs(blocks)).toEqual([
       [1, 'Home', 'https://www.fjordanglers.com'],
       [2, 'Trips', 'https://www.fjordanglers.com/trips'],
-      [3, 'Seed Backcountry Day', 'https://www.fjordanglers.com/experiences/seed-norway'],
+      [3, 'Seed Backcountry Day', 'https://www.fjordanglers.com/experiences/seed-denmark'],
     ])
+  })
+
+  it('FA-1.82: Norway now has a hub → Home → hub → the offer', async () => {
+    const { blocks } = await render(fixedPage({ country: 'Norway', slug: 'seed-norway' }))
+
+    expect(crumbs(blocks)[1]).toEqual([2, 'Guided Fishing Trips in Norway', 'https://www.fjordanglers.com/norway'])
   })
 })
 

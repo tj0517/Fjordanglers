@@ -189,3 +189,46 @@ describe('DestinationHubView — map (FA-1.66)', () => {
     expect(getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe('true')
   })
 })
+
+describe('DestinationHubView — guides and articles blocks (FA-1.82)', () => {
+  const guides: DestinationHubData['guides'] = [
+    { id: '11111111-1111-1111-1111-111111111111', slug: 'fixture-guide', name: 'Fixture Guide', avatarUrl: null, tagline: 'Fixture tagline.' },
+    { id: '22222222-2222-2222-2222-222222222222', slug: null, name: 'No Slug Guide', avatarUrl: null, tagline: null },
+  ]
+
+  it('FA-1.82: a guide links to /guides/<slug>, or to the id when there is no slug', () => {
+    const { container } = render(<DestinationHubView data={{ ...completeHub(), guides }} />)
+    const block = container.querySelector('[data-block="guides"]')!
+    expect([...block.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual([
+      '/guides/fixture-guide',
+      '/guides/22222222-2222-2222-2222-222222222222',
+    ])
+    expect(block.textContent).toContain('Fixture tagline.')
+  })
+
+  it('FA-1.82: guides sit after the trips and before the FAQ; articles after the FAQ', () => {
+    const data = completeHub()
+    data.hub = { ...data.hub, articles: [{ slug: 'fixture-article', title: 'Fixture article' }] }
+    const { container } = render(<DestinationHubView data={{ ...data, guides }} />)
+    expect(order(container)).toEqual([
+      'hero', 'season', 'species', 'trips', 'guides', 'faq', 'articles', 'reviews', 'how-it-works', 'destinations', 'contact',
+    ])
+    expect(container.querySelector('[data-block="articles"] a')?.getAttribute('href')).toBe('/blog/fixture-article')
+  })
+
+  it('FA-1.82: no guides and no articles — neither block, no heading', () => {
+    const { container } = render(<DestinationHubView data={completeHub()} />)
+    expect(container.querySelector('[data-block="guides"]')).toBeNull()
+    expect(container.querySelector('[data-block="articles"]')).toBeNull()
+    expect(container.textContent).not.toContain('Your guides')
+    expect(container.textContent).not.toContain('Read before you go')
+  })
+
+  it('FA-1.82: the blocks add no data-section — the six measured anchors stay six', () => {
+    const data = completeHub()
+    data.hub = { ...data.hub, articles: [{ slug: 'a', title: 'A' }] }
+    const { container } = render(<DestinationHubView data={{ ...data, guides }} />)
+    const anchors = [...container.querySelectorAll('[data-section]')].map(el => el.getAttribute('data-section'))
+    expect([...new Set(anchors)].sort()).toEqual(['contact', 'faq', 'reviews', 'season', 'species', 'trips'])
+  })
+})

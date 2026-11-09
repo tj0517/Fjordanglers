@@ -52,7 +52,7 @@ export const completeHub = (): DestinationHubData => ({
   },
   offers:     OFFERS,
   guideCount: 3,
-  guides: [],
+  guides:     [],
   priceFrom:  { cents: 132_000, currency: 'NZD', text: 'from NZ$1,320 · 1–2 anglers per guide' },
   species:    ['Rainbow Trout', 'Brown Trout', 'Kingfish'],
   reviews: [
@@ -68,7 +68,7 @@ export const emptyHub = (): DestinationHubData => ({
   hub: { ...BASE_HUB, seasonMonths: [], peakMonths: [], species: [], faq: [] },
   offers:     OFFERS,
   guideCount: 2,
-  guides: [],
+  guides:     [],
   priceFrom:  null,
   species:    [],
   reviews:    [],

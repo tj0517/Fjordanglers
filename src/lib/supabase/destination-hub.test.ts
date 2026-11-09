@@ -46,7 +46,7 @@ import { getDestinationHub } from './queries'
 
 const id = (n: number) => `f1650000-0000-4000-8000-${String(n).padStart(12, '0')}`
 
-const G1 = id(1), G2 = id(2), G3 = id(3)
+const G1 = id(1), G2 = id(2), G3 = id(3), G4 = id(4)
 const P1 = id(11), P2 = id(12), P3 = id(13), P4 = id(14), P5 = id(15), P6 = id(16), P7 = id(17), P8 = id(18)
 const PAGES = [P1, P2, P3, P4, P5, P6, P7, P8]
 const I1 = id(21), I2 = id(22), I3 = id(23)
@@ -60,7 +60,7 @@ async function cleanup() {
   await svc.from('experience_guides').delete().in('experience_id', PAGES)
   await svc.from('experience_prices').delete().in('experience_id', PAGES)
   await svc.from('experience_pages').delete().in('id', PAGES)
-  await svc.from('guides').delete().in('id', [G1, G2, G3])
+  await svc.from('guides').delete().in('id', [G1, G2, G3, G4])
 }
 
 async function must(label: string, run: PromiseLike<{ error: { message: string } | null }>) {
@@ -72,10 +72,14 @@ beforeAll(async () => {
   await cleanup()
 
   await must('guides', svc.from('guides').insert([
-    { id: G1, full_name: 'Gunnar Testguide', country: 'Denmark', status: 'active' },
+    { id: G1, full_name: 'Gunnar Testguide', country: 'Denmark', status: 'active', slug: 'fa165-gunnar-testguide', tagline: 'Test tagline.' },
     { id: G2, full_name: 'Freja Testguide',  country: 'Denmark', status: 'active' },
     { id: G3, full_name: 'Paused Testguide', country: 'Denmark', status: 'active' },
   ]))
+  // FA-1.82: shown on an offer, but `getGuide` 404s a hidden guide — the hub must not link to it.
+  await must('hidden guide', svc.from('guides').insert(
+    { id: G4, full_name: 'Hidden Testguide', country: 'Denmark', status: 'active', is_hidden: true },
+  ))
 
   // One insert per page: a bulk insert sends NULL for a key one row leaves out, skipping its default.
   const base = { country: 'Denmark', region: 'Jutland', status: 'active', max_anglers_per_guide: 2, fee_pct: 0.2 }
@@ -123,6 +127,7 @@ beforeAll(async () => {
     { experience_id: P3, guide_id: G3, role: 'primary', status: 'paused', show_on_page: true,  sort_order: 0 },
     { experience_id: P4, guide_id: G3, role: 'primary', status: 'active', show_on_page: false, sort_order: 0 },
     { experience_id: P5, guide_id: G3, role: 'primary', status: 'active', show_on_page: true,  sort_order: 0 },
+    { experience_id: P6, guide_id: G4, role: 'primary', status: 'active', show_on_page: true,  sort_order: 0 },
   ]))
 
   await must('inquiries', svc.from('inquiries').insert([
@@ -152,12 +157,28 @@ describe('getDestinationHub (local stack)', () => {
     const hub = (await getDestinationHub(h.hub.slug))!
     expect(hub.offers.map(o => o.id)).toEqual([P1, P2, P3, P4, P6, P7, P8])
     expect(hub.offers.map(o => o.guides.map(g => g.name))).toEqual([
-      ['Gunnar Testguide', 'Freja Testguide'], ['Gunnar Testguide'], [], [], [], [], [],
+      ['Gunnar Testguide', 'Freja Testguide'], ['Gunnar Testguide'], [], [], ['Hidden Testguide'], [], [],
     ])
   })
 
   it('FA-1.65: guideCount — distinct active + show_on_page guides of active offers', async () => {
-    expect((await getDestinationHub(h.hub.slug))!.guideCount).toBe(2)
+    // 3, not 2: it still counts the hidden guide (FA-1.82 left it alone; logged in deferred-tasks).
+    expect((await getDestinationHub(h.hub.slug))!.guideCount).toBe(3)
+  })
+
+  it('FA-1.82: guides — distinct, in the offers\' order, with slug and tagline', async () => {
+    const { guides } = (await getDestinationHub(h.hub.slug))!
+    expect(guides).toEqual([
+      { id: G1, slug: 'fa165-gunnar-testguide', name: 'Gunnar Testguide', avatarUrl: null, tagline: 'Test tagline.' },
+      { id: G2, slug: null, name: 'Freja Testguide', avatarUrl: null, tagline: null },
+    ])
+  })
+
+  it('FA-1.82 red case: a hidden guide is on the offer but not in guides — their profile would 404', async () => {
+    const hub = (await getDestinationHub(h.hub.slug))!
+    expect(hub.offers[4]!.guides.map(g => g.name)).toEqual(['Hidden Testguide'])
+    expect(hub.guides.map(g => g.id)).not.toContain(G4)
+    expect(hub.guides.map(g => g.id)).not.toContain(G3)   // paused link, off-page link, draft page
   })
 
   it('FA-1.65: card prices — v2 fixed from experience_prices + fee, v2 custom its indicative range, v1 via formatPrice', async () => {
@@ -205,6 +226,6 @@ describe('getDestinationHub (local stack)', () => {
   it('FA-1.65: ogImage and the other hubs', async () => {
     const hub = (await getDestinationHub(h.hub.slug))!
     expect(hub.ogImage).toBeNull()
-    expect(hub.otherHubs.map(o => o.slug)).toEqual(['patagonia', 'iceland', 'new-zealand'])
+    expect(hub.otherHubs.map(o => o.slug)).toEqual(['patagonia', 'iceland', 'norway', 'sweden', 'finland', 'new-zealand'])
   })
 })
