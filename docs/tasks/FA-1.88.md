@@ -2,14 +2,14 @@
 id: FA-1.88
 title: Higiena sitemapy i listingów — tylko indeksowalne adresy, prawdziwe `lastModified`, własny canonical stron 2+ listingów, opis `/trips`, domyślne `og:image`
 stage: 1
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-1.88-sitemap-hygiene
-pr: 177
+pr: 177, 179
 depends_on: [FA-1.79]
 blocked_by_questions: []
 touches_db: false
@@ -62,3 +62,5 @@ curl -s localhost:3000/sitemap.xml | grep -o '<loc>[^<]*' | sed 's/<loc>//' | wh
 - **2026-11-05, tj:** model Sonnet · effort medium.
 - **2026-11-05, tj:** D1 — `lastModified` w sitemapie tylko tam, gdzie jest prawdziwa data: oferty i przewodnicy → ich `updated_at`, a gdy jest null → pole pominięte (bez zastępczego „teraz”); wpisy bloga → `date` wpisu z `blog-data.ts`; strony statyczne (home, `/trips`, `/guides`, `/blog`, prawne) i huby → pole pominięte.
 - **2026-11-05, tj:** D2 — opis `/trips` bez filtra kraju: jedno stałe zdanie wymieniające kraje aktywnych ofert (funkcja warstwy danych `getActiveDestinationCountries`), bez „20+” i bez liczby. Dokładny szablon idzie do opisu PR do mojej akceptacji.
+- **2026-11-09, tj:** D3 — opis `/trips` (zatwierdzenie szablonu z PR #177): zdanie bez „, and filter by country” → „Browse hand-picked guided fishing trips with local guides in A, B and C.”; bez krajów → „Browse hand-picked guided fishing trips with local guides.”. Zmiana w osobnym PR `fix/fa-1.88-trips-description`.
+- **2026-11-09, tj:** zamknięte po sprawdzeniu produkcji (`curl -A Googlebot`): `/trips` → `…/trips`, `/trips?page=2` → `…/trips?page=2`, `/trips?country=Norway` → `…/trips`, `/guides?page=2` → `…/guides?page=2`. PR #177 (sitemapa, canonical, `og:image`) i #179 (opis `/trips`).

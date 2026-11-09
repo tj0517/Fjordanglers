@@ -9,6 +9,7 @@ import { WebEventTracker } from '@/components/analytics/WebEventTracker'
 import { SITE_URL } from '@/lib/site'
 import { getActiveDestinationCountries } from '@/lib/supabase/queries'
 import { listingCanonicalUrl } from '@/lib/listing-canonical'
+import { defaultTripsDescription } from '@/lib/trips-description'
 
 const PAGE_SIZE = 12
 
@@ -96,19 +97,6 @@ export const revalidate = 60
 
 const DEFAULT_TITLE = 'Guided Fishing Trips with Local Guides'
 
-/**
- * The one fixed sentence for /trips without a country filter. It names the countries
- * that have an active offer right now (data layer, ordered Nordic → Patagonia → NZ),
- * so it cannot go stale when an offer goes live or is taken down. No count, no "20+".
- */
-function defaultDescription(countries: readonly string[]): string {
-  const where =
-    countries.length === 0 ? '' :
-    countries.length === 1 ? ` in ${countries[0]}` :
-    ` in ${countries.slice(0, -1).join(', ')} and ${countries[countries.length - 1]}`
-  return `Browse hand-picked guided fishing trips with local guides${where}, and filter by country.`
-}
-
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams
   const matched = params.country
@@ -120,7 +108,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     : DEFAULT_TITLE
   const description = matched != null
     ? `Browse guided fishing trips in ${matched} with verified local guides. Filter by species, price and dates.`
-    : defaultDescription(await getActiveDestinationCountries())
+    : defaultTripsDescription(await getActiveDestinationCountries())
 
   // Page N ≥ 2 is its own canonical; any country filter stays on /trips (FA-1.88).
   const canonical = listingCanonicalUrl(`${SITE_URL}/trips`, params.page, [params.country])
