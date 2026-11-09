@@ -2,7 +2,7 @@
 id: FA-1.86
 title: Przewodnicy — slugi dla 6 bez sluga, slug obowiązkowy przy aktywacji, scalenie duplikatu Josh Hart, ukrycie dwóch pustych profili, koniec linków z UUID, profile bez oferty poza indeksem
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
