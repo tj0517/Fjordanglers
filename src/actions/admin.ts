@@ -14,12 +14,25 @@ import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
 import { requireAdmin } from '@/lib/auth/guards'
+import { activationBlocker, slugChangeBlocker, validateGuideSlug } from '@/lib/guide-slug'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type AdminActionResult =
   | { error: string }
   | { success: true; guideId: string }
+
+/** True when another guide already uses `slug` (slugs are unique, public URLs). */
+async function isGuideSlugTaken(
+  supabase: ReturnType<typeof createServiceClient>,
+  slug: string,
+  exceptGuideId?: string,
+): Promise<boolean> {
+  const { data } = await supabase.from('guides').select('id').eq('slug', slug).maybeSingle()
+  return data != null && data.id !== exceptGuideId
+}
+
+const SLUG_TAKEN_ERROR = 'That slug is already used by another guide. Choose a different one.'
 
 // ─── Create Beta Guide Listing ────────────────────────────────────────────────
 
@@ -48,6 +61,8 @@ export type BetaGuidePayload = {
   gallery_images?: GuideGalleryImage[]
   /** Used by /auth/callback to auto-link the guide's auth account on registration. */
   invite_email?: string
+  /** Public profile slug. Required: a beta listing is created `active`, and an active guide needs one. */
+  slug: string
 }
 
 /**
@@ -58,13 +73,19 @@ export async function createBetaGuide(
   payload: BetaGuidePayload,
 ): Promise<AdminActionResult> {
   await requireAdmin()
+  const slug = payload.slug?.trim() ?? ''
+  const slugError = validateGuideSlug(slug)
+  if (slugError != null) return { error: slugError }
   try {
     const supabase = createServiceClient()
+
+    if (await isGuideSlugTaken(supabase, slug)) return { error: SLUG_TAKEN_ERROR }
 
     const { data, error } = await supabase
       .from('guides')
       .insert({
         user_id:          null,
+        slug,
         is_beta_listing:  true,
         is_hidden:        false,
         full_name:        payload.full_name.trim(),
@@ -89,7 +110,7 @@ export async function createBetaGuide(
 
     if (error != null) {
       console.error('[admin/createBetaGuide]', error.message)
-      return { error: error.message }
+      return { error: error.code === '23505' ? SLUG_TAKEN_ERROR : error.message }
     }
 
     // Save gallery images
@@ -192,6 +213,11 @@ export type UpdateGuidePayload = {
    * to this listing automatically. Pass null to clear.
    */
   invite_email?: string | null
+  /**
+   * Public profile slug. `undefined` = untouched. Required for the guide to be `active`;
+   * read-only once the guide is active (rename = deactivate first).
+   */
+  slug?: string | null
 }
 
 export type AdminUpdateResult =
@@ -214,9 +240,26 @@ export async function updateGuide(
     // Fetch current verified_at so we only set it once (on first activation)
     const { data: current } = await supabase
       .from('guides')
-      .select('verified_at')
+      .select('verified_at, status, slug')
       .eq('id', guideId)
       .single()
+    if (current == null) return { error: 'Guide not found.' }
+
+    // Slug rules (FA-1.86): an active guide keeps its slug; activating needs one. The database
+    // enforces the same (`guides_active_requires_slug`) — these errors are the readable version.
+    const slugChange = slugChangeBlocker(current, payload.slug)
+    if (slugChange != null) return { error: slugChange }
+
+    const nextSlug = payload.slug !== undefined ? payload.slug?.trim() || null : current.slug
+    if (payload.slug !== undefined && nextSlug != null) {
+      const invalid = validateGuideSlug(nextSlug)
+      if (invalid != null) return { error: invalid }
+      if (nextSlug !== current.slug && await isGuideSlugTaken(supabase, nextSlug, guideId)) {
+        return { error: SLUG_TAKEN_ERROR }
+      }
+    }
+    const blocker = activationBlocker(payload.status, nextSlug)
+    if (blocker != null) return { error: blocker }
 
     const isActivating =
       payload.status === 'active' || payload.status === 'verified'
@@ -239,6 +282,7 @@ export async function updateGuide(
         youtube_url:      payload.youtube_url?.trim() || null,
         pricing_model:    payload.pricing_model,
         status:           payload.status,
+        ...(payload.slug !== undefined ? { slug: nextSlug } : {}),
         // undefined = untouched; null = cleared; string = new value
         ...(payload.invite_email !== undefined
           ? { invite_email: payload.invite_email?.trim() || null }
@@ -249,7 +293,7 @@ export async function updateGuide(
 
     if (error != null) {
       console.error('[admin/updateGuide]', error.message)
-      return { error: error.message }
+      return { error: error.code === '23505' ? SLUG_TAKEN_ERROR : error.message }
     }
 
     // Replace gallery images when provided
@@ -365,9 +409,14 @@ export async function adminSetGuideStatus(
 
     const { data: current } = await supabase
       .from('guides')
-      .select('verified_at')
+      .select('verified_at, slug')
       .eq('id', guideId)
       .single()
+    if (current == null) return { error: 'Guide not found.' }
+
+    // Activation needs a slug (FA-1.86) — refuse with a readable error before the database does.
+    const blocker = activationBlocker(status, current.slug)
+    if (blocker != null) return { error: blocker }
 
     const isActivating  = status === 'active'
     const setVerifiedAt = isActivating && current?.verified_at == null

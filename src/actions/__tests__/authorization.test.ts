@@ -177,6 +177,7 @@ describe('admin.ts', () => {
       await expect(
         createBetaGuide({
           full_name: 'Test Guide',
+          slug: 'test-guide-iceland',
           country: 'IS',
           languages: ['en'],
           fish_expertise: ['salmon'],
@@ -191,6 +192,7 @@ describe('admin.ts', () => {
       await expect(
         createBetaGuide({
           full_name: 'Test Guide',
+          slug: 'test-guide-iceland',
           country: 'IS',
           languages: ['en'],
           fish_expertise: ['salmon'],

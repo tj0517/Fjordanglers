@@ -13,7 +13,7 @@ const CANONICAL_HOST = 'www.fjordanglers.com'
 // DB-derived URLs are checked too, not only the static ones.
 vi.mock('@/lib/supabase/server', () => {
   const rows: Record<string, unknown[]> = {
-    experience_pages: [{ slug: 'test-offer', updated_at: '2026-10-01T00:00:00Z' }],
+    experience_pages: [{ slug: 'test-offer', updated_at: '2026-10-01T00:00:00Z', guide_id: 'guide-uuid-1' }],
     guides: [{ id: 'guide-uuid-1', slug: 'test-guide', updated_at: null }],
   }
   const from = (table: string) => {

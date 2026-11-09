@@ -94,7 +94,7 @@ export function v2OfferJsonLd(page: V2Page, slug: string): OfferJsonLd {
     // v2 stores months, not a date range — nothing to publish without inventing one (docs/deferred-tasks.md, FA-1.81).
     temporalCoverage: null,
     price:       v2OfferPrice(page),
-    guide:       primary != null ? { name: primary.fullName, slug: primary.slug, id: primary.id } : null,
+    guide:       primary != null ? { name: primary.fullName, slug: primary.slug } : null,
     parentCrumb: v2ParentCrumb(page.country),
     faq:         page.faq,
   })

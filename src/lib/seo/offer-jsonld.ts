@@ -16,6 +16,7 @@
  */
 
 import type { Json } from '@/lib/supabase/database.types'
+import { guideProfilePath } from '@/lib/guide-url'
 
 /** A price already decided for publication, as the decimal amount schema.org wants. */
 export type OfferPrice =
@@ -34,7 +35,7 @@ export interface OfferJsonLdInput {
   temporalCoverage: string | null
   /** Null → the page says "on request" and no `offers` is emitted. */
   price: OfferPrice | null
-  guide: { name: string; slug: string | null; id: string } | null
+  guide: { name: string; slug: string | null } | null
   /** The crumb between Home and the offer: the destination hub, or "Trips". */
   parentCrumb: { label: string; url: string }
   /** Empty → no FAQPage. */
@@ -110,7 +111,8 @@ export function buildOfferJsonLd(input: OfferJsonLdInput): OfferJsonLd {
       subjectOf: {
         '@type': 'Person',
         name: input.guide.name,
-        url: `${siteUrl}/guides/${input.guide.slug ?? input.guide.id}`,
+        // No slug → no url: a profile is never identified by its UUID (FA-1.86).
+        ...(guideProfilePath(input.guide) != null ? { url: `${siteUrl}${guideProfilePath(input.guide)}` } : {}),
       },
     } : {}),
   }

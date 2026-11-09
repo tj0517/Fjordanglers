@@ -5,6 +5,8 @@ import { getGuides, getPlatformStats } from '@/lib/supabase/queries'
 import { GuidesFilters } from './guides-filters'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { SITE_URL } from '@/lib/site'
+import { GuideLink } from '@/components/guides/guide-link'
+import { guideProfilePath } from '@/lib/guide-url'
 import { listingCanonicalUrl } from '@/lib/listing-canonical'
 
 
@@ -158,18 +160,23 @@ export default async function GuidesPage({
     description: 'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
     url: `${SITE_URL}/guides`,
     numberOfItems: total,
-    itemListElement: guides.map((guide, i) => ({
-      '@type': 'ListItem',
-      position: (currentPage - 1) * PAGE_SIZE + i + 1,
-      item: {
-        '@type': 'Person',
-        name: guide.full_name,
-        url: `${SITE_URL}/guides/${guide.slug ?? guide.id}`,
-        ...(guide.avatar_url != null && { image: guide.avatar_url }),
-        ...(guide.bio != null && { description: guide.bio }),
-        address: { '@type': 'PostalAddress', addressCountry: guide.country },
-      },
-    })),
+    // A guide without a slug has no profile URL, so it has no entry (FA-1.86).
+    itemListElement: guides.flatMap((guide, i) => {
+      const path = guideProfilePath(guide)
+      if (path == null) return []
+      return [{
+        '@type': 'ListItem',
+        position: (currentPage - 1) * PAGE_SIZE + i + 1,
+        item: {
+          '@type': 'Person',
+          name: guide.full_name,
+          url: `${SITE_URL}${path}`,
+          ...(guide.avatar_url != null && { image: guide.avatar_url }),
+          ...(guide.bio != null && { description: guide.bio }),
+          address: { '@type': 'PostalAddress', addressCountry: guide.country },
+        },
+      }]
+    }),
   }
 
   return (
@@ -279,7 +286,7 @@ export default async function GuidesPage({
               const fishPills = guide.fish_expertise.slice(0, 3)
 
               return (
-                <Link key={guide.id} href={`/guides/${guide.slug ?? guide.id}`} className="group block">
+                <GuideLink key={guide.id} slug={guide.slug} className="group block">
                   <article
                     className="overflow-hidden transition-all duration-300 hover:shadow-[0_20px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1"
                     style={{
@@ -396,7 +403,7 @@ export default async function GuidesPage({
                       </div>
                     </div>
                   </article>
-                </Link>
+                </GuideLink>
               )
             })}
           </div>

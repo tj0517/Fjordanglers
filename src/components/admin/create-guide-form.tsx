@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createBetaGuide, type BetaGuidePayload, type GuideGalleryImage } from '@/actions/admin'
+import { suggestGuideSlug, validateGuideSlug } from '@/lib/guide-slug'
 import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload from '@/components/admin/multi-image-upload'
 import { Check, ExternalLink, Info, Loader2, Plus } from 'lucide-react'
@@ -161,6 +162,9 @@ export default function CreateGuideForm({ defaultValues }: Props) {
   // ── Form state — initialised from defaultValues if provided ────────────────
   const [fullName, setFullName]           = useState(defaultValues?.full_name ?? '')
   const [country, setCountry]             = useState<string>(normaliseCountry(defaultValues?.country))
+  // The slug follows name + country until the admin edits it by hand.
+  const [slug, setSlug]                   = useState(() => suggestGuideSlug(defaultValues?.full_name ?? '', normaliseCountry(defaultValues?.country)))
+  const [slugTouched, setSlugTouched]     = useState(false)
   const [city, setCity]                   = useState(defaultValues?.city ?? '')
   const [bio, setBio]                     = useState(defaultValues?.bio ?? '')
   const [languages, setLanguages]         = useState<string[]>(defaultValues?.languages?.length ? defaultValues.languages : ['English'])
@@ -190,6 +194,8 @@ export default function CreateGuideForm({ defaultValues }: Props) {
   // ── Reset helper ───────────────────────────────────────────────────────────
   const resetForm = () => {
     setFullName('')
+    setSlug('')
+    setSlugTouched(false)
     setCity('')
     setBio('')
     setLanguages(['English'])
@@ -216,11 +222,14 @@ export default function CreateGuideForm({ defaultValues }: Props) {
     setError(null)
 
     if (fullName.trim() === '') { setError('Full name is required.'); return }
+    const slugError = validateGuideSlug(slug)
+    if (slugError != null) { setError(slugError); return }
     if (fishExpertise.length === 0) { setError('Select at least one fish species.'); return }
     if (languages.length === 0) { setError('Select at least one language.'); return }
 
     const payload: BetaGuidePayload = {
       full_name:        fullName,
+      slug:             slug.trim(),
       country,
       city:             city || undefined,
       bio:              bio || undefined,
@@ -342,16 +351,41 @@ export default function CreateGuideForm({ defaultValues }: Props) {
             <TextInput
               type="text"
               value={fullName}
-              onChange={e => setFullName(e.target.value)}
+              onChange={e => {
+                setFullName(e.target.value)
+                if (!slugTouched) setSlug(suggestGuideSlug(e.target.value, country))
+              }}
               placeholder="e.g. Bjørn Eriksen"
               required
             />
           </div>
 
+          {/* Slug */}
+          <div className="md:col-span-2">
+            <FieldLabel required>Profile slug</FieldLabel>
+            <TextInput
+              type="text"
+              value={slug}
+              onChange={e => { setSlugTouched(true); setSlug(e.target.value) }}
+              placeholder="e.g. bjorn-eriksen-norway"
+              required
+            />
+            <p className="text-[#0A2E4D]/40 text-xs f-body mt-2">
+              The public profile URL: /guides/{slug.trim() !== '' ? slug.trim() : 'your-slug'}. Suggested from name and country.
+              It cannot be changed while the guide is active.
+            </p>
+          </div>
+
           {/* Country */}
           <div>
             <FieldLabel required>Country</FieldLabel>
-            <SelectInput value={country} onChange={e => setCountry(e.target.value)}>
+            <SelectInput
+              value={country}
+              onChange={e => {
+                setCountry(e.target.value)
+                if (!slugTouched) setSlug(suggestGuideSlug(fullName, e.target.value))
+              }}
+            >
               {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
             </SelectInput>
           </div>

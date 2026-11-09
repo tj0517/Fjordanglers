@@ -73,12 +73,12 @@ beforeAll(async () => {
 
   await must('guides', svc.from('guides').insert([
     { id: G1, full_name: 'Gunnar Testguide', country: 'Denmark', status: 'active', slug: 'fa165-gunnar-testguide', tagline: 'Test tagline.' },
-    { id: G2, full_name: 'Freja Testguide',  country: 'Denmark', status: 'active' },
-    { id: G3, full_name: 'Paused Testguide', country: 'Denmark', status: 'active' },
+    { id: G2, full_name: 'Freja Testguide',  country: 'Denmark', status: 'active', slug: 'fa165-freja-testguide' },
+    { id: G3, full_name: 'Paused Testguide', country: 'Denmark', status: 'active', slug: 'fa165-paused-testguide' },
   ]))
   // FA-1.82: shown on an offer, but `getGuide` 404s a hidden guide — the hub must not link to it.
   await must('hidden guide', svc.from('guides').insert(
-    { id: G4, full_name: 'Hidden Testguide', country: 'Denmark', status: 'active', is_hidden: true },
+    { id: G4, full_name: 'Hidden Testguide', country: 'Denmark', status: 'active', is_hidden: true, slug: 'fa165-hidden-testguide' },
   ))
 
   // One insert per page: a bulk insert sends NULL for a key one row leaves out, skipping its default.
@@ -170,7 +170,7 @@ describe('getDestinationHub (local stack)', () => {
     const { guides } = (await getDestinationHub(h.hub.slug))!
     expect(guides).toEqual([
       { id: G1, slug: 'fa165-gunnar-testguide', name: 'Gunnar Testguide', avatarUrl: null, tagline: 'Test tagline.' },
-      { id: G2, slug: null, name: 'Freja Testguide', avatarUrl: null, tagline: null },
+      { id: G2, slug: 'fa165-freja-testguide', name: 'Freja Testguide', avatarUrl: null, tagline: null },
     ])
   })
 

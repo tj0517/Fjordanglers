@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { getIndexableBlogPosts, parseBlogPostDate } from '@/lib/blog-articles'
 import { DESTINATION_HUBS } from '@/lib/destinations'
 import { SITE_URL } from '@/lib/site'
+import { guideProfilePath } from '@/lib/guide-url'
 
 export const revalidate = 3600
 
@@ -53,7 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const [expRes, guideRes] = await Promise.all([
       db.from('experience_pages')
-        .select('slug, updated_at')
+        .select('slug, updated_at, guide_id')
         .eq('status', 'active'),
       db.from('guides')
         .select('id, slug, updated_at')
@@ -68,12 +69,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority:        0.95,
     }))
 
-    guidePages = (guideRes.data ?? []).map(guide => ({
-      url:             `${SITE_URL}/guides/${(guide as { slug?: string | null }).slug ?? guide.id}`,
-      ...lastModifiedFrom(guide.updated_at),
-      changeFrequency: 'weekly' as const,
-      priority:        0.90,
-    }))
+    // A profile is listed only with a slug (never a UUID) and with at least one active offer —
+    // a profile without one is noindex, so it stays out of the sitemap too (FA-1.86, tj D3).
+    const guidesWithOffer = new Set((expRes.data ?? []).map(exp => exp.guide_id))
+    guidePages = (guideRes.data ?? []).flatMap(guide => {
+      const path = guideProfilePath(guide)
+      if (path == null || !guidesWithOffer.has(guide.id)) return []
+      return [{
+        url:             `${SITE_URL}${path}`,
+        ...lastModifiedFrom(guide.updated_at),
+        changeFrequency: 'weekly' as const,
+        priority:        0.90,
+      }]
+    })
   } catch {
     // Fail silently — sitemap degrades to static pages only
   }

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
@@ -8,6 +9,8 @@ import { heroFull, avatarImg, cardThumb } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
 import { currencySymbol } from '@/lib/format-price'
 import { SITE_URL } from '@/lib/site'
+import { guideProfilePath } from '@/lib/guide-url'
+import { retiredGuideTarget } from '@/lib/guide-redirects'
 
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -60,11 +63,15 @@ const SalmonRule = () => (
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
   const guide = await getGuide(id)
   if (guide == null) return {}
-  const canonicalSlug = (guide as { slug?: string | null }).slug ?? id
+  const profilePath = guideProfilePath(guide)
+  // A profile with no active offer is thin content → noindex (tj D3). One without a slug has no
+  // canonical URL to point at, so it is noindex as well and carries no canonical.
+  const hasOffer = (await getGuideExperiencePages(guide.id)).length > 0
+  const indexable = profilePath != null && hasOffer
   const desc = `Fish with ${guide.full_name} — verified local fishing guide in ${guide.country}. ${guide.fish_expertise?.slice(0, 3).join(', ') ?? 'Salmon, sea trout & more'}. Book via FjordAnglers.`
   const ogTitle = `${guide.full_name} — Fishing Guide in ${guide.country} | FjordAnglers`
   const ogImages = guide.cover_url != null
@@ -73,11 +80,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title: `${guide.full_name} — Fishing Guide in ${guide.country}`,
     description: desc,
-    alternates: { canonical: `${SITE_URL}/guides/${canonicalSlug}` },
+    ...(indexable ? {} : { robots: { index: false } }),
+    ...(profilePath != null ? { alternates: { canonical: `${SITE_URL}${profilePath}` } } : {}),
     openGraph: {
       title: ogTitle,
       description: desc,
-      url: `${SITE_URL}/guides/${canonicalSlug}`,
+      ...(profilePath != null ? { url: `${SITE_URL}${profilePath}` } : {}),
       images: ogImages,
     },
     twitter: {
@@ -98,21 +106,30 @@ export default async function GuideProfilePage({
 }) {
   const { id } = await params
 
+  // A retired duplicate redirects to the profile it was merged into. This runs before the
+  // lookup below, which 404s for hidden / inactive rows (FA-1.86, D2).
+  const mergedInto = retiredGuideTarget(id)
+  if (mergedInto != null) {
+    const target = await getGuide(mergedInto)
+    const targetPath = target != null ? guideProfilePath(target) : null
+    if (targetPath != null) permanentRedirect(targetPath)
+  }
+
   // Fetch guide first — needed to resolve slug → UUID before fetching experiences
   const guide = await getGuide(id)
 
   if (guide == null) notFound()
 
   // Redirect UUID URLs to slug URLs permanently (SEO: slug carries keyword value)
-  const guideSlug = (guide as { slug?: string | null }).slug
-  if (UUID_RE.test(id) && guideSlug != null) {
-    permanentRedirect(`/guides/${guideSlug}`)
+  const profilePath = guideProfilePath(guide)
+  if (UUID_RE.test(id) && profilePath != null) {
+    permanentRedirect(profilePath)
   }
 
   // Use guide.id (UUID) so getGuideExperiencePages can filter by the UUID FK
   const guideExperiences = await getGuideExperiencePages(guide.id)
 
-  const canonicalSlug = guideSlug ?? id
+  const profileUrl = profilePath != null ? `${SITE_URL}${profilePath}` : null
 
   // flag rendered as <CountryFlag> below
   const landscapeUrl = (guide as { landscape_url?: string | null }).landscape_url ?? getLandscapeUrl(guide.country, guide.id)
@@ -130,7 +147,7 @@ export default async function GuideProfilePage({
     name: guide.full_name,
     ...(guide.bio != null ? { description: guide.bio } : {}),
     ...(guide.avatar_url != null ? { image: guide.avatar_url } : {}),
-    url: `${SITE_URL}/guides/${canonicalSlug}`,
+    ...(profileUrl != null ? { url: profileUrl } : {}),
     jobTitle: 'Fishing Guide',
     address: {
       '@type': 'PostalAddress',
@@ -155,7 +172,7 @@ export default async function GuideProfilePage({
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
       { '@type': 'ListItem', position: 2, name: 'Guides', item: `${SITE_URL}/guides` },
-      { '@type': 'ListItem', position: 3, name: guide.full_name, item: `${SITE_URL}/guides/${canonicalSlug}` },
+      { '@type': 'ListItem', position: 3, name: guide.full_name, ...(profileUrl != null ? { item: profileUrl } : {}) },
     ],
   }
 

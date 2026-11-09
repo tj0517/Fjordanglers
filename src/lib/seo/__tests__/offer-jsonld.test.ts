@@ -66,3 +66,18 @@ describe('serializeJsonLd — a </script> in the content cannot close the tag', 
     expect(serializeJsonLd(breadcrumb)).toBe(JSON.stringify(breadcrumb))
   })
 })
+
+describe('subjectOf — the guide profile URL (FA-1.86)', () => {
+  it('uses /guides/<slug>', () => {
+    const { trip } = buildOfferJsonLd(input({ guide: { name: 'Josh Hart', slug: 'josh-hart-new-zealand' } }))
+    expect(trip.subjectOf).toEqual({ '@type': 'Person', name: 'Josh Hart', url: 'https://www.fjordanglers.com/guides/josh-hart-new-zealand' })
+  })
+
+  it('a guide without a slug has no url — never the UUID, /guides/null or /guides/undefined', () => {
+    for (const slug of [null, '', '  ']) {
+      const { trip } = buildOfferJsonLd(input({ guide: { name: 'No Slug', slug } }))
+      expect(trip.subjectOf).toEqual({ '@type': 'Person', name: 'No Slug' })
+      expect(JSON.stringify(trip)).not.toMatch(/\/guides\//)
+    }
+  })
+})
