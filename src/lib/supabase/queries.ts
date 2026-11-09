@@ -1064,11 +1064,23 @@ export type HubOffer = {
   guides:        { name: string; avatarUrl: string | null }[]
 }
 
+/** A guide whose public profile the hub links to (FA-1.82). */
+export type HubGuide = {
+  id:        string
+  /** `/guides/<slug>` when the guide has one (the profile redirects an id to it), else the id. */
+  slug:      string | null
+  name:      string
+  avatarUrl: string | null
+  tagline:   string | null
+}
+
 export type DestinationHubData = {
   hub:        DestinationHub
   offers:     HubOffer[]
   /** Distinct guides shown on the hub's active offers. */
   guideCount: number
+  /** The same guides, minus the ones whose profile does not render (inactive or hidden — it 404s). */
+  guides:     HubGuide[]
   /** The hero's "from" — null when the hub has no priced offer in its dominant currency. */
   priceFrom:  { cents: number; currency: string; text: string } | null
   /** Species chips: the hub's own list, or the union of its offers' (tj D2). */
@@ -1089,7 +1101,10 @@ type RawHubGuideRow = {
   show_on_page:  boolean
   sort_order:    number
   guide_price_override_cents: number | null
-  guide: { id: string; full_name: string; avatar_url: string | null } | null
+  guide: {
+    id: string; full_name: string; avatar_url: string | null
+    slug: string | null; tagline: string | null; status: string; is_hidden: boolean
+  } | null
 }
 
 /**
@@ -1160,7 +1175,7 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
           .from('experience_guides')
           .select(`
             experience_id, role, status, show_on_page, sort_order, guide_price_override_cents,
-            guide:guides!guide_id ( id, full_name, avatar_url )
+            guide:guides!guide_id ( id, full_name, avatar_url, slug, tagline, status, is_hidden )
           `)
           .in('experience_id', ids),
         v2Ids.length === 0 ? null : db
@@ -1249,16 +1264,28 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
         }
       })
 
+      // One entry per guide, in the offers' order. `getGuide` serves only an active, non-hidden
+      // guide, so a hidden one (an offer can still show them) is not linked — the link would 404.
+      const guides = new Map<string, HubGuide>()
+      for (const row of shown) {
+        const g = row.guide!
+        if (g.status !== 'active' || g.is_hidden || guides.has(g.id)) continue
+        guides.set(g.id, { id: g.id, slug: g.slug, name: g.full_name, avatarUrl: g.avatar_url, tagline: g.tagline })
+      }
+
       return {
         offers,
         guideCount: new Set(shown.map(row => row.guide!.id)).size,
+        guides:     [...guides.values()],
         priceFrom:  hubPriceFrom(priced),
         reviews:    reviewCards(reviewsResult?.data ?? []),
         ogImage:    rows[0]?.hero_image_url ?? null,
       }
     },
-    // The countries are part of the query; the flag decides how every card is priced.
-    ['destination-hub', slug, getHubCountries(hub).join(','), rendersAsV2(2) ? 'v2' : 'v1'],
+    // The countries are part of the query; the flag decides how every card is priced. `guides`
+    // (FA-1.82) changed the cached shape — the trailing segment keeps a deploy from reading an
+    // entry written without it from the shared data cache.
+    ['destination-hub', slug, getHubCountries(hub).join(','), rendersAsV2(2) ? 'v2' : 'v1', 'guides'],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
   )()
 
