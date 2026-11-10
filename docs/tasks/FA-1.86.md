@@ -2,7 +2,7 @@
 id: FA-1.86
 title: Przewodnicy — slugi dla 6 bez sluga, slug obowiązkowy przy aktywacji, scalenie duplikatu Josh Hart, ukrycie dwóch pustych profili, koniec linków z UUID, profile bez oferty poza indeksem
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -74,3 +74,4 @@ curl -sI https://www.fjordanglers.com/guides/cd8f48f1-0633-4832-9c56-0f2cb4c7ee6
 - **2026-11-09, tj:** Decyzja 1 = C — duplikat `cd8f48f1…` dostaje `status='suspended'` + `is_hidden=true`; jeden wiersz `agent_knowledge` (`14fd7003…`) przechodzi na `1a30602e…`; 3 zapytania zachowują `assigned_guide_id` bez zmian. SQL migracji zatwierdzony (z opcją C).
 - **2026-11-09, tj:** Decyzja 2 = (i) z blokadą — pole slug w formularzach create/edit, wstępnie z imienia + kraju, format i unikalność sprawdzane w akcji. Gdy przewodnik jest `active`, slug jest tylko do odczytu w formularzu edycji (zmiana wymaga najpierw dezaktywacji; krótka podpowiedź pod polem). Aktywacja bez sluga zwraca czytelny błąd; `QuickApproveButton` pokazuje błąd akcji; `createBetaGuide` wymaga sluga.
 - **2026-11-09, tj:** Kolejność po merge: merge → poczekać na deploy produkcyjny Vercel → `deploy-db` na prod → SELECT na prod i trzy `curl`.
+- **2026-11-10, odbiór (PR #181):** przyjęte z uzupełnieniem — red proof reguły bazy `guides_active_requires_slug` w jobie `db`. Udowodnione przed merge: odmowa aktywacji bez sluga (akcje + baza), grep UUID w zakresie D1, CI. Po merge (tj): `deploy-db` na prod zaraz po deployu Vercela, SELECT „0 aktywnych bez sluga” i trzy `curl` — wynik dopisany tutaj.
