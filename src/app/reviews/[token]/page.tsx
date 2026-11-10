@@ -2,7 +2,10 @@ import { notFound } from 'next/navigation'
 import { getReviewByToken } from '@/actions/reviews'
 import { ReviewForm } from './ReviewForm'
 
-export const metadata = { title: 'Rate your trip — FjordAnglers' }
+export const metadata = {
+  title: 'Rate your trip — FjordAnglers',
+  robots: { index: false },
+}
 
 export default async function ReviewPage({
   params,

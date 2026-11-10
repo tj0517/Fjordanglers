@@ -1,9 +1,15 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { getFormByToken } from '@/actions/guide-forms'
 import { IntakeFormClient } from './IntakeFormClient'
 import { SITE_URL } from '@/lib/site'
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+
+export const metadata: Metadata = {
+  robots: { index: false },
+}
 
 export default async function GuideIntakePage({
   params,
@@ -13,34 +19,8 @@ export default async function GuideIntakePage({
   const { token } = await params
   const form = await getFormByToken(token)
 
-  // ── Closed or not found ────────────────────────────────────────────────────
-  if (form == null) {
-    return (
-      <main className="min-h-screen flex items-center justify-center px-4"
-        style={{ background: '#F8FAFB' }}>
-        <div className="max-w-md w-full text-center py-16">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
-            style={{ background: 'rgba(10,46,77,0.06)' }}>
-            <span className="text-2xl">🔗</span>
-          </div>
-          <h1 className="text-2xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>
-            Form not found
-          </h1>
-          <p className="text-base f-body mb-6" style={{ color: 'rgba(10,46,77,0.55)' }}>
-            This link is no longer active or doesn&apos;t exist.
-            Please contact FjordAnglers directly if you think this is a mistake.
-          </p>
-          <a
-            href="mailto:contact@fjordanglers.com"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold f-body"
-            style={{ background: '#E67E50', color: '#fff' }}
-          >
-            Contact FjordAnglers
-          </a>
-        </div>
-      </main>
-    )
-  }
+  // Unknown, expired and inactive links alike (FA-1.91 D1).
+  if (form == null) notFound()
 
   return (
     <main style={{ background: '#F8FAFB', minHeight: '100vh' }}>

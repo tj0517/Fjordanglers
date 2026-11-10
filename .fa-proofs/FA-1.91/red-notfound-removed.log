@@ -1,0 +1,16 @@
+ ❯ src/app/guide-intake/[token]/page.test.tsx (3 tests | 1 failed) 10ms
+     × calls notFound() when the lookup is null (unknown or inactive form) 8ms
+     ✓ still renders for a valid token and does not call notFound() 1ms
+     ✓ is noindex 0ms
+ ❯ src/app/offers/[token]/page.test.tsx (3 tests | 1 failed) 10ms
+     × calls notFound() when the lookup is null (unknown or expired token) 8ms
+     ✓ still renders for a valid token and does not call notFound() 1ms
+     ✓ is noindex 0ms
+ FAIL  src/app/guide-intake/[token]/page.test.tsx > /guide-intake/[token] > calls notFound() when the lookup is null (unknown or inactive form)
+AssertionError: expected TypeError: Cannot read properties of null… to be Error: NEXT_NOT_FOUND // Object.is equality
++ TypeError {
+ FAIL  src/app/offers/[token]/page.test.tsx > /offers/[token] > calls notFound() when the lookup is null (unknown or expired token)
+AssertionError: expected TypeError: Cannot read properties of null… to be Error: NEXT_NOT_FOUND // Object.is equality
++ TypeError {
+ Test Files  2 failed (2)
+      Tests  2 failed | 4 passed (6)

@@ -22,7 +22,7 @@ export function pinIcon() {
       cursor: pointer;
       display: flex; align-items: center; justify-content: center; overflow: hidden;
     ">
-      <img src="/brand/sygnet.png" style="width:17px;height:17px;object-fit:contain;" draggable="false"/>
+      <img src="/brand/sygnet.png" alt="" style="width:17px;height:17px;object-fit:contain;" draggable="false"/>
     </div>`,
     iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -18],
   })

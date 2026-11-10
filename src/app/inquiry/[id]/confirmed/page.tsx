@@ -11,9 +11,14 @@
  * read and shown.
  */
 
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { CheckCircle2, Clock } from 'lucide-react'
 import { getInquiryConfirmation } from '@/actions/inquiries'
+
+export const metadata: Metadata = {
+  robots: { index: false },
+}
 
 function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] ?? fullName
