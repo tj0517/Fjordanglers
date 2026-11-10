@@ -2,7 +2,7 @@
 id: FA-1.84
 title: Blog, krok 2 — edytor w `/admin` (szkic/publikacja, zdjęcia, podgląd, metadane SEO), publikacja bez deployu
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -75,3 +75,4 @@ curl -s -o /dev/null -w "%{http_code}" localhost:3000/blog/<szkic>   # 404
 - **2026-11-10, agent:** „pierwsza publikacja" = ustawione `published_at`: akcja stempluje je przy pierwszej publikacji i zachowuje przy wycofaniu, więc wycofany wpis nie odblokowuje sluga (test red-proof). Zmiana sluga szkicu nigdy nie publikowanego jest dodatkowo zabezpieczona warunkiem w `UPDATE` (status `draft`, brak `published_at`) — gdy inny admin opublikuje wpis w międzyczasie, zapis nie trafi w żaden wiersz.
 - **2026-11-10, agent:** obraz główny: formularz przyjmuje wgranie do `guide-photos/blog/` albo ścieżkę serwisową (`/fish_catalog/…`, jak w artykule o Norwegii), żeby edycja istniejącego wpisu nie wymagała ponownego wgrania. Limit rozmiaru i typów wymusza bucket (prod: 52 428 800 B, jpeg/jpg/png/webp), nazwę pliku generuje komponent (UUID).
 - **Otwarte (decyzja tj w raporcie PR):** C3 — zamknięta lista kategorii (treść listy); sprawdzenie `revalidateTag` w trybie produkcyjnym (wymaga `pnpm build`).
+- **2026-11-10, tj (accepted — close it):** Kategoria zostaje wolnym tekstem; zamknięta lista odłożona (wiersz w deferred: lista do ustalenia później, ryzyko duplikatów przez literówki typu „planning"/„Planning"). `revalidateTag` w trybie produkcyjnym: nie dowodzony lokalnym buildem — dowód po merge na prod przez tj: edycja artykułu o Norwegii w nowym edytorze (poprawki z deferred: „sjørøye", limit wywozu 15 kg → 10 kg), zapis i sprawdzenie, że `/blog/fishing-regulations-norway-2026` pokazuje zmianę w ciągu kilku minut; w tej samej sesji tj testuje prawdziwy upload do `guide-photos/blog/` i wiersz `audit_log`. Jeśli zmiana nie pojawi się w 5 minut — wraca jako nowe zadanie. Dodany wiersz deferred dla FA-1.92: bucket `guide-photos` przyjmuje pliki do 50 MB — tak duże zdjęcie główne spowalnia stronę artykułu; rozważyć mniejszy limit albo zmianę rozmiaru przy uploadzie.
