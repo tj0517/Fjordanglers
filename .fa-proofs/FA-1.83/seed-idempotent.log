@@ -1,0 +1,11 @@
+-- transaction, rolled back: delete the row, apply the migration (expect INSERT 0 1), apply again (expect INSERT 0 0)
+BEGIN
+DELETE 1
+INSERT 0 1
+INSERT 0 0
+              slug               |  status   | seo_len | desc_len | body_len |      published_at      |       updated_at       
+---------------------------------+-----------+---------+----------+----------+------------------------+------------------------
+ fishing-regulations-norway-2026 | published |      54 |      153 |     9777 | 2026-03-17 00:00:00+00 | 2026-03-17 00:00:00+00
+(1 row)
+
+ROLLBACK
