@@ -185,19 +185,16 @@ export function BlogPostForm({ postId, initialValues, initialStatus, initialPubl
   })
 
   // The same schema the server runs. Anything it refuses blocks both save buttons — the limits on the
-  // SEO title and description apply to drafts too (the database refuses them).
-  const issues = useMemo(() => {
-    const result = BlogPostPayloadSchema.safeParse(payload('draft'))
-    const byField: Record<string, string> = {}
-    if (!result.success) {
-      for (const issue of result.error.issues) {
-        const field = String(issue.path[0] ?? '')
-        if (byField[field] == null) byField[field] = issue.message
-      }
+  // SEO title and description apply to drafts too (the database refuses them). Cheap enough to run on
+  // every render: the length checks are O(1) and nothing here is a network call.
+  const issues: Record<string, string> = {}
+  const checked = BlogPostPayloadSchema.safeParse(payload('draft'))
+  if (!checked.success) {
+    for (const issue of checked.error.issues) {
+      const field = String(issue.path[0] ?? '')
+      if (issues[field] == null) issues[field] = issue.message
     }
-    return byField
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- payload() reads exactly these
-  }, [title, slug, seoTitle, description, body, imageUrl, imageAlt, category, country, guideId])
+  }
   const blocked = Object.keys(issues).length > 0
 
   // The preview and the HTML check follow the text a beat behind the keys, so typing stays smooth.

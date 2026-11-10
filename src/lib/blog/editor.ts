@@ -21,12 +21,12 @@ import { isValidBlogSlug } from '@/lib/blog/post'
 export const SEO_TITLE_MAX = 60
 export const DESCRIPTION_MAX = 155
 export const TITLE_MAX = 200
-export const SLUG_MAX = 100
-export const BODY_MAX = 200_000
+const SLUG_MAX = 100
+const BODY_MAX = 200_000
 export const CATEGORY_MAX = 40
 export const IMAGE_ALT_MAX = 300
 
-export const BLOG_STATUSES = ['draft', 'published'] as const
+const BLOG_STATUSES = ['draft', 'published'] as const
 export type BlogStatus = (typeof BLOG_STATUSES)[number]
 
 // ─── Slug ─────────────────────────────────────────────────────────────────────
@@ -178,7 +178,6 @@ export const BlogPostPayloadSchema = z.object({
 })
 
 export type BlogPostPayload = z.input<typeof BlogPostPayloadSchema>
-export type BlogPostValues = z.output<typeof BlogPostPayloadSchema>
 
 // ─── Raw HTML in the body ─────────────────────────────────────────────────────
 
