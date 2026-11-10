@@ -6,7 +6,9 @@ import { BlogImage } from '@/components/blog/article-blocks'
 import { SITE_URL } from '@/lib/site'
 
 // Published posts come from the table (FA-1.83); the data layer caches them for 5 minutes under the `blog` tag.
-export const revalidate = 300
+// Rendered per request, not at build: a build (CI, a preview without env) has no database to read, and
+// `getBlogPosts` throws on a failed read rather than cache "no articles" — a prerender would fail the build.
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Fishing Journal — Tips, Guides & Destination Stories',
