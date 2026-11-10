@@ -196,7 +196,7 @@ function pinIconWithArea(areaColor: string) {
         cursor:pointer;
         display:flex;align-items:center;justify-content:center;overflow:hidden;
       ">
-        <img src="/brand/sygnet.png" style="width:14px;height:14px;object-fit:contain;" draggable="false"/>
+        <img src="/brand/sygnet.png" alt="" style="width:14px;height:14px;object-fit:contain;" draggable="false"/>
       </div>
     </div>`,
     iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -20],
@@ -216,7 +216,7 @@ function pinIconHover() {
       cursor: pointer;
       display: flex; align-items: center; justify-content: center; overflow: hidden;
     ">
-      <img src="/brand/sygnet-black.png" style="width:21px;height:21px;object-fit:contain;opacity:0.85;" draggable="false"/>
+      <img src="/brand/sygnet-black.png" alt="" style="width:21px;height:21px;object-fit:contain;opacity:0.85;" draggable="false"/>
     </div>`,
     iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -22],
   })
@@ -239,7 +239,7 @@ function pinIconHoverWithArea(areaColor: string) {
         cursor:pointer;
         display:flex;align-items:center;justify-content:center;overflow:hidden;
       ">
-        <img src="/brand/sygnet-black.png" style="width:18px;height:18px;object-fit:contain;opacity:0.85;" draggable="false"/>
+        <img src="/brand/sygnet-black.png" alt="" style="width:18px;height:18px;object-fit:contain;opacity:0.85;" draggable="false"/>
       </div>
     </div>`,
     iconSize: [44, 44], iconAnchor: [22, 22], popupAnchor: [0, -24],

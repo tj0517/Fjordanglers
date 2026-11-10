@@ -1,0 +1,9 @@
+src/app/reviews/[token]/page.tsx:7:  robots: { index: false },
+src/app/guide-intake/[token]/page.tsx:11:  robots: { index: false },
+src/app/inquiry/[id]/confirmed/page.tsx:20:  robots: { index: false },
+src/app/offers/[token]/page.tsx:37:  robots: { index: false },
+pins without alt:
+0
+SearchAction:
+src/app/layout.tsx:90:        {/* WebSite — name and url only. No SearchAction: /trips?country= is a filter, not a search. */}
+(end)

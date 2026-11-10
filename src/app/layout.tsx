@@ -87,7 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           });
         `}} />
 
-        {/* WebSite + SearchAction — enables sitelinks searchbox in branded SERPs */}
+        {/* WebSite — name and url only. No sitelinks search box: /trips?country= is a filter, not a search. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -96,14 +96,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               '@type': 'WebSite',
               name: 'FjordAnglers',
               url: SITE_URL,
-              potentialAction: {
-                '@type': 'SearchAction',
-                target: {
-                  '@type': 'EntryPoint',
-                  urlTemplate: `${SITE_URL}/trips?country={search_term_string}`,
-                },
-                'query-input': 'required name=search_term_string',
-              },
             }),
           }}
         />
