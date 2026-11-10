@@ -1,0 +1,102 @@
+=== SETUP (postgres): one draft, one published row
+INSERT 0 1
+INSERT 0 1
+      slug       |  status   
+-----------------+-----------
+ proof-draft     | draft
+ proof-published | published
+(2 rows)
+
+=== RLS: anon
+-- anon: all rows visible (expect only proof-published)
+SET
+-- anon: the draft by slug (expect 0 rows)
+      slug       |  status   
+-----------------+-----------
+ proof-published | published
+(1 row)
+
+-- anon: INSERT (expect 42501)
+ draft_rows_visible 
+--------------------
+                  0
+(1 row)
+
+ERROR:  42501: permission denied for table blog_posts
+-- anon: UPDATE (expect 42501)
+ERROR:  42501: permission denied for table blog_posts
+-- anon: DELETE (expect 42501)
+ERROR:  42501: permission denied for table blog_posts
+RESET
+=== RLS: authenticated
+SET
+ draft_rows_visible 
+--------------------
+                  0
+(1 row)
+
+ERROR:  42501: permission denied for table blog_posts
+ERROR:  42501: permission denied for table blog_posts
+-- after: published row untouched, no stray rows
+RESET
+      slug       |   title   
+-----------------+-----------
+ proof-draft     | Draft
+ proof-published | Published
+(2 rows)
+
+=== CONSTRAINTS (postgres) — each statement must fail except CONTROL
+-- publish without seo_title (expect 23514 blog_posts_published_complete)
+ERROR:  23514: new row for relation "blog_posts" violates check constraint "blog_posts_published_complete"
+CONSTRAINT NAME:  blog_posts_published_complete
+-- publish without published_at (expect 23514)
+ERROR:  23514: new row for relation "blog_posts" violates check constraint "blog_posts_published_complete"
+CONSTRAINT NAME:  blog_posts_published_complete
+-- publish with blank alt (expect 23514)
+ERROR:  23514: new row for relation "blog_posts" violates check constraint "blog_posts_published_complete"
+CONSTRAINT NAME:  blog_posts_published_complete
+-- seo_title 61 chars (expect 23514 blog_posts_seo_title_length)
+ERROR:  23514: new row for relation "blog_posts" violates check constraint "blog_posts_seo_title_length"
+CONSTRAINT NAME:  blog_posts_seo_title_length
+-- description 156 chars (expect 23514 blog_posts_description_length)
+ERROR:  23514: new row for relation "blog_posts" violates check constraint "blog_posts_description_length"
+CONSTRAINT NAME:  blog_posts_description_length
+-- slug with capitals/underscore (expect 23514 blog_posts_slug_format)
+ERROR:  23514: new row for relation "blog_posts" violates check constraint "blog_posts_slug_format"
+CONSTRAINT NAME:  blog_posts_slug_format
+-- duplicate slug (expect 23505 blog_posts_slug_key)
+ERROR:  23505: duplicate key value violates unique constraint "blog_posts_slug_key"
+CONSTRAINT NAME:  blog_posts_slug_key
+-- image_url javascript: (expect 23514 blog_posts_image_url_shape)
+ERROR:  23514: new row for relation "blog_posts" violates check constraint "blog_posts_image_url_shape"
+CONSTRAINT NAME:  blog_posts_image_url_shape
+-- image_url protocol-relative //evil.example (expect 23514)
+ERROR:  23514: new row for relation "blog_posts" violates check constraint "blog_posts_image_url_shape"
+CONSTRAINT NAME:  blog_posts_image_url_shape
+-- country Mexico (expect 23514 blog_posts_country_check)
+ERROR:  23514: new row for relation "blog_posts" violates check constraint "blog_posts_country_check"
+CONSTRAINT NAME:  blog_posts_country_check
+-- status archived (expect 23514 blog_posts_status_check)
+ERROR:  23514: new row for relation "blog_posts" violates check constraint "blog_posts_status_check"
+CONSTRAINT NAME:  blog_posts_status_check
+-- CONTROL: a valid published row with 60/155-char limits (expect INSERT 0 1)
+-- updated_at moves on UPDATE (expect true)
+INSERT 0 1
+ pg_sleep 
+----------
+ 
+(1 row)
+
+UPDATE 1
+=== CLEANUP
+ updated_at_moved 
+------------------
+ t
+(1 row)
+
+DELETE 3
+ rows_left 
+-----------
+         0
+(1 row)
+

@@ -108,3 +108,23 @@ describe('FA-1.68 — testimonials_trip_country_check matches COUNTRIES', () => 
     expect([...inConstraint].sort()).toEqual([...COUNTRIES].sort())
   })
 })
+
+// FA-1.83 — blog_posts.country repeats the same list; the constraint's behaviour is
+// red-proved in the FA-1.83 PR.
+describe('FA-1.83 — blog_posts_country_check matches COUNTRIES', () => {
+  it('the list written into the migration equals COUNTRIES', () => {
+    const sql = readFileSync(
+      resolve(process.cwd(), 'supabase/migrations/20261110000000_add_blog_posts.sql'),
+      'utf8',
+    )
+
+    const block = sql.match(
+      /CONSTRAINT\s+blog_posts_country_check[\s\S]*?country\s+IN\s*\(([\s\S]*?)\)/,
+    )
+    expect(block, 'blog_posts_country_check with a "country IN (…)" list not found').not.toBeNull()
+
+    const inConstraint = [...(block?.[1] ?? '').matchAll(/'([^']+)'/g)].map(m => m[1])
+
+    expect([...inConstraint].sort()).toEqual([...COUNTRIES].sort())
+  })
+})

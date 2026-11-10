@@ -183,6 +183,68 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_posts: {
+        Row: {
+          body_md: string
+          category: string
+          country: string | null
+          created_at: string
+          description: string | null
+          guide_id: string | null
+          id: string
+          image_alt: string | null
+          image_url: string | null
+          published_at: string | null
+          seo_title: string | null
+          slug: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body_md?: string
+          category?: string
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          guide_id?: string | null
+          id?: string
+          image_alt?: string | null
+          image_url?: string | null
+          published_at?: string | null
+          seo_title?: string | null
+          slug: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body_md?: string
+          category?: string
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          guide_id?: string | null
+          id?: string
+          image_alt?: string | null
+          image_url?: string | null
+          published_at?: string | null
+          seo_title?: string | null
+          slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       countries: {
         Row: {
           created_at: string
