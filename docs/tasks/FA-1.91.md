@@ -59,3 +59,4 @@ for p in offers guide-intake reviews; do curl -s -o /dev/null -w "$p %{http_code
 - **2026-11-03, tj:** zadanie z audytu SEO (F18, F19).
 - **2026-11-10, tj:** D1 — 404 dla nieznanego, wygasłego i nieaktywnego linku (oferta, formularz przewodnika); ekran z komunikatem i kontaktem bez zmian, w `not-found.tsx` trasy.
 - **2026-11-10, tj:** D2 — `alt=""` także na wspólnym pinie `src/components/map/pin-icon.ts`; kryterium Lighthouse zastąpione grepem, Lighthouse jako dodatek.
+- **2026-11-10, tj:** kontrole HTTP (404 na trzech trasach, treść ekranu) bez lokalnego serwera — sprawdzane `curl` na prod po merge; przed merge dowodem są testy i red proof.
