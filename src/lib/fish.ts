@@ -39,51 +39,6 @@ export const FISH_ALL = [
   'Saltwater Species: Kingfish & Coastal Predators',
 ] as const
 
-/**
- * Maps any fish name (as stored in DB or used in UI) to its catalog image.
- * Fallback to closest visual match when a dedicated image doesn't exist yet.
- */
-export const FISH_IMG: Record<string, string> = {
-  // Salmonids
-  'Salmon':           '/fish_catalog/salmon.png',
-  'Atlantic Salmon':  '/fish_catalog/salmon.png',
-  'Sea Trout':        '/fish_catalog/sea_trout.png',
-  'Brown Trout':      '/fish_catalog/brown_trout.png',
-  'Rainbow Trout':    '/fish_catalog/rainbow_trout.png',
-  'Lake Trout':       '/fish_catalog/lake-trout.png',
-  'Trout':            '/fish_catalog/trout.png',
-  'Arctic Char':      '/fish_catalog/char.png',
-  'Grayling':         '/fish_catalog/grayling.png',
-  'Whitefish':        '/fish_catalog/whitefish.png',
-  'Brook Trout':      '/fish_catalog/char.png',     // a char, not a trout — closest is Arctic Char
-  'Coho Salmon':      '/fish_catalog/salmon.png',
-  'Chinook Salmon':   '/fish_catalog/salmon.png',
-  // Freshwater predators
-  'Pike':             '/fish_catalog/pike.png',
-  'Perch':            '/fish_catalog/perch.png',
-  'Zander':           '/fish_catalog/zander.png',
-  'Burbot':           '/fish_catalog/ling.png',
-  // Saltwater — demersal
-  'Cod':              '/fish_catalog/cod.png',
-  'Pollock':          '/fish_catalog/pollock.png',
-  'Saithe':           '/fish_catalog/pollock.png',
-  'Haddock':          '/fish_catalog/cod.png',
-  'Ling':             '/fish_catalog/ling.png',
-  'Brosme':           '/fish_catalog/brossma.png',
-  'Halibut':          '/fish_catalog/halibut.png',
-  'Flounder':         '/fish_catalog/flounder.png',
-  'Wolffish':         '/fish_catalog/wolffish.png',
-  'Norway Redfish':   '/fish_catalog/karmazyn.png',
-  'Redfish':          '/fish_catalog/karmazyn.png',
-  'Spiny Dogfish':    '/fish_catalog/spine-dogfish.png',
-  // Saltwater — other
-  'Sea Bass':         '/fish_catalog/sea-bass.png',
-  'Mackerel':         '/fish_catalog/mackrel.png',
-  'Garfish':          '/fish_catalog/gar-fish.png',
-  // Saltwater — NZ
-  'Saltwater Species: Kingfish & Coastal Predators': '/fish_catalog/mackrel.png', // kingfish is a jack — the mackerel is the closest streamlined, fork-tailed shape
-}
-
 /** Species shown on the homepage slider */
 export const FISH_CATALOG: {
   name: string

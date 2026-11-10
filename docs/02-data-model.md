@@ -209,6 +209,38 @@ on read and write, as on `reviews` (tj D3, 2026-10-24). Reads and writes go thro
 service role on the server only — the data layer and the admin actions behind
 `requireAdmin()` arrive in the FA-1.68 code PR, after this migration is on prod.
 
+### Added in FA-1.83 — `blog_posts` (blog articles)
+Migration `20261110000000_add_blog_posts.sql`. One row = one article; before, an article was
+an entry in `src/lib/blog-data.ts` plus a JSX component, and publishing meant a deploy.
+The Norway article is the first row (data migration `20261110010000_…`, applied before the
+code that reads the table). Written in the admin editor from FA-1.84; read by `/blog`,
+`/blog/[slug]`, the sitemap and the hubs' article links.
+
+```
+blog_posts (id, slug, title, seo_title, description, body_md, image_url, image_alt,
+            category, country, guide_id, status, published_at, created_at, updated_at)
+```
+
+`status ∈ draft | published` (CHECK). `body_md` is Markdown (GFM tables) plus four named blocks
+(`:::warning`, `:::info`, `:::stat{…}`, `::photo{…}` — `src/lib/blog/article-markdown.ts`),
+rendered to React components, never as raw HTML. `country` uses the `COUNTRIES` list, NULL =
+general; `category` is free text until the editor closes the list; `guide_id` is optional.
+"Published" is the one definition of "not a stub".
+
+| Rule | Enforced by |
+|---|---|
+| `slug` unique, lower-case words joined by single hyphens, ≤ 100 | `blog_posts_slug_key`, `blog_posts_slug_format` |
+| `seo_title` ≤ 60, `description` ≤ 155 | `blog_posts_seo_title_length`, `blog_posts_description_length` |
+| `image_url` is a site path or https — no `javascript:`, `data:`, `//host` | `blog_posts_image_url_shape` |
+| `country` only from `COUNTRIES` | `blog_posts_country_check` (sync test: `agentKnowledgeCountries.test.ts`) |
+| A published row has SEO title, description, body, image, alt text and `published_at` | `blog_posts_published_complete` |
+
+**RLS:** enabled; one policy, `Public reads published blog posts` (`SELECT` to anon and
+authenticated, `status = 'published'`). No write policy, and `INSERT/UPDATE/DELETE` are
+revoked from both roles; writes go through the service role after `requireAdmin()` (tj C1,
+2026-11-10). Reads use the anon client in `src/lib/supabase/queries.ts` (`getBlogPosts`,
+`getBlogPost`), cached 5 minutes under the `blog` tag.
+
 ### Still in `public`, dead or near-dead (candidates for later tasks)
 `guide_images` (admin insert + guide profile read — FA-1.07/1.08),
 `guide_submissions` (read-only archive; writer component unrendered — FA-1.07),

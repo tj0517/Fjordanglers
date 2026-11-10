@@ -1,0 +1,7 @@
+     × a <script> in the body does not appear in the HTML 10ms
+     × raw HTML is removed, not echoed: onerror handlers, iframes, style, event attributes 1ms
+     × a javascript: link and a javascript: image never reach an href / src 1ms
+     ✓ a ::photo block with an unsafe src is shown as the text that was typed, not as an image 2ms
+     × attribute values of a block are text, never markup 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  4 failed | 1 passed | 14 skipped (19)

@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { DESTINATION_HUBS, getHubCountries, getHubSlugForCountry } from './destinations'
-import { BLOG_POSTS } from './blog-data'
-import { isBlogStub } from './blog-articles'
 
 /**
  * FA-1.82 — every hub is a public page and a landing page for search: its editorial fields are
@@ -39,13 +37,13 @@ describe('DESTINATION_HUBS (FA-1.82)', () => {
     for (const m of peak) expect(season, `peak month ${m} is outside the season`).toContain(m)
   })
 
-  it('every article a hub links to is a real, non-stub blog post', () => {
+  // Whether a linked article is published is decided at request time by `getDestinationHub` (FA-1.83:
+  // "not a stub" became "status = published") and proved in destination-hub.test.ts.
+  it('every article a hub links to has a well-formed slug and a title', () => {
     for (const hub of DESTINATION_HUBS) {
       for (const a of hub.articles ?? []) {
-        const post = BLOG_POSTS.find(p => p.slug === a.slug)
-        expect(post, `${hub.slug}: ${a.slug}`).toBeDefined()
-        expect(isBlogStub(a.slug), `${hub.slug}: ${a.slug} is a stub`).toBe(false)
-        expect(a.title).toBe(post!.title)
+        expect(a.slug, `${hub.slug}: ${a.slug}`).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+        expect(a.title.trim(), `${hub.slug}: ${a.slug}`).not.toBe('')
       }
     }
   })

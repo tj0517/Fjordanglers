@@ -1,13 +1,26 @@
 /**
  * FA-1.88 — the sitemap lists only pages meant for the index, with real dates.
  *
- *  - no blog stub (the same `isBlogStub` rule the blog page uses for `noindex`);
+ *  - blog posts come from `getBlogPosts()` — published rows only (the draft filter itself is
+ *    proved against the database in `src/lib/supabase/blog-queries.test.ts`);
  *  - `lastModified` is a real date or absent — never "now";
  *  - two fetches at different times carry identical `lastModified` values.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { BLOG_POSTS } from '@/lib/blog-data'
-import { ARTICLE_CONTENT, isBlogStub } from '@/lib/blog-articles'
+
+const PUBLISHED = [
+  { slug: 'published-article', updatedAt: '2026-03-17T00:00:00.000Z' },
+  { slug: 'second-article',    updatedAt: '2026-04-02T09:30:00.000Z' },
+]
+
+const blogMock = vi.hoisted(() => ({ fail: false }))
+
+vi.mock('@/lib/supabase/queries', () => ({
+  getBlogPosts: async () => {
+    if (blogMock.fail) throw new Error('db down')
+    return PUBLISHED
+  },
+}))
 
 vi.mock('@/lib/supabase/server', () => {
   const rows: Record<string, unknown[]> = {
@@ -42,21 +55,26 @@ const byUrl = (entries: Awaited<ReturnType<typeof sitemap>>, path: string) =>
 afterEach(() => vi.useRealTimers())
 
 describe('sitemap — only indexable URLs', () => {
-  it('the fixture has both a stub and a real article, otherwise the filter proves nothing', () => {
-    expect(BLOG_POSTS.some(p => isBlogStub(p.slug))).toBe(true)
-    expect(Object.keys(ARTICLE_CONTENT).length).toBeGreaterThan(0)
+  it('lists every published blog post and no other /blog/ URL', async () => {
+    const blogUrls = (await sitemap()).map(e => e.url).filter(u => u.includes('/blog/'))
+    expect(blogUrls.sort()).toEqual(PUBLISHED.map(p => `${SITE}/blog/${p.slug}`).sort())
   })
 
-  it('lists no blog stub', async () => {
+  it('the old stub slugs are not listed', async () => {
     const urls = (await sitemap()).map(e => e.url)
-    const stubs = BLOG_POSTS.filter(p => isBlogStub(p.slug)).map(p => `${SITE}/blog/${p.slug}`)
-    expect(urls.filter(u => stubs.includes(u))).toEqual([])
+    for (const slug of ['atlantic-salmon-norway-guide', 'best-trout-rivers-sweden', 'pike-fishing-beginners', 'fishing-license-scandinavia', 'grayling-season-2026']) {
+      expect(urls).not.toContain(`${SITE}/blog/${slug}`)
+    }
   })
 
-  it('lists every blog post that has content', async () => {
-    const urls = (await sitemap()).map(e => e.url)
-    for (const slug of Object.keys(ARTICLE_CONTENT)) {
-      expect(urls).toContain(`${SITE}/blog/${slug}`)
+  it('a failed blog read leaves the rest of the sitemap in place', async () => {
+    blogMock.fail = true
+    try {
+      const urls = (await sitemap()).map(e => e.url)
+      expect(urls).toContain(`${SITE}/trips`)
+      expect(urls.filter(u => u.includes('/blog/'))).toEqual([])
+    } finally {
+      blogMock.fail = false
     }
   })
 })
@@ -79,12 +97,10 @@ describe('sitemap — lastModified is real or absent', () => {
     expect(byUrl(entries, '/guides/undated-guide')).not.toHaveProperty('lastModified')
   })
 
-  it("blog posts carry the post's own date (UTC), not the fetch time", async () => {
+  it("blog posts carry the row's updated_at, not the fetch time", async () => {
     const entries = await sitemap()
-    const slug = Object.keys(ARTICLE_CONTENT)[0]
-    const post = BLOG_POSTS.find(p => p.slug === slug)!
-    expect(post.date).toBe('March 17, 2026') // if the fixture changes, update the expectation below on purpose
-    expect(byUrl(entries, `/blog/${slug}`)?.lastModified).toEqual(new Date(Date.UTC(2026, 2, 17)))
+    expect(byUrl(entries, '/blog/published-article')?.lastModified).toEqual(new Date('2026-03-17T00:00:00.000Z'))
+    expect(byUrl(entries, '/blog/second-article')?.lastModified).toEqual(new Date('2026-04-02T09:30:00.000Z'))
   })
 
   it('two fetches at different times have identical lastModified values', async () => {

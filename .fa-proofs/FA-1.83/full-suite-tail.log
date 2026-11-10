@@ -1,0 +1,8 @@
+[autoSendReply] judgeReply failed: Error: [judgeReply] Could not parse judge response: {"score": 0.95, "send": true, "reasons": ["The draft quotes
+[autoSendReply] daily cap count failed: Error: connection reset
+[autoSendReply] takeover check failed: Error: connection reset
+[updateOfferOptions] event error: EventError: emitEvent: failed to write offer.updated for inquiry inq-1: injected insert failure on inquiry_events
+[updateOfferOptions] event error: EventError: emitEvent: failed to write offer.updated for inquiry inq-1: injected insert failure on inquiry_events
+stderr | src/app/__tests__/sitemap-hygiene.test.ts > sitemap — only indexable URLs > a failed blog read leaves the rest of the sitemap in place
+ Test Files  137 passed (137)
+      Tests  1668 passed (1668)
