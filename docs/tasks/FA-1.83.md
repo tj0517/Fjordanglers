@@ -2,7 +2,7 @@
 id: FA-1.83
 title: Blog, krok 1 — tabela wpisów + publiczny czytnik (metadane, schema, sitemapa z tabeli), przeniesienie obecnego artykułu, koniec stubów
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -72,3 +72,6 @@ pnpm test -- blog
 ## Notatki z realizacji
 - **2026-11-03, tj:** D4 — system bloga A (tabela + edytor w `/admin`) w dwóch krokach; artykuły z pakietu 15.11 wchodzą po 15.11 z tego systemu (decyzja (c)), Krzysztof pisze w Notionie.
 - **2026-11-03, tj:** O-49 (a) — treść artykułu w Markdown (tekst z Notiona wkleja się 1:1).
+- **2026-11-10, tj:** D1 (a) — treść w Markdown (O-49 (a)) + mały zestaw nazwanych bloków, żeby artykuł o Norwegii zachował wygląd: ostrzeżenie, info, wyróżniona liczba (stat), zdjęcie z podpisem (składnia dyrektyw, np. `:::warning` … `:::`), mapowane na istniejące komponenty; tabele GFM; spis treści budowany z nagłówków Markdown (zastępuje `NORWAY_SECTIONS`). Zestaw bloków minimalny — tekst wklejony z Notiona działa bez zmian; co nie ma bloku, jest zwykłym Markdownem.
+- **2026-11-10, tj:** D2 (B) — trzy PR-y, żeby jedyny zaindeksowany artykuł nigdy nie dał 404: (1) migracja tabeli → merge (tj) → `migrate-prod` (tj) → odczyt prod; (2) PR z kodem, gotowy i sprawdzony lokalnie, NIE zmergowany; (3) migracja danych z wierszem Norwegii z `origin/main` → merge (tj) → `migrate-prod` (tj) → odczyt prod; dopiero potem tj merguje (2).
+- **2026-11-10, tj:** D3 (tak) — JSON-LD na stronie artykułu przez `serializeJsonLd` (zamyka wiersz deferred FA-1.81 tylko dla `blog/[slug]/page.tsx`).
