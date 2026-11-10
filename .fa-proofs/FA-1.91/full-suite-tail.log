@@ -1,0 +1,8 @@
+ ✓ src/lib/trips-description.test.ts (3 tests) 3ms
+ ✓ src/app/admin/inquiries/InquiriesClient.test.tsx (3 tests) 5ms
+
+ Test Files  134 passed (134)
+      Tests  1630 passed (1630)
+   Start at  11:36:00
+   Duration  26.44s (transform 8.57s, setup 1.27s, import 29.12s, tests 53.55s, environment 21.94s)
+
