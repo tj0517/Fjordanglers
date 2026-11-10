@@ -19,6 +19,7 @@ import { env } from '@/lib/env'
 import { DESTINATION_HUBS, getHubCountries, getHubForSlug, type DestinationHub } from '@/lib/destinations'
 import { hubSpecies } from '@/lib/hub-species'
 import { getTestimonial, type Testimonial } from './testimonials'
+import { isValidBlogSlug, toBlogPost, toBlogPostSummary, type BlogPost, type BlogPostSummary } from '@/lib/blog/post'
 import {
   speciesNames,
   parseLicenseInfo,
@@ -45,6 +46,8 @@ import {
 // Cache tag constants — used here and revalidated from Server Actions.
 export const CACHE_TAG_EXPERIENCES = 'experiences'
 export const CACHE_TAG_GUIDES      = 'guides'
+// Not exported yet: nothing outside this file revalidates it. FA-1.84's editor will, and exports it then.
+const CACHE_TAG_BLOG               = 'blog'
 
 // ─── Client factory ───────────────────────────────────────────────────────────
 
@@ -1133,6 +1136,22 @@ function hubPriceFrom(
 }
 
 /**
+ * A hub links to articles by slug (`DestinationHub.articles`). A link to a post that is not
+ * published would 404, so the hub shows only the ones the table says are published — the rule
+ * that used to be "not a stub" (FA-1.83). A failed read hides the section rather than the page.
+ */
+async function publishedHubArticles(articles: DestinationHub['articles']): Promise<DestinationHub['articles']> {
+  if (articles == null || articles.length === 0) return articles
+  try {
+    const published = new Set((await getBlogPosts()).map(p => p.slug))
+    return articles.filter(a => published.has(a.slug))
+  } catch (err) {
+    console.error('[getDestinationHub] blog posts unavailable, article links hidden:', err instanceof Error ? err.message : err)
+    return []
+  }
+}
+
+/**
  * Everything a country hub (`/[destination]`) shows, in one call — the page itself queries
  * nothing (CLAUDE.md rule 3). Null for a slug that is not in `DESTINATION_HUBS`.
  *
@@ -1291,7 +1310,7 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
 
   return {
     ...fromDb,
-    hub,
+    hub:       { ...hub, articles: await publishedHubArticles(hub.articles) },
     species:   hubSpecies(hub.species, fromDb.offers.map(o => o.targetSpecies)),
     otherHubs: DESTINATION_HUBS.filter(h => h.slug !== hub.slug).map(h => ({ slug: h.slug, h1: h.h1 })),
     // Outside the cache, like the config above. Every country the hub covers (tj FA-1.69 2B).
@@ -1538,4 +1557,58 @@ export async function getProfileRole(
     .maybeSingle()
 
   return NAV_ROLES.find(r => r === data?.role) ?? null
+}
+
+// ─── Blog ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Published posts, newest first — the blog list, the sitemap and the hubs' article links read this.
+ * Anon client: the table's only policy returns published rows, and the explicit filter says so
+ * again. A failed read throws instead of returning `[]`: `unstable_cache` does not store a throw,
+ * so one bad second is not served as "no articles" for five minutes.
+ */
+export async function getBlogPosts(): Promise<BlogPostSummary[]> {
+  return unstable_cache(
+    async () => {
+      const { data, error } = await createPublicClient()
+        .from('blog_posts')
+        .select('*')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+
+      if (error) throw new Error(`[getBlogPosts] ${error.message}`)
+
+      return (data ?? []).flatMap(row => {
+        const post = toBlogPost(row)
+        return post == null ? [] : [toBlogPostSummary(post)]
+      })
+    },
+    ['blog-posts'],
+    { revalidate: 300, tags: [CACHE_TAG_BLOG] },
+  )()
+}
+
+/**
+ * One published post by slug; null for a draft, an unknown slug or a malformed one (checked first,
+ * so a made-up URL never becomes a cache key). Throws on a failed read, for the reason above — a
+ * transient error must not turn the indexed article into a cached 404.
+ */
+export async function getBlogPost(slug: string): Promise<BlogPost | null> {
+  if (!isValidBlogSlug(slug)) return null
+
+  return unstable_cache(
+    async () => {
+      const { data, error } = await createPublicClient()
+        .from('blog_posts')
+        .select('*')
+        .eq('slug', slug)
+        .eq('status', 'published')
+        .maybeSingle()
+
+      if (error) throw new Error(`[getBlogPost] ${error.message}`)
+      return data == null ? null : toBlogPost(data)
+    },
+    ['blog-post', slug],
+    { revalidate: 300, tags: [CACHE_TAG_BLOG] },
+  )()
 }

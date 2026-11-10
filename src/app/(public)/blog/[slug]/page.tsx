@@ -1,103 +1,72 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { BLOG_POSTS } from '@/lib/blog-data'
-
-import { NORWAY_SECTIONS } from '@/lib/blog-content/norway-regulations-2026'
-import { ARTICLE_CONTENT, isBlogStub } from '@/lib/blog-articles'
+import { getBlogPost } from '@/lib/supabase/queries'
+import { absoluteImageUrl, buildArticleJsonLd, buildBlogBreadcrumbJsonLd, formatPostDate } from '@/lib/blog/post'
+import { extractSections } from '@/lib/blog/article-markdown'
+import { serializeJsonLd } from '@/lib/seo/offer-jsonld'
+import { ArticleBody } from '@/components/blog/article-body'
+import { BlogImage } from '@/components/blog/article-blocks'
 import { ReadingProgress } from '@/components/blog/reading-progress'
 import { TableOfContents } from '@/components/blog/table-of-contents'
 import { SITE_URL } from '@/lib/site'
 
-const ARTICLE_SECTIONS: Record<string, readonly { id: string; label: string }[]> = {
-  'fishing-regulations-norway-2026': NORWAY_SECTIONS,
-}
+// The article comes from the table (FA-1.83): rendered on first request, then cached for 5 minutes under
+// the `blog` tag. No generateStaticParams — a build must not need the database, and a slug that is not a
+// published post is a 404 from `notFound()` below.
+export const revalidate = 300
 
 interface Props {
   params: Promise<{ slug: string }>
 }
 
-export async function generateStaticParams() {
-  return BLOG_POSTS.map(p => ({ slug: p.slug }))
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const post = BLOG_POSTS.find(p => p.slug === slug)
-  if (!post) return {}
+  const post = await getBlogPost(slug)
+  if (post == null) return {}
 
-  const isStub = isBlogStub(slug)
-  const absImg = `${SITE_URL}${post.img}`
+  const url = `${SITE_URL}/blog/${post.slug}`
+  const image = absoluteImageUrl(post.imageUrl)
 
   return {
-    title: post.title,
-    description: post.excerpt,
-    ...(isStub ? { robots: { index: false, follow: false } } : {}),
-    alternates: { canonical: `${SITE_URL}/blog/${slug}` },
+    // `absolute`: the <title> is the row's SEO title as written (≤ 60 characters), without the site template.
+    title: { absolute: post.seoTitle },
+    description: post.description,
+    alternates: { canonical: url },
     openGraph: {
       title: `${post.title} | FjordAnglers`,
-      description: post.excerpt,
+      description: post.description,
       type: 'article',
-      url: `${SITE_URL}/blog/${slug}`,
-      images: [{ url: absImg, width: 1200, height: 630, alt: post.title }],
+      url,
+      publishedTime: post.publishedAt,
+      modifiedTime: post.updatedAt,
+      images: [{ url: image, width: 1200, height: 630, alt: post.imageAlt }],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${post.title} | FjordAnglers`,
-      description: post.excerpt,
-      images: [absImg],
+      description: post.description,
+      images: [image],
     },
   }
 }
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params
-  const post = BLOG_POSTS.find(p => p.slug === slug)
-  if (!post) notFound()
+  const post = await getBlogPost(slug)
+  if (post == null) notFound()
 
-  const ContentComponent = ARTICLE_CONTENT[slug]
-  const sections = ARTICLE_SECTIONS[slug]
-
-  const absImg = `${SITE_URL}${post.img}`
-
-  const articleSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: post.title,
-    description: post.excerpt,
-    image: absImg,
-    author: { '@type': 'Organization', name: 'FjordAnglers', url: SITE_URL },
-    publisher: {
-      '@type': 'Organization',
-      name: 'FjordAnglers',
-      logo: { '@type': 'ImageObject', url: `${SITE_URL}/brand/sygnet.png` },
-    },
-    datePublished: new Date(post.date).toISOString(),
-    dateModified: new Date(post.date).toISOString(),
-    url: `${SITE_URL}/blog/${slug}`,
-    mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE_URL}/blog/${slug}` },
-  }
-
-  const breadcrumbSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
-      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE_URL}/blog` },
-      { '@type': 'ListItem', position: 3, name: post.title, item: `${SITE_URL}/blog/${slug}` },
-    ],
-  }
+  const sections = extractSections(post.bodyMd)
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      {ContentComponent && <ReadingProgress />}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildArticleJsonLd(post)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildBlogBreadcrumbJsonLd(post)) }} />
+      <ReadingProgress />
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <div className="relative" style={{ height: 'clamp(380px, 55vh, 640px)' }}>
-        <Image src={post.img} alt={post.title} fill priority className="object-cover" />
+        <BlogImage src={post.imageUrl} alt={post.imageAlt} priority className="object-cover" />
         {/* Gradient: dark at bottom for legibility */}
         <div
           className="absolute inset-0"
@@ -133,11 +102,11 @@ export default async function BlogPostPage({ params }: Props) {
               {post.category}
             </span>
             <span className="f-body" style={{ fontSize: '13px', color: 'rgba(10,46,77,0.4)' }}>
-              {post.date}
+              {formatPostDate(post.publishedAt)}
             </span>
             <span style={{ color: 'rgba(10,46,77,0.2)', fontSize: '12px' }}>·</span>
             <span className="f-body" style={{ fontSize: '13px', color: 'rgba(10,46,77,0.4)' }}>
-              {post.readTime} read
+              {post.readMinutes} min read
             </span>
           </div>
 
@@ -157,7 +126,7 @@ export default async function BlogPostPage({ params }: Props) {
               marginTop: '1.25rem', maxWidth: '620px',
             }}
           >
-            {post.excerpt}
+            {post.description}
           </p>
 
           {/* Rule */}
@@ -170,35 +139,11 @@ export default async function BlogPostPage({ params }: Props) {
         className="mx-auto px-6"
         style={{ maxWidth: '800px', paddingTop: '2.5rem', paddingBottom: '6rem' }}
       >
-        {ContentComponent ? (
-          <>
-            {sections && <TableOfContents sections={sections} />}
-            <ContentComponent />
-          </>
-        ) : (
-          <div
-            className="rounded-2xl p-10 text-center"
-            style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
-          >
-            <p className="f-display font-bold text-2xl mb-2" style={{ color: '#0A2E4D' }}>
-              Full article coming soon.
-            </p>
-            <p className="text-sm f-body mb-6" style={{ color: 'rgba(10,46,77,0.45)' }}>
-              We&apos;re writing this one up. Check back shortly.
-            </p>
-            <Link
-              href="/blog"
-              className="inline-flex items-center gap-2 text-sm font-semibold f-body px-6 py-2.5 rounded-full text-white transition-all hover:brightness-110"
-              style={{ background: '#E67E50' }}
-            >
-              Read other articles →
-            </Link>
-          </div>
-        )}
+        {sections.length > 0 && <TableOfContents sections={sections} />}
+        <ArticleBody markdown={post.bodyMd} />
 
         {/* Bottom nav */}
-        {ContentComponent && (
-          <div
+        <div
             style={{
               marginTop: '5rem', paddingTop: '3rem',
               borderTop: '1px solid rgba(10,46,77,0.1)',
@@ -219,8 +164,7 @@ export default async function BlogPostPage({ params }: Props) {
             >
               More articles →
             </Link>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )

@@ -1,0 +1,13 @@
+RED: policy widened to USING (true), code filter also removed in memory is not needed — RLS alone must be caught
+ALTER POLICY
+     ✓ getBlogPosts returns the published post and not the draft 14ms
+     ✓ the list entry carries ISO dates and a read time, and no body 13ms
+     ✓ getBlogPost returns the whole published post 11ms
+     ✓ getBlogPost returns null for a draft, an unknown slug and a malformed one 42ms
+     × anon sees the published row and 0 rows of the draft 55ms
+     ✓ anon INSERT fails with 42501 17ms
+     ✓ anon UPDATE and DELETE fail with 42501 and change nothing 34ms
+     ✓ a hub links only to posts that are published 31ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected [ { slug: 'fa183-draft' } ] to have a length of +0 but got 1
+      Tests  1 failed | 7 passed (8)

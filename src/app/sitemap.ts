@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { createServiceClient } from '@/lib/supabase/server'
-import { getIndexableBlogPosts, parseBlogPostDate } from '@/lib/blog-articles'
+import { getBlogPosts } from '@/lib/supabase/queries'
 import { DESTINATION_HUBS } from '@/lib/destinations'
 import { SITE_URL } from '@/lib/site'
 import { guideProfilePath } from '@/lib/guide-url'
@@ -9,7 +9,7 @@ export const revalidate = 3600
 
 /**
  * `lastModified` is only ever a real modification date (FA-1.88): the row's
- * `updated_at`, or the blog post's own date. No date → no field. Never "now" —
+ * `updated_at` (a blog post's too, FA-1.83). No date → no field. Never "now" —
  * a sitemap that re-dates every URL on every fetch teaches crawlers to ignore `lastmod`.
  */
 function lastModifiedFrom(date: Date | string | null | undefined): Pick<MetadataRoute.Sitemap[number], 'lastModified'> {
@@ -37,13 +37,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/legal/legal-notice`,      changeFrequency: 'monthly', priority: 0.30 },
   ]
 
-  // ── Blog posts (static data; stubs are noindex, so they are not listed) ───
-  const blogPages: MetadataRoute.Sitemap = getIndexableBlogPosts().map(post => ({
-    url:             `${SITE_URL}/blog/${post.slug}`,
-    ...lastModifiedFrom(parseBlogPostDate(post.date)),
-    changeFrequency: 'monthly' as const,
-    priority:        0.65,
-  }))
+  // ── Blog posts: published rows of `blog_posts` (a draft is not listed — RLS and the query both say so) ──
+  let blogPages: MetadataRoute.Sitemap = []
+  try {
+    blogPages = (await getBlogPosts()).map(post => ({
+      url:             `${SITE_URL}/blog/${post.slug}`,
+      ...lastModifiedFrom(post.updatedAt),
+      changeFrequency: 'monthly' as const,
+      priority:        0.65,
+    }))
+  } catch (err) {
+    // The rest of the sitemap is still worth serving; the blog entries come back with the next fetch.
+    console.error('[sitemap] blog posts unavailable:', err instanceof Error ? err.message : err)
+  }
 
   // ── Dynamic: active experience pages & active guides ─────────────────────
   let experiencePages: MetadataRoute.Sitemap = []

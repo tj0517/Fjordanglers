@@ -1,9 +1,14 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
-import { BLOG_POSTS } from '@/lib/blog-data'
+import { getBlogPosts } from '@/lib/supabase/queries'
+import { formatPostDate } from '@/lib/blog/post'
+import { BlogImage } from '@/components/blog/article-blocks'
 import { SITE_URL } from '@/lib/site'
 
+// Published posts come from the table (FA-1.83); the data layer caches them for 5 minutes under the `blog` tag.
+// Rendered per request, not at build: a build (CI, a preview without env) has no database to read, and
+// `getBlogPosts` throws on a failed read rather than cache "no articles" — a prerender would fail the build.
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Fishing Journal — Tips, Guides & Destination Stories',
@@ -17,16 +22,8 @@ export const metadata: Metadata = {
   },
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Destinations: '#1B4F72',
-  Sweden: '#1B4F72',
-  'Tips & Tactics': '#7B4A1E',
-  Planning: '#2E6B4A',
-  Species: '#5B3A8A',
-}
-
-export default function BlogPage() {
-  const [featured, ...rest] = BLOG_POSTS
+export default async function BlogPage() {
+  const [featured, ...rest] = await getBlogPosts()
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
@@ -50,16 +47,22 @@ export default function BlogPage() {
       <section className="px-4 md:px-6 pb-24">
         <div className="max-w-[1440px] mx-auto">
 
+          {featured == null && (
+            <p className="text-base f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+              The first articles are on their way. In the meantime, <Link href="/trips" className="underline">browse the trips</Link>.
+            </p>
+          )}
+
           {/* Featured post */}
+          {featured != null && (
           <Link href={`/blog/${featured.slug}`} className="group block mb-5">
             <article
               className="relative overflow-hidden"
               style={{ borderRadius: '24px', height: 'clamp(320px, 44vw, 560px)' }}
             >
-              <Image
-                src={featured.img}
-                alt={featured.title}
-                fill
+              <BlogImage
+                src={featured.imageUrl}
+                alt={featured.imageAlt}
                 priority
                 className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
               />
@@ -78,16 +81,17 @@ export default function BlogPage() {
                   {featured.title}
                 </h2>
                 <p className="text-sm f-body mb-4" style={{ color: 'rgba(255,255,255,0.5)', maxWidth: '540px' }}>
-                  {featured.excerpt}
+                  {featured.description}
                 </p>
                 <div className="flex items-center gap-4">
-                  <span className="text-xs f-body" style={{ color: 'rgba(255,255,255,0.35)' }}>{featured.date}</span>
+                  <span className="text-xs f-body" style={{ color: 'rgba(255,255,255,0.35)' }}>{formatPostDate(featured.publishedAt)}</span>
                   <span className="text-xs f-body" style={{ color: 'rgba(255,255,255,0.25)' }}>·</span>
-                  <span className="text-xs f-body" style={{ color: 'rgba(255,255,255,0.35)' }}>{featured.readTime} read</span>
+                  <span className="text-xs f-body" style={{ color: 'rgba(255,255,255,0.35)' }}>{featured.readMinutes} min read</span>
                 </div>
               </div>
             </article>
           </Link>
+          )}
 
           {/* Rest of posts */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -98,10 +102,9 @@ export default function BlogPage() {
                   style={{ borderRadius: '20px', background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
                 >
                   <div className="relative overflow-hidden flex-shrink-0" style={{ height: '180px' }}>
-                    <Image
-                      src={post.img}
-                      alt={post.title}
-                      fill
+                    <BlogImage
+                      src={post.imageUrl}
+                      alt={post.imageAlt}
                       className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
                     />
                     <div className="absolute top-3 left-3">
@@ -122,12 +125,12 @@ export default function BlogPage() {
                       {post.title}
                     </h3>
                     <p className="text-xs f-body line-clamp-2 mb-auto" style={{ color: 'rgba(10,46,77,0.45)', lineHeight: 1.65 }}>
-                      {post.excerpt}
+                      {post.description}
                     </p>
                     <div className="flex items-center gap-3 mt-4 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
-                      <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>{post.date}</span>
+                      <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>{formatPostDate(post.publishedAt)}</span>
                       <span style={{ color: 'rgba(10,46,77,0.2)', fontSize: '10px' }}>·</span>
-                      <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>{post.readTime} read</span>
+                      <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>{post.readMinutes} min read</span>
                     </div>
                   </div>
                 </article>

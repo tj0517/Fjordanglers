@@ -2,14 +2,14 @@
 id: FA-1.83
 title: Blog, krok 1 — tabela wpisów + publiczny czytnik (metadane, schema, sitemapa z tabeli), przeniesienie obecnego artykułu, koniec stubów
 stage: 1
-status: in_progress
+status: done
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
-branch: feat/fa-1.83-blog-table
-pr:
+branch: feat/fa-1.83-blog-table (+ feat/fa-1.83-blog-posts-migration, feat/fa-1.83-blog-norway-data)
+pr: 183, 185, 186
 depends_on: [FA-1.80]
 blocked_by_questions: []
 touches_db: true
@@ -76,3 +76,8 @@ pnpm test -- blog
 - **2026-11-10, tj:** D2 (B) — trzy PR-y, żeby jedyny zaindeksowany artykuł nigdy nie dał 404: (1) migracja tabeli → merge (tj) → `migrate-prod` (tj) → odczyt prod; (2) PR z kodem, gotowy i sprawdzony lokalnie, NIE zmergowany; (3) migracja danych z wierszem Norwegii z `origin/main` → merge (tj) → `migrate-prod` (tj) → odczyt prod; dopiero potem tj merguje (2).
 - **2026-11-10, tj:** D3 (tak) — JSON-LD na stronie artykułu przez `serializeJsonLd` (zamyka wiersz deferred FA-1.81 tylko dla `blog/[slug]/page.tsx`).
 - **2026-11-10, tj:** SQL tabeli `blog_posts` zatwierdzony, z decyzjami: C1 — zapis wyłącznie przez service role po `requireAdmin()`, bez polityki zapisu dla admina w bazie, blok REVOKE/GRANT bez zmian; C2 — zostaje CHECK `blog_posts_published_complete` (edytor FA-1.84 musi pokazać czytelny komunikat zamiast surowego błędu bazy — wiersz w deferred); C3 — `category` to wolny tekst, zamknięta lista razem z FA-1.84. Przyjęte też: opis Norwegii skrócony do ≤ 155 znaków (tekst pokazać na STOP przed PR 3), brak kolumny hub, czas czytania liczony z treści, bez publikacji zaplanowanej. C4 — nie zatrzymywać stosu Seaclouds (DCS); przed pierwszym `next dev` / Playwright: `df -h /mnt/c` + `docker ps` wklejone, ≥ 10 GB wolne → oba stosy zostają, mniej → STOP; `pnpm build` tylko przy wszystkich stosach zatrzymanych, najpierw zapytać.
+- **2026-11-10, tj:** SEO title `Fishing in Norway 2026: Regulations, Licenses & Limits` (bez sufiksu „ | FjordAnglers" — `<title>` bloga to `seo_title` dokładnie jak w wierszu) i opis 153 znaki — zatwierdzone jak zaproponowano.
+- **2026-11-10, tj:** Decyzja 1 → B — węższy pasek „Contents", etykiety przycinane do dwóch linii; nagłówki bez zmian (zrobione w PR 2, zrzut przy 1280 px: `.playwright-mcp/fa-1.83-after-toc-1280.png`). Decyzja 2 → A — zwykły Markdown zamiast etykiet „Part", plakietek tabeli, układu FAQ i kart linków; zestaw bloków zostaje przy czterech z D1.
+- **2026-11-10, tj:** wiersz deferred: `/blog` (lista) jest `force-dynamic` (renderowana per żądanie, nie z CDN jak inne publiczne strony po FA-1.80), bo build nie ma bazy; dane nadal przez `unstable_cache`; wrócić przy FA-1.92.
+- **2026-11-10:** PR 3 (#186) zmergowany i `migrate-prod` wykonany przez tj; odczyt prod potwierdza wiersz `fishing-regulations-norway-2026` (opublikowany, 2026-03-17) — wklejony w #185. Status `review`; `done` ustawia tj po „accepted — close it".
+- **2026-11-10, tj:** „accepted — close it" — FA-1.83 zaakceptowane; `status: done` ustawione w PR 2 (#185) przed merge, bez osobnego PR-a.

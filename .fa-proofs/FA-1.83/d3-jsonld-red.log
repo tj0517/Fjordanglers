@@ -1,0 +1,10 @@
+$ RED: page.tsx emits JSON.stringify(...) for the Article block instead of serializeJsonLd(...)
+     × a title containing </script> cannot close the ld+json tag 61ms
+     ✓ emits Article and BreadcrumbList with ISO dates 5ms
+     ✓ a <script> in the body does not appear in the page 6ms
+     ✓ the <title> is the SEO title as written, not the headline with a site suffix 1ms
+     ✓ the post's own image is the Open Graph image 0ms
+     ✓ a slug that is not a published post is a 404, with no metadata 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected '<link rel="preload" as="image" imageS…' not to contain '<script>alert(1)'
+      Tests  1 failed | 5 passed (6)
