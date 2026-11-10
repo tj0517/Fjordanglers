@@ -2,7 +2,7 @@
 id: FA-1.91
 title: Strony techniczne poza indeksem — `noindex` i prawdziwy 404 dla nieznanych tokenów, `alt` na pinach mapy, bez `SearchAction`
 stage: 1
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
@@ -57,3 +57,5 @@ for p in offers guide-intake reviews; do curl -s -o /dev/null -w "$p %{http_code
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** zadanie z audytu SEO (F18, F19).
+- **2026-11-10, tj:** D1 — 404 dla nieznanego, wygasłego i nieaktywnego linku (oferta, formularz przewodnika); ekran z komunikatem i kontaktem bez zmian, w `not-found.tsx` trasy.
+- **2026-11-10, tj:** D2 — `alt=""` także na wspólnym pinie `src/components/map/pin-icon.ts`; kryterium Lighthouse zastąpione grepem, Lighthouse jako dodatek.
