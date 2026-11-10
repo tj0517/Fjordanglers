@@ -9,7 +9,7 @@ model_approved:
 effort: high
 agent: fa-web
 branch: feat/fa-1.84-blog-editor
-pr:
+pr: 187
 depends_on: [FA-1.83]
 blocked_by_questions: []
 touches_db: true
