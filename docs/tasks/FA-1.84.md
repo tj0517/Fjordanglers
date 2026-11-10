@@ -2,7 +2,7 @@
 id: FA-1.84
 title: Blog, krok 2 — edytor w `/admin` (szkic/publikacja, zdjęcia, podgląd, metadane SEO), publikacja bez deployu
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -36,7 +36,7 @@ Krzysztof publikuje artykuł sam, w przeglądarce, bez PR-a i deployu. Po zadani
 ## Zakres
 - [ ] Odczyt stanu: tabela z FA-1.83 na prod (SELECT kolumn), wzorzec akcji i uploadu z FA-1.68.
 - [ ] Lista wpisów + formularz (nowy / edycja) w `/admin/blog`, akcje w `src/actions/*` z walidacją zod, tylko admin.
-- [ ] Liczniki: tytuł SEO ≤ 60, opis ≤ 155 (ostrzeżenie, nie blokada); slug zablokowany po pierwszej publikacji.
+- [ ] Liczniki: tytuł SEO ≤ 60, opis ≤ 155 — **blokada** (E1, zastępuje „ostrzeżenie, nie blokada"; baza wymusza limity także dla szkiców); slug zablokowany po pierwszej publikacji (E2, tylko w akcji).
 - [ ] Pole treści w Markdown z podglądem tym samym rendererem co strona publiczna (O-49 (a)).
 - [ ] Upload zdjęcia do istniejącego bucketu `guide-photos`, folder `blog/` (O-50 (a), jak O-47); `updated_at` przy każdej zmianie; `revalidateTag('blog')` po zapisie opublikowanego.
 - [ ] Konto dla Krzysztofa — instrukcja dla tj w opisie PR (rola admin albo nowa rola redaktora → STOP, decyzja tj).
@@ -66,3 +66,7 @@ curl -s -o /dev/null -w "%{http_code}" localhost:3000/blog/<szkic>   # 404
 ## Notatki z realizacji
 - **2026-11-03, tj:** D4 — krok 2 opcji A.
 - **2026-11-03, tj:** O-49 (a) Markdown; O-50 (a) zdjęcia w `guide-photos/blog/`.
+- **2026-11-10, tj:** E1 (a) — tytuł SEO ≤ 60 i opis ≤ 155 są **blokadą** w formularzu (licznik czerwony, zapis wyłączony); baza wymusza je także dla szkiców. Zastępuje „ostrzeżenie, nie blokada" z zakresu.
+- **2026-11-10, tj:** E2 (a) — niezmienność sluga po pierwszej publikacji wymuszana wyłącznie w akcji serwerowej (bez triggera, bez migracji), z testem red-proof.
+- **2026-11-10, tj:** E3 (a) — Krzysztof dostaje istniejącą rolę `admin`, bez nowej roli. Kroki dla tj w opisie PR; zmianę roli na prod wykonuje tj.
+- **2026-11-10, tj:** E4 (tak) — oba wiersze z deferred w zakresie: czytelny komunikat zamiast surowego błędu 23514 przy publikacji niekompletnego wpisu (decyzja C2) oraz ostrzeżenie w podglądzie, gdy treść zawiera znaczniki HTML, które zostaną usunięte (`skipHtml`).
