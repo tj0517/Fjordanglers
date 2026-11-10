@@ -56,10 +56,12 @@ export function TableOfContents({ sections }: Props) {
         className="hidden xl:block"
         style={{
           position: 'fixed',
-          left: 'max(1.5rem, calc(50% - 480px))',
+          // Right edge sits ~34px left of the 752px article column (article left = 50% - 376px),
+          // so the labels never run over the body text at 1280px and up.
+          left: 'max(1.5rem, calc(50% - 560px))',
           top: '50%',
           transform: 'translateY(-50%)',
-          width: '180px',
+          width: '150px',
           zIndex: 40,
         }}
       >
@@ -89,7 +91,7 @@ export function TableOfContents({ sections }: Props) {
           </div>
 
           {/* Section links */}
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0', minWidth: 0 }}>
             {sections.map((s, i) => {
               const isActive = s.id === activeId
               const isPast = i < activeIndex
@@ -97,6 +99,7 @@ export function TableOfContents({ sections }: Props) {
                 <button
                   key={s.id}
                   onClick={() => scrollTo(s.id)}
+                  title={s.label}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     textAlign: 'left', padding: '5px 0',
@@ -110,7 +113,14 @@ export function TableOfContents({ sections }: Props) {
                     transition: 'color 0.2s, font-weight 0.2s',
                   }}
                 >
-                  {s.label}
+                  {/* Long headings: two lines, then an ellipsis (full text on hover via title).
+                      The clamp is on the span: on the button, its padding would show a third line. */}
+                  <span style={{
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden', overflowWrap: 'anywhere',
+                  }}>
+                    {s.label}
+                  </span>
                 </button>
               )
             })}

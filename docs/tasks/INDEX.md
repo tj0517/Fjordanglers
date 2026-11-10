@@ -114,7 +114,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.79 | Jeden host kanoniczny `www` — stała adresu zamiast 58 na sztywno; apex → www 308 w Vercelu (tj) | M | sonnet | done (PR #173) | — |
 | FA-1.81 | Oferta v2 — dane strukturalne jak v1 (`TouristTrip`+`Offer`, `BreadcrumbList`, `FAQPage`, `og:url/type`) | M | sonnet | done (PR #176) | — |
 | FA-1.82 | Huby Norwegii, Szwecji i Finlandii w kodzie + `FAQPage`/`BreadcrumbList`, linki do przewodników i artykułów | M | sonnet | done | — (teksty: Krzysztof) |
-| FA-1.83 | Blog, krok 1 — tabela wpisów + publiczny czytnik (metadane, schema, sitemapa), przeniesienie artykułu, koniec stubów | L | opus | in_progress | FA-1.80 |
+| FA-1.83 | Blog, krok 1 — tabela wpisów + publiczny czytnik (metadane, schema, sitemapa), przeniesienie artykułu, koniec stubów | L | opus | review | FA-1.80 |
 | FA-1.84 | Blog, krok 2 — edytor w `/admin` (szkic/publikacja, zdjęcia, podgląd, SEO) | L | opus | todo | FA-1.83 |
 | FA-1.85 | Treść hubów w bazie + edytor w panelu (O-42 → b) | M | sonnet | todo | FA-1.82, FA-1.84 |
 | FA-1.86 | Przewodnicy — slugi dla 6, slug obowiązkowy, scalenie Josh Hart, ukrycie 2 pustych, koniec UUID, profile bez oferty poza indeksem | M | sonnet | done (PR #181) | — |
