@@ -129,6 +129,27 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | Migracje przez GitHub Actions — `deploy-db.yml`: dev auto po merge do `main`, prod `workflow_dispatch` za bramką Environment `production-db` (wzór DCS) | M | sonnet | done | FA-1.18 |
 | FA-1.75 | Preview wyłączone do czasu dev — Ignored Build Step w Vercelu (tymczasowe, zdejmuje FA-1.18); robi tj | S | — (człowiek) | done | — |
+
+## Stage M — aplikacja przewodników (MVP, start najpóźniej 1.12.2026)
+
+Zakres: dokument „Aplikacja dla przewodników — zakres MVP” (Claude Docs) + decyzje tj 4.11 i 10.11.
+
+| id | title | diff | model | status | depends |
+|---|---|---|---|---|---|
+| FA-M.01 | Baseline przed startem — czas zapytanie → oferta i close rate z prod | S | — (Claude w app) | done | — |
+| FA-M.02 | Audyt panelu i kont przewodnika — co z `/dashboard`, logowania, resetu i zaproszeń działa; raport, bez kodu | M | sonnet | todo | — |
+| FA-M.03 | Zlecenie do przewodnika w bazie — rekord z podpisanym tokenem, zdarzenia wysłano/otwarto/odpowiedział, skrót na `inquiries` | L | opus | todo | — |
+| FA-M.04 | Strona zlecenia `/r/[token]` — akceptuj / odrzuć / 1–3 inne daty, bez logowania, mobile-first | M | sonnet | todo | FA-M.03 |
+| FA-M.05 | Wysyłka zlecenia z karty zapytania — WhatsApp szablonem z linkiem + oś czasu zlecenia | M | sonnet | todo | FA-M.03, FA-M.04, FA-M.11 |
+| FA-M.06 | Ponaglenie po 12 h (sezon) / 24 h — jedno WhatsApp do przewodnika + flaga dla admina | M | sonnet | todo (O-55) | FA-M.05 |
+| FA-M.07 | Brief dla przewodnika — nocleg, licencje/permity, edycja na karcie zapytania | M | sonnet | todo | — |
+| FA-M.08 | Konta przewodników — zaproszenie, logowanie, reset, sesje (zakres wg audytu) | L | opus | todo | FA-M.02 |
+| FA-M.09 | Kalendarz 1 — synchronizacja zajętości, Apple (link udostępniania), strona „Connect” przez podpisany link | L | opus | todo (O-55) | — |
+| FA-M.10 | Kalendarz 2 — „Connect with Google” (OAuth, odczyt zajętości, tokeny) | L | opus | todo | FA-M.09, FA-M.11 |
+| FA-M.11 | Zgłoszenia zewnętrzne — szablon WA w Meta, OAuth Google + weryfikacja, klucze push; robi tj | S | — (człowiek) | todo | — |
+| FA-M.12 | PWA + web push — instalacja, zgoda, push przy nowym zleceniu | L | opus | todo | FA-M.08, FA-M.05, FA-M.11 |
+| FA-M.13 | Panel przewodnika — zlecenia, podgląd kalendarza, „Connect” w koncie | M | sonnet | todo | FA-M.08, FA-M.03, FA-M.09, FA-M.10 |
+
 ## Stages 2–8
 
 Tasks are written when the preceding stage reaches `review`. Stage outlines: `REBUILD_PLAN.md` §8.
@@ -154,3 +175,4 @@ FA-1.72–1.73 dopisane 26 X 2026 (rozmowa z tj „agent w ogóle nie wysyła”
 FA-1.74, FA-1.76, FA-1.77 dopisane 27 X 2026 (/wf-plan fa „poprawki panelu admina — oferta i płatność”) — za dużo blokad w karcie „Next step”, oferta nieedytowalna, payment link bez podglądu. Decyzje tj: D1 (a) edycja w miejscu, D2 wszystkie blokady zdjęte + przywrócenie z lost, D3 (a) zmiana na istniejącym linku, D4 trzy zadania, D5 (a) wybór statusu przy przywracaniu. Ścieżka: FA-1.74 → FA-1.76 → FA-1.77 (ta sama karta, sekwencyjnie). FA-1.75 zajęte.
 FA-1.79–1.92 dopisane 3 XI 2026 (/wf-plan fa „SEO z audytu `docs/audit/seo-audit-2026-11.md`”, PR #171). Decyzje tj: D1 host `www` (308), D2 treść hubów w tabeli z edytorem — najpierw w kodzie (FA-1.82), potem FA-1.85; D3 rekomendacje z audytu; D4 blog A (tabela + edytor) w dwóch krokach; D5 regiony/rzeki później; D6 kolejność wg raportu; artykuły pakietu 15.11 wchodzą po 15.11 z bloga (c). Ścieżka do 15.11: FA-1.79 ∥ FA-1.80 ∥ FA-1.81 ∥ FA-1.82 → FA-1.88 → zgłoszenie sitemapy w GSC (tj). Po 15.11: FA-1.83 → FA-1.84 → FA-1.85; FA-1.86, 1.87, 1.89, 1.91 dowolnie; FA-1.90 po 1.82+1.83; FA-1.92 po 1.80.
 FA-1.93 dopisane 4 XI 2026 (/wf-next → /wf-plan fa „user może zmienić swoją rolę na admina”) — trzy drogi do admina: polityka UPDATE `profiles` bez ograniczeń, `handle_new_user` z `raw_user_meta_data`, `auth/callback` z `user_metadata` kluczem serwisowym. Decyzje tj: A (pilne, przed SEO), D1 (b) callback nie zapisuje roli, D2 Opus; plik zadania w pierwszym commicie gałęzi. Moduł kont poza adminem do przebudowy (deferred).
+FA-M.01–M.13 dopisane 10 XI 2026 (/wf-plan fa „MVP aplikacji przewodników”, dokument MVP w Claude Docs). Numeracja FA-M (decyzja tj). Decyzje tj: D1 wszystkie 6 funkcji na 1.12; O-51 (a) szablon Mety z linkiem; O-52 (a) rekord zlecenia; O-53 (c) ponaglenie do przewodnika + flaga admina, 12/24 h; O-54 „Connect with your calendar” — Google przez logowanie, Apple link udostępniania, w koncie + podpisany link; audyt kont przed kontami; FishingBooker ręcznie. Baseline policzony 10.11 (FA-M.01). Ścieżki: zlecenie FA-M.11 (Meta) + FA-M.03 → M.04 → M.05 → M.06; konta FA-M.02 → M.08 → M.12, M.13; kalendarz FA-M.09 → M.10 (+ FA-M.11 Google) → M.13; FA-M.07 dowolnie.
