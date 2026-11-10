@@ -2,14 +2,14 @@
 id: FA-1.91
 title: Strony techniczne poza indeksem — `noindex` i prawdziwy 404 dla nieznanych tokenów, `alt` na pinach mapy, bez `SearchAction`
 stage: 1
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
 effort: low
 agent: fa-web
 branch: feat/fa-1.91-utility-noindex
-pr:
+pr: 182
 depends_on: []
 blocked_by_questions: []
 touches_db: false
