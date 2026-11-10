@@ -2,7 +2,7 @@
 id: FA-1.83
 title: Blog, krok 1 — tabela wpisów + publiczny czytnik (metadane, schema, sitemapa z tabeli), przeniesienie obecnego artykułu, koniec stubów
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -80,3 +80,4 @@ pnpm test -- blog
 - **2026-11-10, tj:** Decyzja 1 → B — węższy pasek „Contents", etykiety przycinane do dwóch linii; nagłówki bez zmian (zrobione w PR 2, zrzut przy 1280 px: `.playwright-mcp/fa-1.83-after-toc-1280.png`). Decyzja 2 → A — zwykły Markdown zamiast etykiet „Part", plakietek tabeli, układu FAQ i kart linków; zestaw bloków zostaje przy czterech z D1.
 - **2026-11-10, tj:** wiersz deferred: `/blog` (lista) jest `force-dynamic` (renderowana per żądanie, nie z CDN jak inne publiczne strony po FA-1.80), bo build nie ma bazy; dane nadal przez `unstable_cache`; wrócić przy FA-1.92.
 - **2026-11-10:** PR 3 (#186) zmergowany i `migrate-prod` wykonany przez tj; odczyt prod potwierdza wiersz `fishing-regulations-norway-2026` (opublikowany, 2026-03-17) — wklejony w #185. Status `review`; `done` ustawia tj po „accepted — close it".
+- **2026-11-10, tj:** „accepted — close it" — FA-1.83 zaakceptowane; `status: done` ustawione w PR 2 (#185) przed merge, bez osobnego PR-a.
