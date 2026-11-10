@@ -7,15 +7,20 @@ import { adminSetGuideStatus } from '@/actions/admin'
 export function QuickApproveButton({ guideId }: { guideId: string }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleApprove() {
     setLoading(true)
-    await adminSetGuideStatus(guideId, 'active')
+    setError(null)
+    const result = await adminSetGuideStatus(guideId, 'active')
+    // A refusal (e.g. no slug yet) must be visible — never swallowed (FA-1.86).
+    if ('error' in result) setError(result.error)
     router.refresh()
     setLoading(false)
   }
 
   return (
+    <>
     <button
       type="button"
       onClick={() => { void handleApprove() }}
@@ -40,5 +45,11 @@ export function QuickApproveButton({ guideId }: { guideId: string }) {
     >
       {loading ? '…' : '✓ Approve'}
     </button>
+    {error != null && (
+      <p role="alert" className="f-body" style={{ color: '#B91C1C', fontSize: '11px', lineHeight: 1.4, marginTop: '4px', maxWidth: '260px', whiteSpace: 'normal' }}>
+        {error}
+      </p>
+    )}
+    </>
   )
 }

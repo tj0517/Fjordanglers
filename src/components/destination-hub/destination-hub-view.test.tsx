@@ -196,13 +196,12 @@ describe('DestinationHubView — guides and articles blocks (FA-1.82)', () => {
     { id: '22222222-2222-2222-2222-222222222222', slug: null, name: 'No Slug Guide', avatarUrl: null, tagline: null },
   ]
 
-  it('FA-1.82: a guide links to /guides/<slug>, or to the id when there is no slug', () => {
+  it('FA-1.86: a guide links to /guides/<slug>; a guide without a slug is shown without any link', () => {
     const { container } = render(<DestinationHubView data={{ ...completeHub(), guides }} />)
     const block = container.querySelector('[data-block="guides"]')!
-    expect([...block.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual([
-      '/guides/fixture-guide',
-      '/guides/22222222-2222-2222-2222-222222222222',
-    ])
+    expect([...block.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(['/guides/fixture-guide'])
+    expect(block.innerHTML).not.toMatch(/22222222-2222-2222-2222-222222222222|\/guides\/(null|undefined)/)
+    expect(block.textContent).toContain('No Slug Guide')
     expect(block.textContent).toContain('Fixture tagline.')
   })
 

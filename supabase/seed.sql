@@ -271,11 +271,11 @@ ON CONFLICT (id) DO NOTHING;
 -- avatar_url / google_* are read by the v2 offer page (FA-1.53): the rating line next to the
 -- H1 and the mini-avatar in the widget. Fictional values, example.com so nothing resolves.
 INSERT INTO guides (
-  id, full_name, country, city, status, languages, fish_expertise, years_experience, bio,
+  id, full_name, slug, country, city, status, languages, fish_expertise, years_experience, bio,
   avatar_url, google_rating, google_review_count, google_profile_url, association, response_time_hours
 ) VALUES (
   '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c03',
-  'Jon Seed', 'Iceland', 'Reykjavik', 'active',
+  'Jon Seed', 'jon-seed-iceland', 'Iceland', 'Reykjavik', 'active',
   ARRAY['en', 'is'], ARRAY['atlantic salmon', 'brown trout'], 12,
   'Fictional seed guide. Not a real person, not real content.',
   '/about/krzychu.jpg', 4.8, 21, 'https://example.com/seed-google-profile-jon', 'SEED-ASSOC', 48
@@ -365,11 +365,11 @@ INSERT INTO inquiries (
 -- ════════════════════════════════════════════════════════════════════════════
 
 INSERT INTO guides (
-  id, full_name, country, city, status, languages, fish_expertise, years_experience, bio,
+  id, full_name, slug, country, city, status, languages, fish_expertise, years_experience, bio,
   avatar_url, google_rating, google_review_count, google_profile_url, association, response_time_hours
 ) VALUES (
   '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c04',
-  'Hana Seed', 'New Zealand', 'Queenstown', 'active',
+  'Hana Seed', 'hana-seed-new-zealand', 'New Zealand', 'Queenstown', 'active',
   ARRAY['en'], ARRAY['brown trout', 'rainbow trout'], 9,
   'Fictional seed guide. Not a real person, not real content.',
   '/brand/profile-photo.png', 4.9, 37, 'https://example.com/seed-google-profile-hana', 'SEED-ASSOC', 24

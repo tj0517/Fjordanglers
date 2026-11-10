@@ -12,8 +12,9 @@ import { ARTICLE_CONTENT, isBlogStub } from '@/lib/blog-articles'
 vi.mock('@/lib/supabase/server', () => {
   const rows: Record<string, unknown[]> = {
     experience_pages: [
-      { slug: 'dated-offer',   updated_at: '2026-10-01T08:30:00Z' },
-      { slug: 'undated-offer', updated_at: null },
+      // A guide is listed only with an active offer (FA-1.86) — each fixture guide has one.
+      { slug: 'dated-offer',   updated_at: '2026-10-01T08:30:00Z', guide_id: 'g1' },
+      { slug: 'undated-offer', updated_at: null,                   guide_id: 'g2' },
     ],
     guides: [
       { id: 'g1', slug: 'dated-guide',   updated_at: '2026-09-15T12:00:00Z' },

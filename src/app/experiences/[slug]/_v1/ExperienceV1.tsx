@@ -20,6 +20,7 @@ import { COUNTRIES, getRegionGroup } from '@/lib/countries'
 import { WebEventTracker } from '@/components/analytics/WebEventTracker'
 import { availabilityWindow } from '@/lib/availability-window'
 import { SITE_URL } from '@/lib/site'
+import { guideProfilePath } from '@/lib/guide-url'
 import { buildOfferJsonLd, serializeJsonLd } from '@/lib/seo/offer-jsonld'
 
 /**
@@ -241,6 +242,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
   const faq                  = (page.faq               as FaqItem[]            | null) ?? []
   const pageContentBlocks    = (page.content_blocks     as ContentBlock[]       | null) ?? []
   const guideLanguages       = (guide?.languages        as string[]             | null) ?? []
+  const guideHref            = guide != null ? guideProfilePath(guide) : null
 
 
   // Build ExpPage for the map — used in both mobile and desktop LOCATION sections
@@ -302,7 +304,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
     price: page.price_from != null && page.price_type !== 'request'
       ? { kind: 'single', amount: page.price_from, currency: page.currency }
       : null,
-    guide:       guide != null ? { name: guide.full_name, slug: guide.slug, id: guide.id } : null,
+    guide:       guide != null ? { name: guide.full_name, slug: guide.slug } : null,
     parentCrumb: { label: 'Trips', url: `${SITE_URL}/trips` },
     faq,
   })
@@ -1457,13 +1459,15 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
                   </div>
                 )}
 
-                <Link
-                  href={`/guides/${guide.slug ?? guide.id}`}
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold f-body transition-all hover:opacity-90"
-                  style={{ background: '#E67E50', color: '#fff', boxShadow: '0 4px 14px rgba(230,126,80,0.35)' }}
-                >
-                  View guide profile →
-                </Link>
+                {guideHref != null && (
+                  <Link
+                    href={guideHref}
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold f-body transition-all hover:opacity-90"
+                    style={{ background: '#E67E50', color: '#fff', boxShadow: '0 4px 14px rgba(230,126,80,0.35)' }}
+                  >
+                    View guide profile →
+                  </Link>
+                )}
               </div>
 
             </div>

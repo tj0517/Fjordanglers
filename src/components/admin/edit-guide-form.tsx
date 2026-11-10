@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { updateGuide, type UpdateGuidePayload, type GuideGalleryImage } from '@/actions/admin'
+import { suggestGuideSlug, validateGuideSlug } from '@/lib/guide-slug'
 import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload from '@/components/admin/multi-image-upload'
 import { ImageCropModal } from '@/components/ui/image-crop'
@@ -174,6 +175,9 @@ export default function EditGuideForm({ guide }: Props) {
 
   // ── Form state initialised from existing guide data ─────────────────────────
   const [fullName,      setFullName]      = useState(guide.full_name)
+  // An active guide with a slug keeps it: renaming would break the public URL. Deactivate first.
+  const slugLocked = guide.status === 'active' && (guide.slug?.trim() ?? '') !== ''
+  const [slug,          setSlug]          = useState(guide.slug ?? '')
   const [country,       setCountry]       = useState(guide.country)
   const [city,          setCity]          = useState(guide.city ?? '')
   const [bio,           setBio]           = useState(guide.bio ?? '')
@@ -210,6 +214,10 @@ export default function EditGuideForm({ guide }: Props) {
     setError(null)
 
     if (fullName.trim() === '') { setError('Full name is required.'); return }
+    if (!slugLocked && slug.trim() !== '') {
+      const slugError = validateGuideSlug(slug)
+      if (slugError != null) { setError(slugError); return }
+    }
     if (fishExpertise.length === 0) { setError('Select at least one fish species.'); return }
     if (languages.length === 0) { setError('Select at least one language.'); return }
 
@@ -229,6 +237,8 @@ export default function EditGuideForm({ guide }: Props) {
       youtube_url:      youtubeUrl || undefined,
       pricing_model:    pricingModel,
       status,
+      // Locked slug is not sent: the action refuses a change while the guide is active.
+      ...(slugLocked ? {} : { slug: slug.trim() || null }),
       // null clears the field; trimmed string sets it
       invite_email:     inviteEmail.trim() || null,
     }
@@ -341,6 +351,25 @@ export default function EditGuideForm({ guide }: Props) {
               placeholder="e.g. Bjørn Eriksen"
               required
             />
+          </div>
+
+          {/* Slug */}
+          <div className="md:col-span-2">
+            <FieldLabel htmlFor="edit-slug" required={status === 'active'}>Profile slug</FieldLabel>
+            <TextInput
+              id="edit-slug"
+              type="text"
+              value={slug}
+              onChange={e => setSlug(e.target.value)}
+              readOnly={slugLocked}
+              placeholder={suggestGuideSlug(fullName, country)}
+              style={slugLocked ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+            />
+            <p className="text-[#0A2E4D]/40 text-xs f-body mt-2">
+              {slugLocked
+                ? 'Locked while the guide is active — changing it would break the public URL. To change it, set the status to Suspended or Pending and save first.'
+                : 'Required before the guide can be active. It becomes the public profile URL and is locked once the guide is active.'}
+            </p>
           </div>
 
           {/* Country */}

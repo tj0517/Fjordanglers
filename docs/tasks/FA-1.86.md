@@ -2,14 +2,14 @@
 id: FA-1.86
 title: Przewodnicy — slugi dla 6 bez sluga, slug obowiązkowy przy aktywacji, scalenie duplikatu Josh Hart, ukrycie dwóch pustych profili, koniec linków z UUID, profile bez oferty poza indeksem
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-1.86-guide-slugs
-pr:
+pr: 181
 depends_on: []
 blocked_by_questions: []
 touches_db: true
@@ -66,3 +66,12 @@ curl -sI https://www.fjordanglers.com/guides/cd8f48f1-0633-4832-9c56-0f2cb4c7ee6
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** D3 — rekomendacje z audytu: scalić Josha Harta, ukryć Emanuel Cosic i Lucky Lure do uzupełnienia; profile bez oferty poza indeksem.
+- **2026-11-09, tj:** D1 — UUID fallback usuwamy tylko z powierzchni publicznych (listing, strona główna, sitemapa, JSON-LD, oferta v1, hub, canonical profilu). Admin i panel przewodnika zostają z UUID — przewodnik w statusie pending legalnie nie ma sluga.
+- **2026-11-09, tj:** D2 — przekierowanie duplikatu to pojedyncze mapowanie w kodzie strony profilu przewodnika, bez nowej tabeli.
+- **2026-11-09, tj:** D3 — jedna migracja w tym PR: najpierw dane (slugi, ukrycie), potem reguła bazy „active ⇒ slug". tj uruchamia ją na prod przez `deploy-db` po merge.
+- **2026-11-09, tj:** Kryterium „grep" zmienione względem pliku zadania zgodnie z D1 — zakres: `src/app/(public)`, `src/app/page.tsx`, `src/app/sitemap.ts`, `src/lib/seo`, `src/app/experiences`, `src/components/destination-hub`; trafienia w admin/dashboard wypisane osobno jako zamierzone.
+- **2026-11-09, tj:** Slugi zatwierdzone: `dustin-habener-new-zealand`, `josh-hart-new-zealand`, `kristina-placko-daryl-paskell-new-zealand`, `emanuel-cosic`, `lucky-lure-fishing-finland`.
+- **2026-11-09, tj:** Decyzja 1 = C — duplikat `cd8f48f1…` dostaje `status='suspended'` + `is_hidden=true`; jeden wiersz `agent_knowledge` (`14fd7003…`) przechodzi na `1a30602e…`; 3 zapytania zachowują `assigned_guide_id` bez zmian. SQL migracji zatwierdzony (z opcją C).
+- **2026-11-09, tj:** Decyzja 2 = (i) z blokadą — pole slug w formularzach create/edit, wstępnie z imienia + kraju, format i unikalność sprawdzane w akcji. Gdy przewodnik jest `active`, slug jest tylko do odczytu w formularzu edycji (zmiana wymaga najpierw dezaktywacji; krótka podpowiedź pod polem). Aktywacja bez sluga zwraca czytelny błąd; `QuickApproveButton` pokazuje błąd akcji; `createBetaGuide` wymaga sluga.
+- **2026-11-09, tj:** Kolejność po merge: merge → poczekać na deploy produkcyjny Vercel → `deploy-db` na prod → SELECT na prod i trzy `curl`.
+- **2026-11-10, odbiór (PR #181):** przyjęte z uzupełnieniem — red proof reguły bazy `guides_active_requires_slug` w jobie `db`. Udowodnione przed merge: odmowa aktywacji bez sluga (akcje + baza), grep UUID w zakresie D1, CI. Po merge (tj): `deploy-db` na prod zaraz po deployu Vercela, SELECT „0 aktywnych bez sluga” i trzy `curl` — wynik dopisany tutaj.

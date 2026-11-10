@@ -15,6 +15,7 @@ import { BgVideo } from '@/components/home/bg-video'
 import { ContactExpertButton } from '@/components/ui/contact-expert-button'
 import TestimonialBanner from '@/components/testimonial-banner'
 import { SITE_URL } from '@/lib/site'
+import { GuideLink } from '@/components/guides/guide-link'
 
 export const revalidate = 300
 
@@ -429,7 +430,7 @@ export default async function HomePage() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
               {featuredGuides.map((guide: FeaturedGuide, idx) => (
-                <Link key={guide.id} href={`/guides/${guide.slug ?? guide.id}`} className="group block">
+                <GuideLink key={guide.id} slug={guide.slug} className="group block">
                   <div className="relative overflow-hidden" style={{ borderRadius: '16px', aspectRatio: '3/4', background: '#0A2E4D' }}>
                     {guide.avatar_url != null ? (
                       <Image src={guide.avatar_url} alt={guide.full_name} fill priority={idx < 2} className="object-cover transition-transform duration-700 group-hover:scale-[1.06]" />
@@ -449,7 +450,7 @@ export default async function HomePage() {
                       )}
                     </div>
                   </div>
-                </Link>
+                </GuideLink>
               ))}
             </div>
 

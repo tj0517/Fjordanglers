@@ -117,7 +117,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.83 | Blog, krok 1 — tabela wpisów + publiczny czytnik (metadane, schema, sitemapa), przeniesienie artykułu, koniec stubów | L | opus | todo | FA-1.80 |
 | FA-1.84 | Blog, krok 2 — edytor w `/admin` (szkic/publikacja, zdjęcia, podgląd, SEO) | L | opus | todo | FA-1.83 |
 | FA-1.85 | Treść hubów w bazie + edytor w panelu (O-42 → b) | M | sonnet | todo | FA-1.82, FA-1.84 |
-| FA-1.86 | Przewodnicy — slugi dla 6, slug obowiązkowy, scalenie Josh Hart, ukrycie 2 pustych, koniec UUID, profile bez oferty poza indeksem | M | sonnet | todo | — |
+| FA-1.86 | Przewodnicy — slugi dla 6, slug obowiązkowy, scalenie Josh Hart, ukrycie 2 pustych, koniec UUID, profile bez oferty poza indeksem | M | sonnet | done (PR #181) | — |
 | FA-1.87 | Atrybucja organiku — referrer i strona lądowania przy zapytaniu i zdarzeniach, kanał wyliczany | M | sonnet | todo | — |
 | FA-1.88 | Higiena sitemapy i listingów — tylko indeksowalne, prawdziwe `lastModified`, canonical stron 2+, opis `/trips`, `og:image` | S | sonnet | done (PR #177, #179) | FA-1.79 |
 | FA-1.89 | Oferty — alias dla wycofanego adresu chilijskiego, jeden H1 w v1, generator slugów bez „--” | S | sonnet | todo | — |

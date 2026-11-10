@@ -29,6 +29,7 @@ import HubTrips from './hub-trips'
 import HubMap from './hub-map'
 import type { HubMapPin } from './hub-map-view'
 import { HubSelectionProvider } from './hub-selection'
+import { GuideLink } from '@/components/guides/guide-link'
 import type { DestinationHubData } from '@/lib/supabase/queries'
 
 const HOW_IT_WORKS: Step[] = [
@@ -138,8 +139,8 @@ function Guides({ data }: { data: DestinationHubData }) {
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {data.guides.map(guide => (
           <li key={guide.id}>
-            <Link
-              href={`/guides/${guide.slug ?? guide.id}`}
+            <GuideLink
+              slug={guide.slug}
               className="flex h-full items-start gap-4 rounded-2xl bg-white px-5 py-4 transition-transform hover:-translate-y-0.5"
               style={{ color: '#0A2E4D', boxShadow: '0 1px 2px rgba(10,46,77,0.06), 0 12px 32px -12px rgba(10,46,77,0.14)' }}
             >
@@ -164,7 +165,7 @@ function Guides({ data }: { data: DestinationHubData }) {
                   </span>
                 )}
               </span>
-            </Link>
+            </GuideLink>
           </li>
         ))}
       </ul>
