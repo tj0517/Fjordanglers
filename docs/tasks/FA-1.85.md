@@ -2,14 +2,14 @@
 id: FA-1.85
 title: Treść hubów w bazie + edytor w panelu — O-42 przechodzi na (b); konfiguracja w kodzie zostaje tylko dla slug/grupa/kraje
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved: tj 2026-11-11
 effort: high
 agent: fa-core
 branch: feat/fa-1.85-hub-content-table
-pr:
+pr: 188, 189
 depends_on: [FA-1.82, FA-1.84]
 blocked_by_questions: []
 touches_db: true
