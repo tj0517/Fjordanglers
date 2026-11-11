@@ -290,6 +290,75 @@ export type Database = {
         }
         Relationships: []
       }
+      destination_hubs: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          contact_whatsapp: string | null
+          created_at: string
+          faq: Json
+          h1: string
+          hero_quote_author: string | null
+          hero_quote_country: string | null
+          hero_quote_text: string | null
+          id: string
+          intro: string
+          meta_description: string
+          meta_title: string
+          peak_months: number[]
+          proof_note: string | null
+          season_months: number[]
+          season_note: string | null
+          slug: string
+          species: string[]
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_whatsapp?: string | null
+          created_at?: string
+          faq?: Json
+          h1: string
+          hero_quote_author?: string | null
+          hero_quote_country?: string | null
+          hero_quote_text?: string | null
+          id?: string
+          intro: string
+          meta_description: string
+          meta_title: string
+          peak_months?: number[]
+          proof_note?: string | null
+          season_months?: number[]
+          season_note?: string | null
+          slug: string
+          species?: string[]
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_whatsapp?: string | null
+          created_at?: string
+          faq?: Json
+          h1?: string
+          hero_quote_author?: string | null
+          hero_quote_country?: string | null
+          hero_quote_text?: string | null
+          id?: string
+          intro?: string
+          meta_description?: string
+          meta_title?: string
+          peak_months?: number[]
+          proof_note?: string | null
+          season_months?: number[]
+          season_note?: string | null
+          slug?: string
+          species?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       expedition_guides: {
         Row: {
           availability_confidence: string
