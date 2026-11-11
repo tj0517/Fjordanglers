@@ -2,39 +2,15 @@ import { describe, it, expect } from 'vitest'
 import { DESTINATION_HUBS, getHubCountries, getHubSlugForCountry } from './destinations'
 
 /**
- * FA-1.82 — every hub is a public page and a landing page for search: its editorial fields are
- * not optional in practice. The type allows empty fields (a section hides when empty); this test
- * is what says no hub ships that way.
+ * The skeleton of the hubs that stays in code (FA-1.85, O-42 → (b)): which hubs exist, which
+ * countries each covers, which articles it links to. Their editorial content is in the
+ * `destination_hubs` table, and what every hub must have there is checked by `hub-rows.test.ts`.
  */
-describe('DESTINATION_HUBS (FA-1.82)', () => {
+describe('DESTINATION_HUBS', () => {
   it('has the six hubs', () => {
     expect(DESTINATION_HUBS.map(h => h.slug).sort()).toEqual(
       ['finland', 'iceland', 'new-zealand', 'norway', 'patagonia', 'sweden'],
     )
-  })
-
-  it.each(DESTINATION_HUBS.map(h => [h.slug, h] as const))('%s has intro, meta and FAQ', (_slug, hub) => {
-    expect(hub.h1.trim()).not.toBe('')
-    expect(hub.intro.trim()).not.toBe('')
-    expect(hub.metaTitle.trim()).not.toBe('')
-    expect(hub.metaDescription.trim()).not.toBe('')
-    expect((hub.faq ?? []).length).toBeGreaterThanOrEqual(3)
-    expect((hub.faq ?? []).length).toBeLessThanOrEqual(6)
-    for (const entry of hub.faq ?? []) {
-      expect(entry.question.trim()).not.toBe('')
-      expect(entry.answer.trim()).not.toBe('')
-    }
-  })
-
-  it.each(DESTINATION_HUBS.map(h => [h.slug, h] as const))('%s: meta description fits a search snippet', (_slug, hub) => {
-    expect(hub.metaDescription.length).toBeLessThanOrEqual(160)
-  })
-
-  it.each(DESTINATION_HUBS.map(h => [h.slug, h] as const))('%s: season months are 1–12 and peak ⊆ season', (_slug, hub) => {
-    const season = hub.seasonMonths ?? []
-    const peak = hub.peakMonths ?? []
-    for (const m of [...season, ...peak]) expect(Number.isInteger(m) && m >= 1 && m <= 12, String(m)).toBe(true)
-    for (const m of peak) expect(season, `peak month ${m} is outside the season`).toContain(m)
   })
 
   // Whether a linked article is published is decided at request time by `getDestinationHub` (FA-1.83:

@@ -32,6 +32,13 @@ import { HubSelectionProvider } from './hub-selection'
 import { GuideLink } from '@/components/guides/guide-link'
 import type { DestinationHubData } from '@/lib/supabase/queries'
 
+/**
+ * The three steps of "How it works". The booking answer every hub's FAQ ends with ("How do I book a
+ * guided fishing trip in …?") repeats them, but since FA-1.85 that answer is plain text in
+ * `destination_hubs.faq` (norway, sweden, finland, new-zealand) and nothing keeps it in step with
+ * these. When the booking process changes, edit these steps and those four answers together
+ * (docs/deferred-tasks.md, FA-1.85).
+ */
 const HOW_IT_WORKS: Step[] = [
   { title: 'Tell us your dates.', body: 'Dates, group size, what you want to catch.' },
   { title: 'We check with the guide.', body: 'We come back with availability and a price within two business days.' },

@@ -17,14 +17,13 @@
  *   reviews    — consented AND submitted only (red case: the unconsented one is absent)
  */
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
-import type { DestinationHub } from '@/lib/destinations'
+import type { DestinationHubSkeleton } from '@/lib/destinations'
 
 const h = vi.hoisted(() => ({
   env: { EXPERIENCE_V2_ENABLED: true as boolean },
   hub: {
     slug: 'fa165-test-hub', group: 'Nordic', countries: ['Denmark'],
-    h1: 'FA-1.65 test hub', intro: 'Test.', metaTitle: 'Test', metaDescription: 'Test',
-  } as DestinationHub,
+  } as DestinationHubSkeleton,
 }))
 
 vi.mock('next/cache', () => ({
@@ -55,6 +54,7 @@ const R1 = id(31), R2 = id(32), R3 = id(33)
 const svc = createServiceClient()
 
 async function cleanup() {
+  await svc.from('destination_hubs').delete().eq('slug', 'fa165-test-hub')
   await svc.from('reviews').delete().in('id', [R1, R2, R3])
   await svc.from('inquiries').delete().in('id', [I1, I2, I3])
   await svc.from('experience_guides').delete().in('experience_id', PAGES)
@@ -70,6 +70,11 @@ async function must(label: string, run: PromiseLike<{ error: { message: string }
 
 beforeAll(async () => {
   await cleanup()
+
+  // The hub's copy is a table row since FA-1.85; the test hub (not in DESTINATION_HUBS) brings its own.
+  await must('hub content', svc.from('destination_hubs').insert({
+    slug: 'fa165-test-hub', h1: 'FA-1.65 test hub', intro: 'Test.', meta_title: 'Test', meta_description: 'Test',
+  }))
 
   await must('guides', svc.from('guides').insert([
     { id: G1, full_name: 'Gunnar Testguide', country: 'Denmark', status: 'active', slug: 'fa165-gunnar-testguide', tagline: 'Test tagline.' },
