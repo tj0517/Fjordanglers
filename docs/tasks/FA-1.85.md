@@ -2,10 +2,10 @@
 id: FA-1.85
 title: Treść hubów w bazie + edytor w panelu — O-42 przechodzi na (b); konfiguracja w kodzie zostaje tylko dla slug/grupa/kraje
 stage: 1
-status: todo
-difficulty: M
-model: sonnet
-model_approved:
+status: in_progress
+difficulty: L
+model: opus
+model_approved: tj 2026-11-11
 effort: high
 agent: fa-core
 branch: feat/fa-1.85-hub-content-table
@@ -36,7 +36,7 @@ Po FA-1.82 tekst hubów (intro, sezon, gatunki, FAQ, meta, cytat) siedzi w `dest
 
 ## Zakres
 - [ ] Odczyt stanu: pola hubów w `destinations.ts`, czy tabela nie istnieje na prod (SELECT).
-- [ ] Tabela treści hubów + RLS (anon czyta, admin zapisuje) — STOP z SQL.
+- [ ] Tabela treści hubów + RLS (anon i authenticated czytają; brak polityki zapisu — zapis przez akcję serwerową z service role po `requireAdmin()`, jak blog; decyzja tj 2026-11-11 nr 1) — STOP z SQL.
 - [ ] Przeniesienie treści 6 hubów z kodu do tabeli (migracja danych) — STOP.
 - [ ] Odczyt w `getDestinationHub()` z tabeli; `revalidateTag` po zapisie w panelu.
 - [ ] `/admin/hubs`: lista + formularz z polami O-43/O-44.
@@ -65,3 +65,4 @@ for h in norway sweden finland iceland patagonia new-zealand; do curl -s localho
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** D2 — treść hubów w tabeli z edytorem; najpierw w kodzie (FA-1.82), tabela razem z edytorem bloga. O-42 wraca na (b).
+- **2026-11-11, tj:** Decyzja 1 — zapis jak w blogu: w bazie brak polityki zapisu, zapis przez akcję serwerową z service role po `requireAdmin()`, jeden wiersz `audit_log` na każdy udany zapis. Decyzja 2 — model Opus · high, trudność traktowana jak L (zadanie przenosi dane na produkcję, `docs/05-agent-operations.md` §2). Decyzja 3 — `articles` zostaje w kodzie bez zmian do FA-1.90.
