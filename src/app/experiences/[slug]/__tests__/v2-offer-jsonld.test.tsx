@@ -19,11 +19,26 @@ const h = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/env', () => ({ env: h.mockEnv }))
-vi.mock('@/lib/supabase/queries', async importOriginal => ({
-  ...(await importOriginal<typeof import('@/lib/supabase/queries')>()),
-  getExperienceV2:           h.getExperienceV2,
-  getRelatedExperiencePages: async () => [],
-}))
+// A hub's label in the breadcrumb is its `h1` from the `destination_hubs` table (FA-1.85), read by
+// `getHubCrumbForCountry`; this file mocks the data layer, so it supplies the labels itself. The real
+// read is covered against the local database in hub-rows.test.ts.
+const HUB_LABELS: Record<string, string> = {
+  iceland: 'Iceland Fly Fishing Trips',
+  norway: 'Guided Fishing Trips in Norway',
+  'new-zealand': 'New Zealand Fly Fishing Trips',
+}
+vi.mock('@/lib/supabase/queries', async importOriginal => {
+  const { getHubSlugForCountry } = await import('@/lib/destinations')
+  return {
+    ...(await importOriginal<typeof import('@/lib/supabase/queries')>()),
+    getExperienceV2:           h.getExperienceV2,
+    getRelatedExperiencePages: async () => [],
+    getHubCrumbForCountry:     async (country: string) => {
+      const slug = getHubSlugForCountry(country)
+      return slug != null && HUB_LABELS[slug] != null ? { slug, label: HUB_LABELS[slug] } : null
+    },
+  }
+})
 vi.mock('@/lib/fx', () => ({ fetchIndicativeRates: async () => ({}) }))
 vi.mock('@/lib/supabase/testimonials', () => ({ getTestimonial: async () => null }))
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND') } }))

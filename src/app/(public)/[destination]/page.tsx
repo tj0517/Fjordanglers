@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
-import { DESTINATION_HUBS } from '@/lib/destinations'
-import { getDestinationHub } from '@/lib/supabase/queries'
+import { getDestinationHub, getPrerenderableHubSlugs } from '@/lib/supabase/queries'
 import { WebEventTracker } from '@/components/analytics/WebEventTracker'
 import DestinationHubView from '@/components/destination-hub/destination-hub-view'
 import { SITE_URL } from '@/lib/site'
@@ -11,8 +10,10 @@ export const revalidate = 60
 
 // ─── Static params & metadata ─────────────────────────────────────────────────
 
-export function generateStaticParams() {
-  return DESTINATION_HUBS.map(hub => ({ destination: hub.slug }))
+// The hubs' copy is in the database (FA-1.85): prerendered when it can be read at build time, otherwise
+// rendered on first request and cached (see getPrerenderableHubSlugs).
+export async function generateStaticParams() {
+  return (await getPrerenderableHubSlugs()).map(destination => ({ destination }))
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ destination: string }> }) {

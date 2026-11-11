@@ -17,7 +17,6 @@
 
 import type { ExperienceV2 } from '@/lib/supabase/queries'
 import { customRange, fromPrice, type Money } from '@/lib/pricing/experience-price'
-import { getHubForSlug, getHubSlugForCountry } from '@/lib/destinations'
 import { SITE_URL } from '@/lib/site'
 import {
   amountFromCents,
@@ -55,14 +54,12 @@ function v2OfferPrice(page: V2Page): OfferPrice | null {
 
 /**
  * Home → hub → offer when a hub covers the country (labelled with the hub's own `h1`, tj D2,
- * 2026-11-05); Home → Trips → offer otherwise, as v1 does.
+ * 2026-11-05); Home → Trips → offer otherwise, as v1 does. The hub's label is its `h1` from the
+ * `destination_hubs` table, so the caller passes it in (`getHubCrumbForCountry`) and this stays pure.
  */
-function v2ParentCrumb(country: string): { label: string; url: string } {
-  const hubSlug = getHubSlugForCountry(country)
-  const hub = hubSlug != null ? getHubForSlug(hubSlug) : undefined
-
+function v2ParentCrumb(hub: { slug: string; label: string } | null): { label: string; url: string } {
   return hub != null
-    ? { label: hub.h1, url: `${SITE_URL}/${hub.slug}` }
+    ? { label: hub.label, url: `${SITE_URL}/${hub.slug}` }
     : { label: 'Trips', url: `${SITE_URL}/trips` }
 }
 
@@ -73,7 +70,7 @@ export function v2Description(page: Pick<V2Page, 'metaDescription' | 'region' | 
 }
 
 /** `slug` is the canonical slug the page is rendered under (a retired alias has already been redirected). */
-export function v2OfferJsonLd(page: V2Page, slug: string): OfferJsonLd {
+export function v2OfferJsonLd(page: V2Page, slug: string, hub: { slug: string; label: string } | null): OfferJsonLd {
   const primary = page.guides.find(g => g.isPrimary) ?? page.guides[0] ?? null
 
   return buildOfferJsonLd({
@@ -95,7 +92,7 @@ export function v2OfferJsonLd(page: V2Page, slug: string): OfferJsonLd {
     temporalCoverage: null,
     price:       v2OfferPrice(page),
     guide:       primary != null ? { name: primary.fullName, slug: primary.slug } : null,
-    parentCrumb: v2ParentCrumb(page.country),
+    parentCrumb: v2ParentCrumb(hub),
     faq:         page.faq,
   })
 }

@@ -21,7 +21,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Clock, Lock, ShieldCheck, Star } from 'lucide-react'
 import { env } from '@/lib/env'
-import { getExperienceV2, getRelatedExperiencePages } from '@/lib/supabase/queries'
+import { getExperienceV2, getHubCrumbForCountry, getRelatedExperiencePages } from '@/lib/supabase/queries'
 import { getTestimonial } from '@/lib/supabase/testimonials'
 import { fetchIndicativeRates } from '@/lib/fx'
 import { SiteNav } from '@/components/layout/nav'
@@ -158,7 +158,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
   // a retired alias, so it is the canonical one; the preview renders the same component, so
   // ?preview=v2 reports page_version 2 as well.
   // Structured data: the same trip / breadcrumb / FAQ blocks v1 emits, built by the shared builder (FA-1.81).
-  const jsonLd = v2OfferJsonLd(page, slug)
+  const jsonLd = v2OfferJsonLd(page, slug, await getHubCrumbForCountry(page.country))
 
   return (
    <ExperienceFunnelProvider version={2} slug={slug} sections={FUNNEL_SECTIONS_V2}>

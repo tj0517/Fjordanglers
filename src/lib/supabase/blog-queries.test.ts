@@ -12,18 +12,17 @@
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
-import type { DestinationHub } from '@/lib/destinations'
+import type { DestinationHubSkeleton } from '@/lib/destinations'
 
 const h = vi.hoisted(() => ({
   hub: {
     slug: 'fa183-test-hub', group: 'Nordic', countries: ['Denmark'],
-    h1: 'FA-1.83 test hub', intro: 'Test.', metaTitle: 'Test', metaDescription: 'Test',
     articles: [
       { slug: 'fa183-published', title: 'Published' },
       { slug: 'fa183-draft',     title: 'Draft' },
       { slug: 'fa183-missing',   title: 'No such post' },
     ],
-  } as DestinationHub,
+  } as DestinationHubSkeleton,
 }))
 
 vi.mock('next/cache', () => ({
@@ -49,10 +48,16 @@ const BODY = Array.from({ length: 450 }, (_, i) => `word${i}`).join(' ') // 450 
 
 async function cleanup() {
   await svc.from('blog_posts').delete().like('slug', 'fa183-%')
+  await svc.from('destination_hubs').delete().eq('slug', 'fa183-test-hub')
 }
 
 beforeAll(async () => {
   await cleanup()
+  // The hub's copy is a table row since FA-1.85; the test hub (not in DESTINATION_HUBS) brings its own.
+  const hubRow = await svc.from('destination_hubs').insert({
+    slug: 'fa183-test-hub', h1: 'FA-1.83 test hub', intro: 'Test.', meta_title: 'Test', meta_description: 'Test',
+  })
+  if (hubRow.error != null) throw new Error(`hub content: ${hubRow.error.message}`)
   // Two inserts, not one array: a bulk insert sends NULL for a key a row lacks, which skips the column default.
   const published = await svc.from('blog_posts').insert({
     slug: 'fa183-published', title: 'A published article', seo_title: 'Published article', description: 'Short description.',

@@ -16,7 +16,8 @@ import { availabilityWindow } from '@/lib/availability-window'
 import { effectivePrices, fromPrice, customRange, anglersPerGuideLabel, type PriceRow } from '@/lib/pricing/experience-price'
 import { formatCents, formatPrice } from '@/lib/format-price'
 import { env } from '@/lib/env'
-import { DESTINATION_HUBS, getHubCountries, getHubForSlug, type DestinationHub } from '@/lib/destinations'
+import { DESTINATION_HUBS, getHubCountries, getHubForSlug, getHubSlugForCountry, type DestinationHub, type DestinationHubSkeleton } from '@/lib/destinations'
+import { hubContentFromRow, type HubContent } from '@/lib/hubs/content'
 import { hubSpecies } from '@/lib/hub-species'
 import { getTestimonial, type Testimonial } from './testimonials'
 import { isValidBlogSlug, toBlogPost, toBlogPostSummary, type BlogPost, type BlogPostSummary } from '@/lib/blog/post'
@@ -47,6 +48,7 @@ import {
 export const CACHE_TAG_EXPERIENCES = 'experiences'
 export const CACHE_TAG_GUIDES      = 'guides'
 export const CACHE_TAG_BLOG        = 'blog'
+export const CACHE_TAG_HUBS        = 'hubs'
 
 // ─── Client factory ───────────────────────────────────────────────────────────
 
@@ -1151,8 +1153,70 @@ async function publishedHubArticles(articles: DestinationHub['articles']): Promi
 }
 
 /**
+ * The editorial content of every hub, keyed by slug — one read of `destination_hubs` (six rows),
+ * cached under the `hubs` tag so saving a hub in /admin/hubs refreshes it at once (FA-1.85). The
+ * anon client is enough: the table is public to read.
+ *
+ * A failed read throws instead of returning nothing: a hub page built from an empty answer would
+ * be a blank page that search engines index, whereas a thrown error keeps the last good page
+ * (ISR serves the stale one) and is not cached.
+ */
+export async function getHubContents(): Promise<Record<string, HubContent>> {
+  return unstable_cache(
+    async (): Promise<Record<string, HubContent>> => {
+      const { data, error } = await createPublicClient().from('destination_hubs').select('*')
+      if (error != null) throw new Error(`[getHubContents] ${error.message}`)
+      return Object.fromEntries((data ?? []).map(row => [row.slug, hubContentFromRow(row)]))
+    },
+    ['hub-contents'],
+    { revalidate: 300, tags: [CACHE_TAG_HUBS] },
+  )()
+}
+
+/**
+ * The hub slugs to prerender at build time (`generateStaticParams`): all of them when their content
+ * can be read now, none when it cannot. A build with no database (CI) or a deploy during an outage must
+ * neither fail nor bake a blank page; with no slugs prerendered, each hub renders on its first request
+ * and is cached from then on (ISR), exactly as it would have been after the build.
+ */
+export async function getPrerenderableHubSlugs(): Promise<string[]> {
+  try {
+    await getHubContents()
+    return DESTINATION_HUBS.map(h => h.slug)
+  } catch (err) {
+    console.error('[getPrerenderableHubSlugs] hub content unavailable, hubs render on first request:', err instanceof Error ? err.message : err)
+    return []
+  }
+}
+
+/**
+ * The hub an offer in `country` belongs to, as a breadcrumb: its slug and its `h1`. Null when no hub
+ * covers the country — and when the hub table cannot be read: an offer page must not fail because of
+ * its parent's label, so the breadcrumb degrades to "Trips" and the failure is logged.
+ */
+export async function getHubCrumbForCountry(country: string): Promise<{ slug: string; label: string } | null> {
+  const slug = getHubSlugForCountry(country)
+  if (slug == null) return null
+  try {
+    const content = (await getHubContents())[slug]
+    return content == null ? null : { slug, label: content.h1 }
+  } catch (err) {
+    console.error('[getHubCrumbForCountry] hub label unavailable:', err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
+/** A skeleton hub and its content, or a thrown error when the table has no row for it (a data bug, not a 404). */
+function joinHub(skeleton: DestinationHubSkeleton, contents: Record<string, HubContent>): DestinationHub {
+  const content = contents[skeleton.slug]
+  if (content == null) throw new Error(`[getDestinationHub] no destination_hubs row for "${skeleton.slug}"`)
+  return { ...skeleton, ...content }
+}
+
+/**
  * Everything a country hub (`/[destination]`) shows, in one call — the page itself queries
- * nothing (CLAUDE.md rule 3). Null for a slug that is not in `DESTINATION_HUBS`.
+ * nothing (CLAUDE.md rule 3). Null for a slug that is not in `DESTINATION_HUBS`. The hub's copy comes
+ * from `destination_hubs` (`getHubContents`), its skeleton (countries, article links) from code.
  *
  * The same filters as `getExperienceV2`, for the same reasons: guides only when active and
  * `show_on_page` (the read policy returns every row of an active page), reviews only when
@@ -1161,11 +1225,14 @@ async function publishedHubArticles(articles: DestinationHub['articles']): Promi
  * does `guide_price_override_cents` (it is folded into the card's price).
  */
 export async function getDestinationHub(slug: string): Promise<DestinationHubData | null> {
-  const hub = getHubForSlug(slug)
-  if (hub == null) return null
+  const skeleton = getHubForSlug(slug)
+  if (skeleton == null) return null
 
-  // Only what the database says is cached; the hub's own config (copy, species override,
-  // the other hubs) is applied after, so a deploy that edits `destinations.ts` shows at once.
+  // The hub's copy is read from `destination_hubs` under its own cache tag (`getHubContents`); the
+  // offers, guides and reviews below are cached separately, so editing a hub's text does not wait
+  // for them and a new review does not wait for the text.
+  const contents = await getHubContents()
+  const hub = joinHub(skeleton, contents)
   const fromDb = await unstable_cache(
     async (): Promise<Omit<DestinationHubData, 'hub' | 'species' | 'otherHubs' | 'testimonial'>> => {
       const db = createPublicClient()
@@ -1311,7 +1378,11 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
     ...fromDb,
     hub:       { ...hub, articles: await publishedHubArticles(hub.articles) },
     species:   hubSpecies(hub.species, fromDb.offers.map(o => o.targetSpecies)),
-    otherHubs: DESTINATION_HUBS.filter(h => h.slug !== hub.slug).map(h => ({ slug: h.slug, h1: h.h1 })),
+    // A hub whose row is missing is left out of the links rather than failing this page.
+    otherHubs: DESTINATION_HUBS.filter(h => h.slug !== hub.slug).flatMap(h => {
+      const other = contents[h.slug]
+      return other == null ? [] : [{ slug: h.slug, h1: other.h1 }]
+    }),
     // Outside the cache, like the config above. Every country the hub covers (tj FA-1.69 2B).
     testimonial: fromDb.reviews.length === 0 ? await getTestimonial(getHubCountries(hub)) : null,
   }
