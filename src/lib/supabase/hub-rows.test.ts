@@ -24,7 +24,7 @@ vi.mock('next/cache', () => ({
 import { DESTINATION_HUBS } from '@/lib/destinations'
 import { HubContentPayloadSchema } from '@/lib/hubs/editor'
 import { createServiceClient } from '@/lib/supabase/server'
-import { getHubContents } from './queries'
+import { getHubContents, getHubCrumbForCountry } from './queries'
 
 const anon = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
@@ -48,6 +48,13 @@ describe('destination_hubs rows', () => {
     expect((c.faq ?? []).length).toBeGreaterThanOrEqual(3)
     expect((c.faq ?? []).length).toBeLessThanOrEqual(6)
     expect(c.metaDescription.length).toBeLessThanOrEqual(160)
+  })
+
+  it('the offer breadcrumb label is the hub row\'s h1; a country with no hub has none', async () => {
+    const contents = await getHubContents()
+    expect(await getHubCrumbForCountry('Norway')).toEqual({ slug: 'norway', label: contents.norway.h1 })
+    expect(await getHubCrumbForCountry('Argentina')).toEqual({ slug: 'patagonia', label: contents.patagonia.h1 })
+    expect(await getHubCrumbForCountry('Denmark')).toBeNull()
   })
 
   it('anon can read the rows but cannot write them', async () => {
