@@ -46,8 +46,7 @@ import {
 // Cache tag constants — used here and revalidated from Server Actions.
 export const CACHE_TAG_EXPERIENCES = 'experiences'
 export const CACHE_TAG_GUIDES      = 'guides'
-// Not exported yet: nothing outside this file revalidates it. FA-1.84's editor will, and exports it then.
-const CACHE_TAG_BLOG               = 'blog'
+export const CACHE_TAG_BLOG        = 'blog'
 
 // ─── Client factory ───────────────────────────────────────────────────────────
 
