@@ -44,7 +44,7 @@ Po FA-1.82 tekst hubów (intro, sezon, gatunki, FAQ, meta, cytat) siedzi w `dest
 
 ## Gotowe, gdy
 - [ ] Tabela i polityki na prod — odczyt wklejony; anon nie zapisuje (red proof).
-- [ ] HTML 6 hubów (bez znaczników czasu) identyczny przed/po — diff wklejony.
+- [ ] 6 hubów identyczne przed/po w czterech warstwach (zatwierdzone przez tj 2026-11-11 zamiast „identycznego HTML”, bo HTML nie jest bajt w bajt stabilny między dwoma żądaniami): `jsonld`, `head` (bez dwóch tagów Sentry), `body` bez `<script>`, widoczny tekst — `diff` każdej warstwy każdego hubu wklejony (pusty). Plus, jeśli stabilne na dwóch zrzutach bazowych: liczba wystąpień pól redakcyjnych w połączonym ładunku `self.__next_f.push` równa przed/po.
 - [ ] Edycja FAQ w panelu → zmiana widoczna na hubie po zapisie — wklejone.
 - [ ] CI zielone — lista wklejona.
 
@@ -67,4 +67,4 @@ for h in norway sweden finland iceland patagonia new-zealand; do curl -s localho
 - **2026-11-03, tj:** D2 — treść hubów w tabeli z edytorem; najpierw w kodzie (FA-1.82), tabela razem z edytorem bloga. O-42 wraca na (b).
 - **2026-11-11, tj:** Decyzja 1 — zapis jak w blogu: w bazie brak polityki zapisu, zapis przez akcję serwerową z service role po `requireAdmin()`, jeden wiersz `audit_log` na każdy udany zapis. Decyzja 2 — model Opus · high, trudność traktowana jak L (zadanie przenosi dane na produkcję, `docs/05-agent-operations.md` §2). Decyzja 3 — `articles` zostaje w kodzie bez zmian do FA-1.90.
 - **2026-11-11, tj:** Tabela `destination_hubs` — SQL zatwierdzony (kolumny, ograniczenia, RLS bez polityki zapisu, REVOKE/GRANT, trigger `updated_at`); pełny plik SQL wklejony w opisie PR migracyjnego, nie streszczenie. Limit opisu meta: **A — 160 w tabeli i w formularzu** (blog blokuje na 155, huby na 160: istniejące opisy Norwegii, Finlandii i Nowej Zelandii mają 160/158/159 znaków). Lokalnie `supabase migration up`, nie `db reset`; reset tylko po zatrzymaniu i zapytaniu tj.
-
+- **2026-11-11, tj:** Porównanie przed/po — cztery warstwy (`jsonld`, `head` bez `sentry-trace` i `baggage`, `body` bez `<script>`, widoczny tekst) zastępują „identyczny HTML”: dwa zrzuty bazowe różnią się per żądanie (trace id Sentry, `__next_r`, dane flight `self.__next_f` ze stosami w trybie dev dzielone w różnych miejscach), a `baggage` zawiera `sentry-release` = SHA commita. Bez buildu produkcyjnego. Dodatkowo: liczba wystąpień każdego pola redakcyjnego (h1, intro, tytuł i opis meta, notka sezonu, pytania i odpowiedzi FAQ) w połączonych ładunkach `self.__next_f.push` — najpierw dowód stabilności na dwóch zrzutach bazowych; jeśli niestabilne — odpada. Ten sam `start-dev.sh` dla zrzutu „po”.
