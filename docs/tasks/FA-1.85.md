@@ -66,3 +66,5 @@ for h in norway sweden finland iceland patagonia new-zealand; do curl -s localho
 ## Notatki z realizacji
 - **2026-11-03, tj:** D2 — treść hubów w tabeli z edytorem; najpierw w kodzie (FA-1.82), tabela razem z edytorem bloga. O-42 wraca na (b).
 - **2026-11-11, tj:** Decyzja 1 — zapis jak w blogu: w bazie brak polityki zapisu, zapis przez akcję serwerową z service role po `requireAdmin()`, jeden wiersz `audit_log` na każdy udany zapis. Decyzja 2 — model Opus · high, trudność traktowana jak L (zadanie przenosi dane na produkcję, `docs/05-agent-operations.md` §2). Decyzja 3 — `articles` zostaje w kodzie bez zmian do FA-1.90.
+- **2026-11-11, tj:** Tabela `destination_hubs` — SQL zatwierdzony (kolumny, ograniczenia, RLS bez polityki zapisu, REVOKE/GRANT, trigger `updated_at`); pełny plik SQL wklejony w opisie PR migracyjnego, nie streszczenie. Limit opisu meta: **A — 160 w tabeli i w formularzu** (blog blokuje na 155, huby na 160: istniejące opisy Norwegii, Finlandii i Nowej Zelandii mają 160/158/159 znaków). Lokalnie `supabase migration up`, nie `db reset`; reset tylko po zatrzymaniu i zapytaniu tj.
+
