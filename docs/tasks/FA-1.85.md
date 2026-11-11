@@ -2,7 +2,7 @@
 id: FA-1.85
 title: Treść hubów w bazie + edytor w panelu — O-42 przechodzi na (b); konfiguracja w kodzie zostaje tylko dla slug/grupa/kraje
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved: tj 2026-11-11
@@ -74,4 +74,4 @@ for h in norway sweden finland iceland patagonia new-zealand; do curl -s localho
 - **2026-11-11, agent:** Limity w tabeli i w formularzu: nagłówek 120, intro 1500, tytuł meta 60, opis meta 160 (decyzja tj A), notka sezonu 600, pytanie 200, odpowiedź 1500, ≤ 12 pytań, ≤ 20 gatunków. Powtórzone miesiące odrzuca zod (CHECK nie może mieć podzapytania).
 - **2026-11-11, agent:** CI `check` (który robi `pnpm build` bez bazy) wywrócił się na prerenderze `/patagonia`: `getHubContents()` rzuca przy nieudanym odczycie (zamierzone — bez pustej strony zapisanej w buildzie), a `generateStaticParams` prerenderowało huby bezwarunkowo. Poprawka: `getPrerenderableHubSlugs()` zwraca sześć slugów, gdy treść da się odczytać, i żadnego, gdy nie — wtedy huby renderują się przy pierwszym żądaniu i są cache’owane (ISR); gdy baza jest osiągalna (Vercel), zachowanie jak dotąd. Przetestowane (`hub-read-failure.test.ts`, `hub-rows.test.ts`); dowodem na build jest zielony `check` na kolejnym commicie, nie lokalny `pnpm build` (stosy działają).
 - **2026-11-11, agent:** Vercel Preview pokazuje `Deployment has failed` dla tego PR-a, ale tak samo dla #183 (sama migracja tabeli) i #186 (same dane) — niezwiązane z kodem; przyczyny nie widzę (brak dostępu do Vercela). Wiersz w deferred, do odczytu przez tj.
-
+- **2026-11-11, tj (accepted — close it):** Zaakceptowane po review PR #188 i #189 — tabela, polityki i sześć wierszy odczytane na prod; porównanie przed/po w czterech warstwach identyczne; guardy akcji z czerwonymi dowodami; edycja FAQ pokazana lokalnie. `revalidateTag` w trybie produkcyjnym oraz status wdrożenia produkcyjnego sprawdza tj po merge’u. Błąd Vercel Preview zostaje wierszem w deferred; nie jest częścią tej rundy.
