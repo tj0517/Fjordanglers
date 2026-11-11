@@ -1174,6 +1174,22 @@ export async function getHubContents(): Promise<Record<string, HubContent>> {
 }
 
 /**
+ * The hub slugs to prerender at build time (`generateStaticParams`): all of them when their content
+ * can be read now, none when it cannot. A build with no database (CI) or a deploy during an outage must
+ * neither fail nor bake a blank page; with no slugs prerendered, each hub renders on its first request
+ * and is cached from then on (ISR), exactly as it would have been after the build.
+ */
+export async function getPrerenderableHubSlugs(): Promise<string[]> {
+  try {
+    await getHubContents()
+    return DESTINATION_HUBS.map(h => h.slug)
+  } catch (err) {
+    console.error('[getPrerenderableHubSlugs] hub content unavailable, hubs render on first request:', err instanceof Error ? err.message : err)
+    return []
+  }
+}
+
+/**
  * The hub an offer in `country` belongs to, as a breadcrumb: its slug and its `h1`. Null when no hub
  * covers the country — and when the hub table cannot be read: an offer page must not fail because of
  * its parent's label, so the breadcrumb degrades to "Trips" and the failure is logged.

@@ -24,7 +24,7 @@ vi.mock('next/cache', () => ({
 import { DESTINATION_HUBS } from '@/lib/destinations'
 import { HubContentPayloadSchema } from '@/lib/hubs/editor'
 import { createServiceClient } from '@/lib/supabase/server'
-import { getHubContents, getHubCrumbForCountry } from './queries'
+import { getHubContents, getHubCrumbForCountry, getPrerenderableHubSlugs } from './queries'
 
 const anon = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
@@ -48,6 +48,10 @@ describe('destination_hubs rows', () => {
     expect((c.faq ?? []).length).toBeGreaterThanOrEqual(3)
     expect((c.faq ?? []).length).toBeLessThanOrEqual(6)
     expect(c.metaDescription.length).toBeLessThanOrEqual(160)
+  })
+
+  it('with the table readable, all six hubs are prerendered at build time', async () => {
+    expect(await getPrerenderableHubSlugs()).toEqual(DESTINATION_HUBS.map(h => h.slug))
   })
 
   it('the offer breadcrumb label is the hub row\'s h1; a country with no hub has none', async () => {

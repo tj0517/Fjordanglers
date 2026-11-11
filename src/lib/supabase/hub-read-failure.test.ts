@@ -5,6 +5,8 @@
  *   getHubContents        throws — a hub page built from an empty answer would be a blank page that
  *                         search engines index; a thrown error keeps the last good page (ISR) and is not cached
  *   getDestinationHub     throws for the same reason
+ *   getPrerenderableHubSlugs returns no slugs and logs — a build with no database (CI) must not fail; the hubs
+ *                         then render on their first request and are cached (ISR)
  *   getHubCrumbForCountry returns null and logs — an offer page must not fail because of its parent's label
  */
 import { vi, describe, it, expect, afterEach } from 'vitest'
@@ -20,7 +22,7 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }))
 
-import { getDestinationHub, getHubContents, getHubCrumbForCountry } from './queries'
+import { getDestinationHub, getHubContents, getHubCrumbForCountry, getPrerenderableHubSlugs } from './queries'
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -35,6 +37,12 @@ describe('a hub table that cannot be read', () => {
 
   it('getDestinationHub still answers null for a slug that is not a hub, without reading the table', async () => {
     await expect(getDestinationHub('atlantis')).resolves.toBeNull()
+  })
+
+  it('no hub is prerendered at build time, and the build does not fail', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(getPrerenderableHubSlugs()).resolves.toEqual([])
+    expect(errors).toHaveBeenCalledWith(expect.stringContaining('[getPrerenderableHubSlugs]'), '[getHubContents] simulated outage')
   })
 
   it('the offer breadcrumb degrades to no hub and logs', async () => {
