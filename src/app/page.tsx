@@ -89,6 +89,7 @@ export default async function HomePage() {
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
       <SiteNav />
 
+      <main>
       {/* ─── HERO ────────────────────────────────────────────────────── */}
       <section className="relative" style={{ height: '100vh', minHeight: '640px', background: '#050e1a' }}>
         <Image src="/hero.jpg" alt="Guide netting a brown trout for an angler in a clear river" fill priority className="object-cover object-center" />
@@ -515,6 +516,7 @@ export default async function HomePage() {
       </section>
 
       </div>{/* end scroll-over wrapper */}
+      </main>
 
       <SiteFooter />
     </div>

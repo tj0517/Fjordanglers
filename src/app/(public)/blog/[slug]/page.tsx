@@ -63,6 +63,7 @@ export default async function BlogPostPage({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildArticleJsonLd(post)) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildBlogBreadcrumbJsonLd(post)) }} />
       <ReadingProgress />
+      <main>
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <div className="relative" style={{ height: 'clamp(380px, 55vh, 640px)' }}>
@@ -166,6 +167,7 @@ export default async function BlogPostPage({ params }: Props) {
             </Link>
         </div>
       </div>
+      </main>
     </div>
   )
 }
