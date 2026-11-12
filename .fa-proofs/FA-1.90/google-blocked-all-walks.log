@@ -1,0 +1,28 @@
+# browser_network_requests(all:true, static:true, filter=googletagmanager|google-analytics|googleadservices|doubleclick|googlesyndication)
+# whole Playwright session: before (5550c79), <main>-only (eba4da6), after (6037818, seed only + temp rows). 26 of 26 blocked.
+6. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+70. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+107. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+143. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+186. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+222. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+257. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+293. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+356. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+393. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+428. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+472. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+508. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+559. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+596. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+633. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+670. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+706. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+741. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+777. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+816. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+881. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+923. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+962. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+1016. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector
+1056. [GET] https://www.googletagmanager.com/gtag/js?id=AW-18171634204 => [FAILED] net::ERR_BLOCKED_BY_CLIENT.Inspector

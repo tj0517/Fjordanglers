@@ -1,0 +1,10 @@
+
+ RUN  v4.0.18 /home/tj/fjordanglers-1.90
+
+ ✓ src/lib/supabase/internal-links.test.tsx (11 tests) 49ms
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  18:28:02
+   Duration  966ms (transform 460ms, setup 31ms, import 763ms, tests 49ms, environment 0ms)
+

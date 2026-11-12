@@ -1,0 +1,39 @@
+
+ RUN  v4.0.18 /home/tj/fjordanglers-1.90
+
+ ✓ src/components/blog/article-related.test.tsx > ArticleRelated > country tier: "Trips in Norway", the trips, the guide and the hub link 17ms
+ ✓ src/components/blog/article-related.test.tsx > ArticleRelated > group fallback: "Trips near Norway" — the heading never claims Swedish trips are in Norway 2ms
+ ✓ src/components/blog/article-related.test.tsx > ArticleRelated > NULL country: "Trips we guide", no guides part, no hub link 1ms
+ ✓ src/components/blog/article-related.test.tsx > ArticleRelated > no guides in the country: the guides part is hidden, trips and hub stay 2ms
+ ✓ src/components/blog/article-related.test.tsx > ArticleRelated > nothing at all: no block 0ms
+ ✓ src/components/blog/article-related.test.tsx > ArticleRelated > heading per tier 0ms
+ ✓ src/components/blog/article-related.test.tsx > LatestArticles (home) > a card per post linking to /blog/<slug>, plus "All articles" 23ms
+ ✓ src/components/blog/article-related.test.tsx > LatestArticles (home) > no posts (none published, or the read failed): no block 0ms
+ ✓ src/lib/supabase/blog-queries.test.ts > blog reads — published only > getBlogPosts returns the published post and not the draft 11ms
+ ✓ src/lib/supabase/blog-queries.test.ts > blog reads — published only > the list entry carries ISO dates and a read time, and no body 9ms
+ ✓ src/lib/supabase/blog-queries.test.ts > blog reads — published only > getBlogPost returns the whole published post 8ms
+ ✓ src/lib/supabase/blog-queries.test.ts > blog reads — published only > getBlogPost returns null for a draft, an unknown slug and a malformed one 14ms
+ ✓ src/lib/supabase/blog-queries.test.ts > blog_posts — what the browser key can do (RLS, through supabase-js) > anon sees the published row and 0 rows of the draft 12ms
+ ✓ src/lib/supabase/blog-queries.test.ts > blog_posts — what the browser key can do (RLS, through supabase-js) > anon INSERT fails with 42501 12ms
+ ✓ src/lib/supabase/blog-queries.test.ts > blog_posts — what the browser key can do (RLS, through supabase-js) > anon UPDATE and DELETE fail with 42501 and change nothing 16ms
+ ✓ src/lib/supabase/blog-queries.test.ts > hub article links (FA-1.90: from the table, by country) > a hub lists the published posts of its countries — not a draft, not another country's post 25ms
+ ✓ src/lib/supabase/internal-links.test.tsx > getArticleRelated (article → offers, guides, hub) > country tier: 3 offers from the post's country, 2 active visible guides from it, the country's hub 15ms
+ ✓ src/lib/supabase/internal-links.test.tsx > getArticleRelated (article → offers, guides, hub) > group fallback: no offer in the country → offers from the same part of the world (Nordic), never further 1ms
+ ✓ src/lib/supabase/internal-links.test.tsx > getArticleRelated (article → offers, guides, hub) > anywhere: nothing in the country or the group → any active offer 1ms
+ ✓ src/lib/supabase/internal-links.test.tsx > getArticleRelated (article → offers, guides, hub) > NULL country (a general post): starts at "anywhere", no guides read, no hub 1ms
+ ✓ src/lib/supabase/internal-links.test.tsx > getArticleRelated (article → offers, guides, hub) > no guides in the country → guides empty (the part hides), offers and hub unaffected 1ms
+ ✓ src/lib/supabase/internal-links.test.tsx > getArticleRelated (article → offers, guides, hub) > failed offer and guide reads → an empty block, not a failed page 1ms
+ ✓ src/lib/supabase/internal-links.test.tsx > hub articles (tj D2: from blog_posts, by the hub's countries) > /norway lists the published Norway posts, newest first — not Sweden's, not a general post, not a draft 2ms
+ ✓ src/lib/supabase/internal-links.test.tsx > hub articles (tj D2: from blog_posts, by the hub's countries) > a hub with no posts of its countries has no articles 0ms
+ ✓ src/lib/supabase/internal-links.test.tsx > getLatestBlogPosts (home) > the three newest published posts, any country 1ms
+ ✓ src/lib/supabase/internal-links.test.tsx > fail-soft: the blog read fails (a build has no database; an outage) > home: no "From the journal" block, the page still renders, the failure is logged 30ms
+ ✓ src/lib/supabase/internal-links.test.tsx > fail-soft: the blog read fails (a build has no database; an outage) > hub: no articles section, offers and the rest of the page still render, the failure is logged 9ms
+ ✓ src/app/__tests__/internal-links-pages.test.tsx > FA-1.90 link counts inside <main> (fixtures) > article (Norway): ≥ 2 /experiences/, ≥ 1 /guides/, exactly 1 hub link — /norway 45ms
+ ✓ src/app/__tests__/internal-links-pages.test.tsx > FA-1.90 link counts inside <main> (fixtures) > hub with articles: ≥ 1 /blog/ 15ms
+ ✓ src/app/__tests__/internal-links-pages.test.tsx > FA-1.90 link counts inside <main> (fixtures) > home: ≥ 1 /blog/ — the three newest posts 12ms
+
+ Test Files  4 passed (4)
+      Tests  30 passed (30)
+   Start at  19:21:43
+   Duration  1.11s (transform 1.27s, setup 128ms, import 2.47s, tests 369ms, environment 0ms)
+

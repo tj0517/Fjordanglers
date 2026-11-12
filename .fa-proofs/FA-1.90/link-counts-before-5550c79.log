@@ -1,0 +1,15 @@
+# BEFORE — dev server from a detached checkout of exactly 5550c79 (origin/main, the commit the branch starts from)
+$ RESEND_DEV_FAKE=1 node .fa-proofs/FA-1.90/link-counts.mjs http://localhost:3001/blog/fishing-regulations-norway-2026 http://localhost:3001/norway http://localhost:3001/
+
+=== http://localhost:3001/blog/fishing-regulations-norway-2026
+status 200 · <main> elements: 0
+no <main> — nothing counted
+
+=== http://localhost:3001/norway
+status 200 · <main> elements: 0
+no <main> — nothing counted
+
+=== http://localhost:3001/
+status 200 · <main> elements: 0
+no <main> — nothing counted
+exit=1
