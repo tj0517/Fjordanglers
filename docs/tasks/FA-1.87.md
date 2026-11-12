@@ -2,7 +2,7 @@
 id: FA-1.87
 title: Atrybucja organiku — źródło pierwszego wejścia (referrer) i strona lądowania przy zapytaniu i zdarzeniach, kanał wyliczany; naprawa `web_events.referrer_host`
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -69,3 +69,4 @@ pnpm test -- channel
 - **2026-11-03, tj:** zadanie z audytu SEO (F17); kolejność wg raportu (D6).
 - **2026-11-12, tj — decyzje:** (1) kanał wylicza widok w bazie; test dowodzi, że reguła `ads` widoku zgadza się z `isPaidAttributed` na tych samych przypadkach. (2) Kryterium „po deployu” sprawdza tj po merge'u, jak w FA-1.84 i FA-1.85 — kryterium przeformułowane: lokalny dowód + SELECT dla tj w opisie PR.
 - **2026-11-12, tj — decyzje po STOP (miejsce zapisu):** (A) trzy kolumny na `inquiries`: `first_referrer_host`, `landing_path`, `first_touch_at`; test z wrogimi wartościami idzie przez prawdziwy insert — zła wartość staje się pusta, nigdy nie psuje zapytania. Reguły kanału: szósta wartość `unknown` — brak danych pierwszego dotyku (`first_touch_at` null), brak gclid i brak kluczy utm → `unknown`; `direct` = `first_touch_at` ustawione, brak referrera i brak utm. Organic: google.*, bing.*, duckduckgo.com, yahoo.*, ecosia.org, baidu.com. `web_events`: zewnętrzny referrer zapisuje tylko strona lądowania; kolejne strony po nawigacji wewnątrz serwisu — własny host. Kanał pusty (NULL) dla `source` innego niż `web_form`. Widok: `inquiry_acquisition_channel`. Kryterium „bez pól atrybucji → `direct`” przeformułowane na `unknown` (wynika z tej decyzji).
+- **2026-11-12, tj:** accepted after review of PR #190 and #191 — columns, format checks and the view read on prod (security_invoker, service role only; today ads 58, unknown 9); server normalisers match the database formats, odd values become NULL and never fail an inquiry; local walk under the Ads-domain block. The prod web_events referrer check is done by tj after the merge.
