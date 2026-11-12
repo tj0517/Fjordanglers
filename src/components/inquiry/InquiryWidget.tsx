@@ -26,6 +26,7 @@ import { trackFormStart, trackSubmitLeadForm } from '@/lib/gtag'
 import { estimateLeadValue, type TripLength } from '@/lib/leadValue'
 import { getStoredGclid } from '@/lib/gclid'
 import { getStoredUtm } from '@/lib/utm'
+import { firstTouchInquiryFields } from '@/lib/first-touch'
 import { currencySymbol } from '@/lib/format-price'
 import { sendWebEvent } from '@/lib/web-events'
 import { useExperienceFunnel } from '@/components/analytics/experience-funnel'
@@ -361,6 +362,7 @@ function InquiryModal({
           angler_phone_country: phoneCountry || null,
           gclid:           gclid ?? null,
           utm:             utm ?? null,
+          ...firstTouchInquiryFields(),
           ...(funnel != null ? funnel.inquiryFields : {}),
           [TRAP_FIELD_NAME]: trapRef.current?.value ?? '',
           form_elapsed_ms:   elapsedSinceShown(formShownAt.current, performance.now()),

@@ -15,7 +15,7 @@
  * the old one; nothing here asks for an exception, and the server would not grant one.
  *
  * The v1 widget (`src/components/inquiry/InquiryWidget.tsx`) is untouched: the only things
- * shared with it are the trap field and the stored UTM/gclid readers.
+ * shared with it are the trap field and the stored UTM/gclid/first-touch readers.
  */
 
 import {
@@ -36,6 +36,7 @@ import { estimateLeadValue } from '@/lib/leadValue'
 import { partySizeFromBrief, tripLengthFromBrief } from '@/lib/inquiries/brief'
 import { getStoredGclid } from '@/lib/gclid'
 import { getStoredUtm } from '@/lib/utm'
+import { firstTouchInquiryFields } from '@/lib/first-touch'
 import { safeHttpUrl } from '@/lib/experience-v2-content'
 import {
   briefFromAnswers,
@@ -271,6 +272,7 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
           brief,
           gclid:      getStoredGclid() ?? null,
           utm:        getStoredUtm() ?? null,
+          ...firstTouchInquiryFields(),
           ...(funnel != null ? funnel.inquiryFields : {}),
           [TRAP_FIELD_NAME]: trapRef.current?.value ?? '',
           form_elapsed_ms:   elapsedSinceShown(shownAt.current, performance.now()),
