@@ -2,14 +2,14 @@
 id: FA-1.90
 title: Linkowanie wewnętrzne — powiązane oferty i przewodnicy przy artykułach i hubach, artykuły kraju na hubie, blok bloga na stronie głównej
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-1.90-internal-links
-pr:
+pr: 192
 depends_on: [FA-1.82, FA-1.83]
 blocked_by_questions: []
 touches_db: false

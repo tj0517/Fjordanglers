@@ -121,7 +121,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.87 | Atrybucja organiku — referrer i strona lądowania przy zapytaniu i zdarzeniach, kanał wyliczany | M | sonnet | todo | — |
 | FA-1.88 | Higiena sitemapy i listingów — tylko indeksowalne, prawdziwe `lastModified`, canonical stron 2+, opis `/trips`, `og:image` | S | sonnet | done (PR #177, #179) | FA-1.79 |
 | FA-1.89 | Oferty — alias dla wycofanego adresu chilijskiego, jeden H1 w v1, generator slugów bez „--” | S | sonnet | todo | — |
-| FA-1.90 | Linkowanie wewnętrzne — oferty/przewodnicy przy artykułach i hubach, blog na głównej | M | sonnet | in_progress | FA-1.82, FA-1.83 |
+| FA-1.90 | Linkowanie wewnętrzne — oferty/przewodnicy przy artykułach i hubach, blog na głównej | M | sonnet | review (PR #192, `feat/fa-1.90-internal-links`) | FA-1.82, FA-1.83 |
 | FA-1.91 | Strony techniczne poza indeksem — `noindex`/404 dla tokenów, `alt` pinów, bez `SearchAction` | S | sonnet | review (PR #182) | — |
 | FA-1.92 | Lżejsze obrazy i szybszy LCP — kompresja `public/`, priorytet LCP, mniej JS na ofercie | M | sonnet | todo | FA-1.80 |
 | FA-1.93 | Rolę nadaje tylko serwer — użytkownik nie zmieni swojej roli (`profiles`), `handle_new_user` i `auth/callback` nie przyjmą `admin` z danych konta (pilne, przed SEO) | M | opus | done (PR #175) | — |
