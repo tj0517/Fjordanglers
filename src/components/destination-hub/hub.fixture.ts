@@ -61,6 +61,7 @@ export const completeHub = (): DestinationHubData => ({
   testimonial: null,
   ogImage:   null,
   otherHubs: [{ slug: 'iceland', h1: 'Iceland Fly Fishing Trips' }, { slug: 'patagonia', h1: 'Patagonia Fly Fishing Trips' }],
+  articles:  [],
 })
 
 /** No faq, reviews, season, species or contact — what a hub looks like before tj writes it. */
@@ -75,6 +76,7 @@ export const emptyHub = (): DestinationHubData => ({
   testimonial: null,
   ogImage:    null,
   otherHubs:  [{ slug: 'iceland', h1: 'Iceland Fly Fishing Trips' }],
+  articles:   [],
 })
 
 /** FA-1.66 — gives the offers with these ids coordinates (Otago-ish), the rest stay without. */

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { SiteNav } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
-import { getFeaturedExperiencePages, getSpeciesCounts, getFeaturedGuides } from '@/lib/supabase/queries'
+import { getFeaturedExperiencePages, getSpeciesCounts, getFeaturedGuides, getLatestBlogPosts } from '@/lib/supabase/queries'
 import { getTestimonial } from '@/lib/supabase/testimonials'
 import type { FeaturedGuide } from '@/lib/supabase/queries'
 import { FISH_CATALOG } from '@/lib/fish'
@@ -16,6 +16,7 @@ import { ContactExpertButton } from '@/components/ui/contact-expert-button'
 import TestimonialBanner from '@/components/testimonial-banner'
 import { SITE_URL } from '@/lib/site'
 import { GuideLink } from '@/components/guides/guide-link'
+import { LatestArticles } from '@/components/home/latest-articles'
 
 export const revalidate = 300
 
@@ -75,11 +76,12 @@ const HOW_IT_WORKS = [
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
-  const [featured, speciesCounts, featuredGuides, testimonial] = await Promise.all([
+  const [featured, speciesCounts, featuredGuides, testimonial, latestPosts] = await Promise.all([
     getFeaturedExperiencePages(8),
     getSpeciesCounts(),
     getFeaturedGuides(6),
     getTestimonial([]),   // no country: the first general testimonial (tj FA-1.69 1A)
+    getLatestBlogPosts(3),
   ])
 
   const species = FISH_CATALOG.map(s => ({ ...s, count: speciesCounts[s.slug] ?? 0 }))
@@ -483,6 +485,9 @@ export default async function HomePage() {
         </div>
       </section>
 
+
+      {/* ─── FROM THE JOURNAL (FA-1.90) ─────────────────────────────────── */}
+      <LatestArticles posts={latestPosts} />
 
       {/* ─── S9: FINAL CTA ────────────────────────────────────────────── */}
       <section style={{ background: '#F3EDE4' }}>

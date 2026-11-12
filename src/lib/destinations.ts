@@ -2,18 +2,17 @@ import { type Country, type RegionGroup, COUNTRIES, COUNTRY_REGION } from './cou
 import type { HubContent } from './hubs/content'
 
 /**
- * What stays in code about a hub (FA-1.85, O-42 → (b)): which hubs exist, which countries each one
- * covers, and — until FA-1.90 — the articles it links to. The editorial copy (h1, intro, meta,
- * season, species, FAQ, quote, proof note, contact) lives in the `destination_hubs` table and is
- * edited in /admin/hubs; `getDestinationHub()` joins the two into a `DestinationHub`.
+ * What stays in code about a hub (FA-1.85, O-42 → (b)): which hubs exist and which countries each one
+ * covers. Its articles are the published `blog_posts` rows of those countries (FA-1.90). The editorial
+ * copy (h1, intro, meta, season, species, FAQ, quote, proof note, contact) lives in the
+ * `destination_hubs` table and is edited in /admin/hubs; `getDestinationHub()` joins the two into a
+ * `DestinationHub`.
  */
 export type DestinationHubSkeleton = {
   slug: string
   group: RegionGroup
   /** Narrows the region group to specific countries. Absent means all countries in the group. */
   countries?: Country[]
-  /** Articles the hub links to, in order. Empty = no "Read before you go" block (FA-1.83 fills it). */
-  articles?: { slug: string; title: string }[]
 }
 
 /** A hub as the page renders it: the skeleton plus its content row. */
@@ -22,14 +21,7 @@ export type DestinationHub = DestinationHubSkeleton & HubContent
 export const DESTINATION_HUBS: DestinationHubSkeleton[] = [
   { slug: 'patagonia', group: 'Patagonia' },
   { slug: 'iceland', group: 'Nordic', countries: ['Iceland'] },
-  {
-    slug: 'norway',
-    group: 'Nordic',
-    countries: ['Norway'],
-    articles: [
-      { slug: 'fishing-regulations-norway-2026', title: 'Fishing in Norway 2026: Regulations, Licenses, and Limits – A Complete Guide' },
-    ],
-  },
+  { slug: 'norway', group: 'Nordic', countries: ['Norway'] },
   { slug: 'sweden', group: 'Nordic', countries: ['Sweden'] },
   { slug: 'finland', group: 'Nordic', countries: ['Finland'] },
   { slug: 'new-zealand', group: 'New Zealand' },

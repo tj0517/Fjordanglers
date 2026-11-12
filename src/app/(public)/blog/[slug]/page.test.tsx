@@ -11,7 +11,10 @@ import type { BlogPost } from '@/lib/blog/post'
 
 const mocks = vi.hoisted(() => ({ post: null as BlogPost | null }))
 
-vi.mock('@/lib/supabase/queries', () => ({ getBlogPost: async () => mocks.post }))
+vi.mock('@/lib/supabase/queries', () => ({
+  getBlogPost: async () => mocks.post,
+  getArticleRelated: async () => ({ offers: { tier: 'anywhere', pages: [] }, guides: [], hub: null }),
+}))
 vi.mock('next/navigation', () => ({
   notFound: () => {
     throw new Error('NEXT_NOT_FOUND')

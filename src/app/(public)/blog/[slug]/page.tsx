@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getBlogPost } from '@/lib/supabase/queries'
+import { getArticleRelated, getBlogPost } from '@/lib/supabase/queries'
 import { absoluteImageUrl, buildArticleJsonLd, buildBlogBreadcrumbJsonLd, formatPostDate } from '@/lib/blog/post'
 import { extractSections } from '@/lib/blog/article-markdown'
 import { serializeJsonLd } from '@/lib/seo/offer-jsonld'
@@ -9,12 +9,19 @@ import { ArticleBody } from '@/components/blog/article-body'
 import { BlogImage } from '@/components/blog/article-blocks'
 import { ReadingProgress } from '@/components/blog/reading-progress'
 import { TableOfContents } from '@/components/blog/table-of-contents'
+import ArticleRelated from '@/components/blog/article-related'
 import { SITE_URL } from '@/lib/site'
 
 // The article comes from the table (FA-1.83): rendered on first request, then cached for 5 minutes under
-// the `blog` tag. No generateStaticParams — a build must not need the database, and a slug that is not a
-// published post is a 404 from `notFound()` below.
+// the `blog` tag. A slug that is not a published post is a 404 from `notFound()` below.
 export const revalidate = 300
+
+// No slugs prebuilt — a build has no database (CI). The empty list is what makes the route ISR rather
+// than `ƒ` (the FA-1.80 pattern on /experiences/[slug]; FA-1.90 D4): each slug renders on its first
+// request and is then served from the cache.
+export function generateStaticParams() {
+  return []
+}
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -57,6 +64,7 @@ export default async function BlogPostPage({ params }: Props) {
   if (post == null) notFound()
 
   const sections = extractSections(post.bodyMd)
+  const related = await getArticleRelated({ country: post.country })
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
@@ -142,6 +150,7 @@ export default async function BlogPostPage({ params }: Props) {
       >
         {sections.length > 0 && <TableOfContents sections={sections} />}
         <ArticleBody markdown={post.bodyMd} />
+        <ArticleRelated related={related} country={post.country} />
 
         {/* Bottom nav */}
         <div

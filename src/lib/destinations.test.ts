@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { DESTINATION_HUBS, getHubCountries, getHubSlugForCountry } from './destinations'
 
 /**
- * The skeleton of the hubs that stays in code (FA-1.85, O-42 → (b)): which hubs exist, which
- * countries each covers, which articles it links to. Their editorial content is in the
+ * The skeleton of the hubs that stays in code (FA-1.85, O-42 → (b)): which hubs exist and which
+ * countries each covers (their articles come from `blog_posts` since FA-1.90). Their editorial content is in the
  * `destination_hubs` table, and what every hub must have there is checked by `hub-rows.test.ts`.
  */
 describe('DESTINATION_HUBS', () => {
@@ -11,17 +11,6 @@ describe('DESTINATION_HUBS', () => {
     expect(DESTINATION_HUBS.map(h => h.slug).sort()).toEqual(
       ['finland', 'iceland', 'new-zealand', 'norway', 'patagonia', 'sweden'],
     )
-  })
-
-  // Whether a linked article is published is decided at request time by `getDestinationHub` (FA-1.83:
-  // "not a stub" became "status = published") and proved in destination-hub.test.ts.
-  it('every article a hub links to has a well-formed slug and a title', () => {
-    for (const hub of DESTINATION_HUBS) {
-      for (const a of hub.articles ?? []) {
-        expect(a.slug, `${hub.slug}: ${a.slug}`).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/)
-        expect(a.title.trim(), `${hub.slug}: ${a.slug}`).not.toBe('')
-      }
-    }
   })
 
   it('Norway, Sweden and Finland are single-country Nordic hubs; Iceland is unchanged', () => {

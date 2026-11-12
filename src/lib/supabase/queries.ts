@@ -406,57 +406,66 @@ const RELATED_SELECT =
   'id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, guide:guides!guide_id ( id, full_name )'
 
 /**
- * Up to `limit` other active pages, as close as the catalogue allows: same region, else
- * same country, else the same part of the world (`getRegionGroup`), else any. Each tier is
- * tried only when the previous one is empty, so the result is never a mix the heading
- * cannot describe. Cached like the featured list; a page edit revalidates the tag.
+ * Up to `limit` active pages, as close to `country` / `region` as the catalogue allows: same
+ * region, else same country, else the same part of the world (`getRegionGroup`), else any. Each
+ * tier is tried only when the previous one is empty, so the result is never a mix the heading
+ * cannot describe. `excludeId` leaves out the page the picks sit under; a null `country` (a
+ * general article, FA-1.90) starts at "anywhere". A failed read of a tier is logged and the next
+ * tier is tried, so the block shrinks or hides rather than failing the page.
  */
+async function relatedPagesByTier(
+  caller: string,
+  { excludeId, country, region, limit }: { excludeId: string | null; country: string | null; region: string; limit: number },
+): Promise<RelatedExperiencePages> {
+  const db = createPublicClient()
+
+  const groupCountries = (() => {
+    const group = country == null ? null : getRegionGroup(country)
+    return group == null ? [] : COUNTRIES.filter(c => getRegionGroup(c) === group && c !== country)
+  })()
+
+  const tiers: { tier: RelatedExperiencePages['tier']; apply: (q: ReturnType<typeof base>) => ReturnType<typeof base> }[] = [
+    { tier: 'region',   apply: q => q.eq('country', country ?? '').eq('region', region) },
+    { tier: 'country',  apply: q => q.eq('country', country ?? '') },
+    { tier: 'group',    apply: q => q.in('country', groupCountries) },
+    { tier: 'anywhere', apply: q => q },
+  ]
+
+  function base() {
+    const q = db
+      .from('experience_pages')
+      .select(RELATED_SELECT)
+      .eq('status', 'active')
+      .limit(limit)
+    return excludeId == null ? q : q.neq('id', excludeId)
+  }
+
+  for (const { tier, apply } of tiers) {
+    if (tier === 'region' && (country == null || region === '')) continue
+    if (tier === 'country' && country == null) continue
+    if (tier === 'group' && groupCountries.length === 0) continue
+
+    const { data, error } = await apply(base())
+    if (error) {
+      console.error(`[${caller}]`, tier, error.message)
+      continue
+    }
+    if (data != null && data.length > 0) {
+      return { tier, pages: data as unknown as FeaturedExperiencePage[] }
+    }
+  }
+
+  return { tier: 'anywhere' as const, pages: [] }
+}
+
+/** "More trips" under an offer page: other pages near it, by `relatedPagesByTier`. Cached; a page edit revalidates the tag. */
 export async function getRelatedExperiencePages({
   pageId, country, region, limit = 3,
 }: {
   pageId: string; country: string; region: string; limit?: number
 }): Promise<RelatedExperiencePages> {
   return unstable_cache(
-    async () => {
-      const db = createPublicClient()
-
-      const groupCountries = (() => {
-        const group = getRegionGroup(country)
-        return group == null ? [] : COUNTRIES.filter(c => getRegionGroup(c) === group && c !== country)
-      })()
-
-      const tiers: { tier: RelatedExperiencePages['tier']; apply: (q: ReturnType<typeof base>) => ReturnType<typeof base> }[] = [
-        { tier: 'region',   apply: q => q.eq('country', country).eq('region', region) },
-        { tier: 'country',  apply: q => q.eq('country', country) },
-        { tier: 'group',    apply: q => q.in('country', groupCountries) },
-        { tier: 'anywhere', apply: q => q },
-      ]
-
-      function base() {
-        return db
-          .from('experience_pages')
-          .select(RELATED_SELECT)
-          .eq('status', 'active')
-          .neq('id', pageId)
-          .limit(limit)
-      }
-
-      for (const { tier, apply } of tiers) {
-        if (tier === 'region' && region === '') continue
-        if (tier === 'group' && groupCountries.length === 0) continue
-
-        const { data, error } = await apply(base())
-        if (error) {
-          console.error('[getRelatedExperiencePages]', tier, error.message)
-          continue
-        }
-        if (data != null && data.length > 0) {
-          return { tier, pages: data as unknown as FeaturedExperiencePage[] }
-        }
-      }
-
-      return { tier: 'anywhere' as const, pages: [] }
-    },
+    () => relatedPagesByTier('getRelatedExperiencePages', { excludeId: pageId, country, region, limit }),
     ['related-experience-pages', pageId, String(limit)],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
   )()
@@ -1096,6 +1105,8 @@ export type DestinationHubData = {
   /** Hero image of the newest active offer. */
   ogImage:    string | null
   otherHubs:  { slug: string; h1: string }[]
+  /** Published articles about the hub's countries, newest first (FA-1.90); empty hides the section. */
+  articles:   ArticleLink[]
 }
 
 type RawHubGuideRow = {
@@ -1137,19 +1148,16 @@ function hubPriceFrom(
 }
 
 /**
- * A hub links to articles by slug (`DestinationHub.articles`). A link to a post that is not
- * published would 404, so the hub shows only the ones the table says are published — the rule
- * that used to be "not a stub" (FA-1.83). A failed read hides the section rather than the page.
+ * The hub's articles: published posts whose country is one the hub covers, newest first, read
+ * from `blog_posts` through `getBlogPosts` (cached under the `blog` tag). Replaces the hand-typed
+ * list in `DESTINATION_HUBS` (FA-1.90, tj D2) — a title can no longer drift from its post. A failed
+ * read hides the section, not the hub (`publishedPostsOrNone`).
  */
-async function publishedHubArticles(articles: DestinationHub['articles']): Promise<DestinationHub['articles']> {
-  if (articles == null || articles.length === 0) return articles
-  try {
-    const published = new Set((await getBlogPosts()).map(p => p.slug))
-    return articles.filter(a => published.has(a.slug))
-  } catch (err) {
-    console.error('[getDestinationHub] blog posts unavailable, article links hidden:', err instanceof Error ? err.message : err)
-    return []
-  }
+async function hubArticles(hub: DestinationHubSkeleton): Promise<ArticleLink[]> {
+  const countries: string[] = getHubCountries(hub)
+  return (await publishedPostsOrNone('getDestinationHub'))
+    .filter(p => p.country != null && countries.includes(p.country))
+    .map(p => ({ slug: p.slug, title: p.title }))
 }
 
 /**
@@ -1216,7 +1224,8 @@ function joinHub(skeleton: DestinationHubSkeleton, contents: Record<string, HubC
 /**
  * Everything a country hub (`/[destination]`) shows, in one call — the page itself queries
  * nothing (CLAUDE.md rule 3). Null for a slug that is not in `DESTINATION_HUBS`. The hub's copy comes
- * from `destination_hubs` (`getHubContents`), its skeleton (countries, article links) from code.
+ * from `destination_hubs` (`getHubContents`), its skeleton (countries) from code, its articles from
+ * `blog_posts` (`hubArticles`).
  *
  * The same filters as `getExperienceV2`, for the same reasons: guides only when active and
  * `show_on_page` (the read policy returns every row of an active page), reviews only when
@@ -1234,7 +1243,7 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
   const contents = await getHubContents()
   const hub = joinHub(skeleton, contents)
   const fromDb = await unstable_cache(
-    async (): Promise<Omit<DestinationHubData, 'hub' | 'species' | 'otherHubs' | 'testimonial'>> => {
+    async (): Promise<Omit<DestinationHubData, 'hub' | 'species' | 'otherHubs' | 'testimonial' | 'articles'>> => {
       const db = createPublicClient()
 
       const { data: pages, error } = await db
@@ -1376,7 +1385,8 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
 
   return {
     ...fromDb,
-    hub:       { ...hub, articles: await publishedHubArticles(hub.articles) },
+    hub,
+    articles:  await hubArticles(hub),
     species:   hubSpecies(hub.species, fromDb.offers.map(o => o.targetSpecies)),
     // A hub whose row is missing is left out of the links rather than failing this page.
     otherHubs: DESTINATION_HUBS.filter(h => h.slug !== hub.slug).flatMap(h => {
@@ -1632,7 +1642,8 @@ export async function getProfileRole(
 // ─── Blog ─────────────────────────────────────────────────────────────────────
 
 /**
- * Published posts, newest first — the blog list, the sitemap and the hubs' article links read this.
+ * Published posts, newest first — the blog list, the sitemap, the hubs' article links and the home
+ * page's latest articles read this.
  * Anon client: the table's only policy returns published rows, and the explicit filter says so
  * again. A failed read throws instead of returning `[]`: `unstable_cache` does not store a throw,
  * so one bad second is not served as "no articles" for five minutes.
@@ -1681,4 +1692,84 @@ export async function getBlogPost(slug: string): Promise<BlogPost | null> {
     ['blog-post', slug],
     { revalidate: 300, tags: [CACHE_TAG_BLOG] },
   )()
+}
+
+// ─── Internal links around the blog (FA-1.90) ─────────────────────────────────
+
+/** An article as a link: what the hub's "Read before you go" list needs. */
+type ArticleLink = { slug: string; title: string }
+
+/**
+ * `getBlogPosts` for a block on someone else's page: a failed read is logged and answered with no
+ * posts, so the block hides and the page renders. A build has no database, and the home page and
+ * the hubs are prerendered — they must not fail on the blog (and must not go `force-dynamic` to
+ * avoid it). The answer is not cached (`getBlogPosts` caches only a success); the page's own ISR
+ * window decides when it is asked again.
+ */
+async function publishedPostsOrNone(caller: string): Promise<BlogPostSummary[]> {
+  try {
+    return await getBlogPosts()
+  } catch (err) {
+    console.error(`[${caller}] blog posts unavailable, block hidden:`, err instanceof Error ? err.message : err)
+    return []
+  }
+}
+
+/** The three newest published posts — the home page's "From the journal" block. Empty on a failed read. */
+export async function getLatestBlogPosts(limit = 3): Promise<BlogPostSummary[]> {
+  return (await publishedPostsOrNone('getLatestBlogPosts')).slice(0, limit)
+}
+
+type ArticleGuide = {
+  id:        string
+  slug:      string
+  name:      string
+  avatarUrl: string | null
+  tagline:   string | null
+}
+
+export type ArticleRelated = {
+  /** Offers by tier (D3): same country → same part of the world → anywhere; never 'region' (a post has none). */
+  offers: RelatedExperiencePages
+  /** Active, visible guides from the post's country; empty when there are none (the part is hidden). */
+  guides: ArticleGuide[]
+  /** The hub that covers the post's country, null for a general post or a country with no hub. */
+  hub:    { slug: string; label: string } | null
+}
+
+/**
+ * What an article links to below its body: 2–3 offers, 1–2 guides and its hub (FA-1.90). The
+ * article itself is read by `getBlogPost`; this reads only offers and guides, cached under their
+ * tags and `blog`. Every part degrades to empty on a failed read and logs — the article renders
+ * without the block rather than not at all.
+ */
+export async function getArticleRelated({ country }: { country: string | null }): Promise<ArticleRelated> {
+  const fromDb = await unstable_cache(
+    async (): Promise<Omit<ArticleRelated, 'hub'>> => {
+      const offers = await relatedPagesByTier('getArticleRelated', { excludeId: null, country, region: '', limit: 3 })
+      if (country == null) return { offers, guides: [] }
+
+      const { data, error } = await createPublicClient()
+        .from('guides')
+        .select('id, slug, full_name, avatar_url, tagline')
+        .eq('country', country)
+        .eq('status', 'active')
+        .eq('is_hidden', false)
+        .not('slug', 'is', null)
+        .order('average_rating', { ascending: false, nullsFirst: false })
+        .order('full_name')
+        .limit(2)
+
+      if (error) console.error('[getArticleRelated] guides', error.message)
+
+      const guides = (data ?? []).flatMap(g => g.slug == null ? [] : [{
+        id: g.id, slug: g.slug, name: g.full_name, avatarUrl: g.avatar_url, tagline: g.tagline,
+      }])
+      return { offers, guides }
+    },
+    ['article-related', country ?? '(none)'],
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES, CACHE_TAG_BLOG] },
+  )()
+
+  return { ...fromDb, hub: country == null ? null : await getHubCrumbForCountry(country) }
 }
