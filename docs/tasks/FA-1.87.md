@@ -36,7 +36,7 @@ Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zam
 ## Zakres
 - [ ] Odczyt stanu (SELECT, wklejony): rozkład `source`, gclid, `utm` za 60 dni; `referrer_host` w `web_events`.
 - [ ] Pierwszy dotyk: referrer + ścieżka lądowania + znacznik czasu przy pierwszej wizycie, w tym samym magazynie co UTM (bez nadpisywania przy kolejnych wizytach).
-- [ ] Gdzie zapisać przy zapytaniu (nowe kolumny vs klucze w istniejącym jsonb) — STOP z opcjami i SQL, decyzja tj.
+- [x] Gdzie zapisać przy zapytaniu (nowe kolumny vs klucze w istniejącym jsonb) — STOP z opcjami i SQL, decyzja tj. → A (kolumny), 2026-11-12.
 - [ ] `web_events`: referrer z payloadu klienta zamiast nagłówka beacona.
 - [ ] Widok kanału z regułami (gclid/utm cpc → ads; google/bing bez gclid → organic; instagram/facebook/utm social → social; brak → direct; reszta → referral) + test reguł.
 - [ ] Żywa ścieżka zapytanie → oferta → depozyt bez zmian w zachowaniu.
@@ -68,3 +68,4 @@ pnpm test -- channel
 ## Notatki z realizacji
 - **2026-11-03, tj:** zadanie z audytu SEO (F17); kolejność wg raportu (D6).
 - **2026-11-12, tj — decyzje:** (1) kanał wylicza widok w bazie; test dowodzi, że reguła `ads` widoku zgadza się z `isPaidAttributed` na tych samych przypadkach. (2) Kryterium „po deployu” sprawdza tj po merge'u, jak w FA-1.84 i FA-1.85 — kryterium przeformułowane: lokalny dowód + SELECT dla tj w opisie PR.
+- **2026-11-12, tj — decyzje po STOP (miejsce zapisu):** (A) trzy kolumny na `inquiries`: `first_referrer_host`, `landing_path`, `first_touch_at`; test z wrogimi wartościami idzie przez prawdziwy insert — zła wartość staje się pusta, nigdy nie psuje zapytania. Reguły kanału: szósta wartość `unknown` — brak danych pierwszego dotyku (`first_touch_at` null), brak gclid i brak kluczy utm → `unknown`; `direct` = `first_touch_at` ustawione, brak referrera i brak utm. Organic: google.*, bing.*, duckduckgo.com, yahoo.*, ecosia.org, baidu.com. `web_events`: zewnętrzny referrer zapisuje tylko strona lądowania; kolejne strony po nawigacji wewnątrz serwisu — własny host. Kanał pusty (NULL) dla `source` innego niż `web_form`. Widok: `inquiry_acquisition_channel`. Kryterium „bez pól atrybucji → `direct`” przeformułowane na `unknown` (wynika z tej decyzji).
