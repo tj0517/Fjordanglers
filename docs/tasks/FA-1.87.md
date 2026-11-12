@@ -9,7 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-1.87-organic-attribution
-pr: 190
+pr: 190, 191
 depends_on: []
 blocked_by_questions: []
 touches_db: true
