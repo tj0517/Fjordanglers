@@ -1,5 +1,6 @@
 /**
  * FA-1.87 — first-touch attribution through POST /api/inquiries into the real local database.
+ * (Lives in src/lib, not next to the route: it reads fixtures with .from(), which src/app must not contain.)
  * Env and safety fuse: src/tests/setup.ts (local URL only).
  *
  * The insert is real (createInquiry → inquiries, CHECK constraints included) and the channel
@@ -38,7 +39,7 @@ vi.mock('@/lib/rate-limit/inquiries', () => ({
 }))
 
 import { createServiceClient } from '@/lib/supabase/server'
-import { POST } from '../route'
+import { POST } from '@/app/api/inquiries/route'
 
 const EMAIL = 'fa187-route@test.invalid'
 const svc = createServiceClient()
