@@ -2,14 +2,14 @@
 id: FA-1.87
 title: Atrybucja organiku — źródło pierwszego wejścia (referrer) i strona lądowania przy zapytaniu i zdarzeniach, kanał wyliczany; naprawa `web_events.referrer_host`
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-1.87-organic-attribution
-pr:
+pr: 190
 depends_on: []
 blocked_by_questions: []
 touches_db: true
