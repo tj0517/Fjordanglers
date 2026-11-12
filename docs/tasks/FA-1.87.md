@@ -2,7 +2,7 @@
 id: FA-1.87
 title: Atrybucja organiku — źródło pierwszego wejścia (referrer) i strona lądowania przy zapytaniu i zdarzeniach, kanał wyliczany; naprawa `web_events.referrer_host`
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -44,8 +44,9 @@ Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zam
 ## Gotowe, gdy
 - [ ] Migracja na prod (jeśli potrzebna) i odczyt kolumn/widoku — wklejone.
 - [ ] Test reguł kanału zielony; red proof: zapytanie z gclid nie wychodzi jako organic — wklejone.
+- [ ] Test parytetu zielony: na tym samym zbiorze przypadków `ads` z widoku i `isPaidAttributed` się zgadzają; red proof: zmiana jednej strony → test czerwony → przywrócenie.
 - [ ] Lokalnie: wejście z `Referer: https://www.google.com/` → zapytanie → kanał `organic`, ścieżka lądowania zapisana — wklejone (z flagami fake, bez wysyłki maili).
-- [ ] Po deployu: nowe wiersze `web_events` z referrerem innym niż własny host — SELECT wklejony.
+- [ ] Lokalnie: wiersz `web_events` zapisany ze strony otwartej z zewnętrznym referrerem ma ten host, nie własny — zapytanie i wynik wklejone. Po merge'u tj sprawdza na prod nowe wiersze z referrerem innym niż własny host (jak w FA-1.84 i FA-1.85); dokładny SELECT w opisie PR.
 - [ ] CI zielone — lista wklejona.
 
 ## Poza zakresem
@@ -66,3 +67,4 @@ pnpm test -- channel
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** zadanie z audytu SEO (F17); kolejność wg raportu (D6).
+- **2026-11-12, tj — decyzje:** (1) kanał wylicza widok w bazie; test dowodzi, że reguła `ads` widoku zgadza się z `isPaidAttributed` na tych samych przypadkach. (2) Kryterium „po deployu” sprawdza tj po merge'u, jak w FA-1.84 i FA-1.85 — kryterium przeformułowane: lokalny dowód + SELECT dla tj w opisie PR.
