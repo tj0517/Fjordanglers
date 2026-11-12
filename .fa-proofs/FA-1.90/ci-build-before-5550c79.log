@@ -1,0 +1,13 @@
+# BEFORE — CI 'check' job 131141164885 (run 43205991134, PR #190, green), the run behind 5550c79.
+# main has no CI 'check' run of its own (ci.yml runs on pull_request to main only).
+# The job built feac13e = Merge 9b9197d into 2f692a8 — the same two parents as 5550c79 (the merge of #190).
+# Command: gh api repos/<repo>/actions/jobs/131141164885/logs | grep the checkout line, the route table head, the three routes, the legend
+HEAD is now at feac13e Merge 9b9197d5158626e52deef5e46aeb10ba4d24652a into 2f692a836f1da620340c57acf285aeb6708102d1
+Route (app)                        Revalidate  Expire
+┌ ○ /                                      5m      1y
+├ ○ /_not-found
+├ ● /[destination]
+├ ƒ /blog/[slug]
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
