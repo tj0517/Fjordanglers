@@ -1771,6 +1771,8 @@ export type Database = {
           experience_page_id: string | null
           external_offer_sent: boolean
           fa_notes: string | null
+          first_referrer_host: string | null
+          first_touch_at: string | null
           gclid: string | null
           guide_acceptance: string | null
           guide_decline_reason: string | null
@@ -1781,6 +1783,7 @@ export type Database = {
           internal_commission_eur: number | null
           internal_deal_total_eur: number | null
           internal_notes: string | null
+          landing_path: string | null
           last_contact_at: string | null
           lost_reason: string | null
           lost_reason_code: string | null
@@ -1853,6 +1856,8 @@ export type Database = {
           experience_page_id?: string | null
           external_offer_sent?: boolean
           fa_notes?: string | null
+          first_referrer_host?: string | null
+          first_touch_at?: string | null
           gclid?: string | null
           guide_acceptance?: string | null
           guide_decline_reason?: string | null
@@ -1863,6 +1868,7 @@ export type Database = {
           internal_commission_eur?: number | null
           internal_deal_total_eur?: number | null
           internal_notes?: string | null
+          landing_path?: string | null
           last_contact_at?: string | null
           lost_reason?: string | null
           lost_reason_code?: string | null
@@ -1935,6 +1941,8 @@ export type Database = {
           experience_page_id?: string | null
           external_offer_sent?: boolean
           fa_notes?: string | null
+          first_referrer_host?: string | null
+          first_touch_at?: string | null
           gclid?: string | null
           guide_acceptance?: string | null
           guide_decline_reason?: string | null
@@ -1945,6 +1953,7 @@ export type Database = {
           internal_commission_eur?: number | null
           internal_deal_total_eur?: number | null
           internal_notes?: string | null
+          landing_path?: string | null
           last_contact_at?: string | null
           lost_reason?: string | null
           lost_reason_code?: string | null
@@ -2071,6 +2080,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inquiry_events_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiry_acquisition_channel"
+            referencedColumns: ["inquiry_id"]
+          },
+          {
             foreignKeyName: "inquiry_events_message_id_fkey"
             columns: ["message_id"]
             isOneToOne: false
@@ -2126,6 +2142,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "inquiries"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inquiry_trip_details_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: true
+            referencedRelation: "inquiry_acquisition_channel"
+            referencedColumns: ["inquiry_id"]
           },
         ]
       }
@@ -2228,6 +2251,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inquiries"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiry_acquisition_channel"
+            referencedColumns: ["inquiry_id"]
           },
         ]
       }
@@ -2332,6 +2362,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inquiries"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiry_acquisition_channel"
+            referencedColumns: ["inquiry_id"]
           },
           {
             foreignKeyName: "offers_source_message_id_fkey"
@@ -2674,6 +2711,13 @@ export type Database = {
             referencedRelation: "inquiries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reviews_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiry_acquisition_channel"
+            referencedColumns: ["inquiry_id"]
+          },
         ]
       }
       spatial_ref_sys: {
@@ -2849,6 +2893,13 @@ export type Database = {
             referencedRelation: "inquiries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "unmatched_messages_matched_inquiry_id_fkey"
+            columns: ["matched_inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiry_acquisition_channel"
+            referencedColumns: ["inquiry_id"]
+          },
         ]
       }
       waters: {
@@ -3019,6 +3070,36 @@ export type Database = {
           f_table_schema?: unknown
           srid?: number | null
           type?: string | null
+        }
+        Relationships: []
+      }
+      inquiry_acquisition_channel: {
+        Row: {
+          channel: string | null
+          created_at: string | null
+          first_referrer_host: string | null
+          first_touch_at: string | null
+          inquiry_id: string | null
+          landing_path: string | null
+          source: string | null
+        }
+        Insert: {
+          channel?: never
+          created_at?: string | null
+          first_referrer_host?: string | null
+          first_touch_at?: string | null
+          inquiry_id?: string | null
+          landing_path?: string | null
+          source?: string | null
+        }
+        Update: {
+          channel?: never
+          created_at?: string | null
+          first_referrer_host?: string | null
+          first_touch_at?: string | null
+          inquiry_id?: string | null
+          landing_path?: string | null
+          source?: string | null
         }
         Relationships: []
       }
