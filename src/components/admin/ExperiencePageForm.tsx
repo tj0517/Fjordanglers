@@ -53,6 +53,7 @@ const LocationPickerMap = dynamic<LocationPickerMapProps>(
   { ssr: false, loading: () => <div style={{ height: 340, background: '#EDE6DB', borderRadius: 16 }} /> },
 )
 import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
+import { finishSlug, slugify, slugifyDraft } from '@/lib/experiences/offer-slug'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -111,10 +112,6 @@ function blockDrafts(stored: ContentBlock[], section: ContentBlockSection): Page
 /** A block's photos, first = cover: the gallery when it has one, else the single legacy photo. */
 function blockPhotos(block: ContentBlock): string[] {
   return block.image_urls ?? (block.image_url ? [block.image_url] : [])
-}
-
-function slugify(s: string): string {
-  return s.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 }
 
 function parseLines(s: string): string[] {
@@ -1320,7 +1317,7 @@ export default function ExperiencePageForm({
     const payload: ExperiencePagePayload = {
       guide_id:                         prefill?.guide_id ?? null,
       experience_name:                  experienceName.trim(),
-      slug:                             slug.trim(),
+      slug:                             finishSlug(slug),
       country,
       region:                           region.trim(),
       price_from:                       parseFloat(priceFrom) || 0,
@@ -1422,7 +1419,7 @@ export default function ExperiencePageForm({
           <div>
             <label className={lbl}>URL slug <Req /></label>
             <input type="text" value={slug}
-              onChange={e => { setSlug(slugify(e.target.value)); setSlugEdited(true) }}
+              onChange={e => { setSlug(slugifyDraft(e.target.value)); setSlugEdited(true) }}
               placeholder="the-gaula-run"
               className={inp} style={{ ...iStyle, border: hasAttempted && !slugValid ? errB : iStyle.border }} />
             <p className="text-[10px] f-body mt-1" style={{ color: 'rgba(10,46,77,0.35)' }}>
