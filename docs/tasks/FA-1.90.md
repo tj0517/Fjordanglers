@@ -2,7 +2,7 @@
 id: FA-1.90
 title: Linkowanie wewnętrzne — powiązane oferty i przewodnicy przy artykułach i hubach, artykuły kraju na hubie, blok bloga na stronie głównej
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -63,3 +63,6 @@ pnpm build   # stack zatrzymany
 - **2026-11-12, tj:** D3 — oferty przy artykule poszerzane tierami jak `getRelatedExperiencePages`: ten sam kraj → ta sama grupa regionów → dowolne; nagłówek bloku zależy od tieru. Artykuł bez kraju (NULL) zaczyna od „dowolne” i nie ma linku do hubu. Przewodnicy: aktywni z tego samego kraju; gdy brak — część z przewodnikami ukryta.
 - **2026-11-12, tj:** D4 — jeśli `pnpm build` na bazie pokazuje `/blog/[slug]` jako `ƒ`, dodać pusty `generateStaticParams` (wzorzec FA-1.80 z `/experiences/[slug]`), żeby trasa znów była ISR. Każdy nowy odczyt bloga na stronie prerenderowanej ma się degradować łagodnie (ukryty blok + log), nigdy przez `force-dynamic`.
 - **2026-11-12, tj:** `<main>` — opcja B: na `/`, `/[destination]` i `/blog/[slug]` dokładnie jeden landmark `<main>` na stronę, dodany per strona (nie we wspólnym layoucie `(public)`, bo `/guides` ma już własny `<main>`). Bez zmiany wyglądu — zrzuty przed/po wszystkich trzech przy 1280 px i na mobile. Skrypt liczy unikalne wewnętrzne href tylko w `<main>`. Build „przed” i „po” w jednym oknie zatrzymania stosów pod koniec; „przed” z odłączonego checkoutu dokładnie `5550c79`.
+- **2026-11-12, tj:** build evidence from the CI `check` job instead of a local `pnpm build` (no stack stop): before = PR #190 check job (feac13e, tree = 5550c79), after = check job on the PR head. The "Weryfikacja" line `pnpm build # stack zatrzymany` is superseded by this.
+- **2026-11-13, tj:** commit with key-shaped dummy values in `.fa-proofs/FA-1.90/start-dev.sh` rewritten (values now read from `.env.test`); force-push with lease run by tj; gitleaks clean on 5550c79..HEAD.
+- **2026-11-13, tj (review PR #192):** accepted. Proven: link counts before (eba4da6) / after with temporary Norway rows (deleted, counts 0), fixture tests incl. red/green fail-soft, route table ƒ → ● for /blog/[slug] with / and /[destination] unchanged, CI check/knip/db/secrets green on e0894a4. Vercel preview failure pre-existing (deferred FA-1.74/FA-1.91).
