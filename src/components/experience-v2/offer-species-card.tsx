@@ -19,7 +19,7 @@
 import { useState, type MouseEvent } from 'react'
 import Image from 'next/image'
 import { CalendarDays, Images } from 'lucide-react'
-import { Dialog, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogTrigger } from '@/components/ui/dialog-root'
 import type { SpeciesDetail } from '@/lib/experience-v2-content'
 import { seasonLabel } from '@/lib/season-months'
 import { Box, mutedStyle } from './offer-box'
