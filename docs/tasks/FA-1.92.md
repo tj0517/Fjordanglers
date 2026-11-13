@@ -2,7 +2,7 @@
 id: FA-1.92
 title: Lżejsze obrazy i szybszy LCP — kompresja źródeł w `public/`, priorytet obrazu LCP na ofercie i artykule, mniej JS na ofercie
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
