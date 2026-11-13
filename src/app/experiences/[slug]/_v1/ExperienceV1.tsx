@@ -431,11 +431,12 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
             )}
           </div>
 
-          {/* H1 */}
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold f-display leading-[1.0] mb-5"
+          {/* Title — a p, not a heading: the page's only h1 is the mobile title block above, the copy
+              Google's mobile-first crawler sees rendered (FA-1.89). */}
+          <p className="text-3xl sm:text-4xl lg:text-5xl font-bold f-display leading-[1.0] mb-5"
             style={{ color: '#0A2E4D', letterSpacing: '-0.01em' }}>
             {page.experience_name}
-          </h1>
+          </p>
 
           {/* Pills */}
           <div className="flex flex-wrap items-center gap-2">
