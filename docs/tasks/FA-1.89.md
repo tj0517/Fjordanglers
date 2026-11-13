@@ -63,3 +63,4 @@ pnpm test -- slug
 - **2026-11-03, tj:** D3 — alias na Punta Arenas; slugów z „--” nie ruszamy.
 - **2026-11-03, Claude (GSC):** niski CTR `fiskedan-stockholm-fishing` i `/trips` wynika z pozycji 20–90 na ogólne frazy, nie z opisu — przepisywanie opisów wycięte z zakresu audytu (zadanie 9 raportu).
 - **2026-11-13, tj:** alias `fly-fishing-across-magallanes-torres-del-paine--tierra-del-fuego` → Punta Arenas dodaje tj w panelu admina (edytor v2, sekcja Publication) — bez migracji danych; agent tylko weryfikuje (SELECT + `curl -sI` na prod). Kryterium H1 liczy wystąpienia (`grep -o '<h1' | wc -l`), nie linie — wyrenderowany HTML ma mało linii, `grep -c` przeszedłby z dwoma H1.
+- **2026-11-13, tj (review PR #193):** desktopowy tytuł dostaje `role="heading" aria-level={1}` (a11y — jedyny tag `<h1>` jest w bloku mobilnym, `display:none` od `md`); tag zostaje `<p>`, liczba `<h1>` = 1. Na prod jest 5 żywych slugów z „--”, nie 4, jak mówi „Gotowe, gdy”.
