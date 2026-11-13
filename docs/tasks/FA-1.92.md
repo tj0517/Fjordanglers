@@ -9,7 +9,7 @@ model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-1.92-images-lcp
-pr:
+pr: 194
 depends_on: [FA-1.80]
 blocked_by_questions: []
 touches_db: false
