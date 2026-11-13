@@ -2,7 +2,7 @@
 id: FA-1.89
 title: Oferty — alias dla wycofanego adresu chilijskiego (→ Punta Arenas), jeden H1 na stronie v1, generator slugów bez „--”
 stage: 1
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
