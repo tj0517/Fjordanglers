@@ -24,7 +24,7 @@ import type { SpeciesDetail } from '@/lib/experience-v2-content'
 import { seasonLabel } from '@/lib/season-months'
 import { Box, mutedStyle } from './offer-box'
 import { INQUIRY_ANCHOR } from './inquiry-anchor'
-import { PhotoLightbox, useLightboxIndex } from './offer-photo-lightbox'
+import { PhotoLightbox, useLightboxIndex } from './offer-photo-lightbox-loader'
 
 /** Smooth-scrolls to the form; without JavaScript (or without the section) the href still jumps there. */
 function scrollToInquiry(event: MouseEvent<HTMLAnchorElement>) {

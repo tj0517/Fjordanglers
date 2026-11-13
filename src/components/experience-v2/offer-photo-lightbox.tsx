@@ -10,21 +10,12 @@
  * frame has a fixed aspect ratio, so nothing jumps while a photo loads.
  */
 
-import { useState, type KeyboardEvent } from 'react'
+import { type KeyboardEvent } from 'react'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DialogContent, DialogTitle } from '@/components/ui/dialog'
 
-/** Which photo the lightbox shows; `reset()` goes in the trigger's onClick, so every opening starts at the cover. */
-export function useLightboxIndex(count: number) {
-  const [index, setIndex] = useState(0)
-  return {
-    index,
-    reset: () => setIndex(0),
-    step:  (by: number) => setIndex(current => (current + by + count) % count),
-  }
-}
-
+/** Loaded on demand through `./offer-photo-lightbox-loader` (FA-1.92) — import that, not this file. */
 export function PhotoLightbox({ title, name, photos, index, step }: {
   /** The dialog's heading. */
   title:  string
