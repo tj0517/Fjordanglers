@@ -321,7 +321,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
       {/* ─── MOBILE GALLERY (below nav, compact height) ── */}
       {topImages.length > 0 && (
         <div className="md:hidden pt-[72px] relative">
-          <ExperienceGallery images={topImages} title={page.experience_name} topMobile />
+          <ExperienceGallery images={topImages} title={page.experience_name} topMobile visibleAt="mobile" />
           {/* Back button — absolute over photo, just under nav */}
           <Link
             href="/trips"
@@ -401,7 +401,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
         {/* ──────────── GALLERY BENTO (desktop only) ──────────── */}
         {topImages.length > 0 && (
           <div className="hidden md:block pt-8 md:pt-10">
-            <ExperienceGallery images={topImages} title={page.experience_name} />
+            <ExperienceGallery images={topImages} title={page.experience_name} visibleAt="desktop" />
           </div>
         )}
 

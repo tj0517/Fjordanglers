@@ -75,7 +75,7 @@ export default async function BlogPostPage({ params }: Props) {
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <div className="relative" style={{ height: 'clamp(380px, 55vh, 640px)' }}>
-        <BlogImage src={post.imageUrl} alt={post.imageAlt} priority className="object-cover" />
+        <BlogImage src={post.imageUrl} alt={post.imageAlt} priority fetchPriority="high" className="object-cover" />
         {/* Gradient: dark at bottom for legibility */}
         <div
           className="absolute inset-0"
