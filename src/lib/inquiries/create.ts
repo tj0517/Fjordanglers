@@ -127,6 +127,10 @@ export interface CreateInquiryParams {
   pageVersionShown?:  1 | 2 | null
   /** FA-1.60: slug of the experience page the form was sent from → `inquiries.page_slug`. */
   pageSlug?:          string | null
+  /** FA-1.87: the visitor's first touch, already reduced by src/lib/attribution.ts. */
+  firstReferrerHost?: string | null
+  landingPath?:       string | null
+  firstTouchAt?:      string | null
   /** FA-1.38: admin backdates a manually created inquiry to the day it actually arrived
    *  (e.g. an Instagram DM from two months ago). 'YYYY-MM-DD', never in the future.
    *  Sets both `created_at` and the `inquiry.created` event's `occurred_at`. */
@@ -181,6 +185,9 @@ export async function createInquiry(params: CreateInquiryParams): Promise<Create
       utm:                 params.utm ?? null,
       page_version:        params.pageVersionShown ?? null,
       page_slug:           params.pageSlug ?? null,
+      first_referrer_host: params.firstReferrerHost ?? null,
+      landing_path:        params.landingPath ?? null,
+      first_touch_at:      params.firstTouchAt ?? null,
       internal_notes:      params.internalNotes ?? null,
     })
     .select('id, status')

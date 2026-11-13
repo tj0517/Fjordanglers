@@ -2,14 +2,14 @@
 id: FA-1.87
 title: Atrybucja organiku — źródło pierwszego wejścia (referrer) i strona lądowania przy zapytaniu i zdarzeniach, kanał wyliczany; naprawa `web_events.referrer_host`
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-1.87-organic-attribution
-pr:
+pr: 190, 191
 depends_on: []
 blocked_by_questions: []
 touches_db: true
@@ -36,7 +36,7 @@ Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zam
 ## Zakres
 - [ ] Odczyt stanu (SELECT, wklejony): rozkład `source`, gclid, `utm` za 60 dni; `referrer_host` w `web_events`.
 - [ ] Pierwszy dotyk: referrer + ścieżka lądowania + znacznik czasu przy pierwszej wizycie, w tym samym magazynie co UTM (bez nadpisywania przy kolejnych wizytach).
-- [ ] Gdzie zapisać przy zapytaniu (nowe kolumny vs klucze w istniejącym jsonb) — STOP z opcjami i SQL, decyzja tj.
+- [x] Gdzie zapisać przy zapytaniu (nowe kolumny vs klucze w istniejącym jsonb) — STOP z opcjami i SQL, decyzja tj. → A (kolumny), 2026-11-12.
 - [ ] `web_events`: referrer z payloadu klienta zamiast nagłówka beacona.
 - [ ] Widok kanału z regułami (gclid/utm cpc → ads; google/bing bez gclid → organic; instagram/facebook/utm social → social; brak → direct; reszta → referral) + test reguł.
 - [ ] Żywa ścieżka zapytanie → oferta → depozyt bez zmian w zachowaniu.
@@ -44,8 +44,9 @@ Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zam
 ## Gotowe, gdy
 - [ ] Migracja na prod (jeśli potrzebna) i odczyt kolumn/widoku — wklejone.
 - [ ] Test reguł kanału zielony; red proof: zapytanie z gclid nie wychodzi jako organic — wklejone.
+- [ ] Test parytetu zielony: na tym samym zbiorze przypadków `ads` z widoku i `isPaidAttributed` się zgadzają; red proof: zmiana jednej strony → test czerwony → przywrócenie.
 - [ ] Lokalnie: wejście z `Referer: https://www.google.com/` → zapytanie → kanał `organic`, ścieżka lądowania zapisana — wklejone (z flagami fake, bez wysyłki maili).
-- [ ] Po deployu: nowe wiersze `web_events` z referrerem innym niż własny host — SELECT wklejony.
+- [ ] Lokalnie: wiersz `web_events` zapisany ze strony otwartej z zewnętrznym referrerem ma ten host, nie własny — zapytanie i wynik wklejone. Po merge'u tj sprawdza na prod nowe wiersze z referrerem innym niż własny host (jak w FA-1.84 i FA-1.85); dokładny SELECT w opisie PR.
 - [ ] CI zielone — lista wklejona.
 
 ## Poza zakresem
@@ -66,3 +67,6 @@ pnpm test -- channel
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** zadanie z audytu SEO (F17); kolejność wg raportu (D6).
+- **2026-11-12, tj — decyzje:** (1) kanał wylicza widok w bazie; test dowodzi, że reguła `ads` widoku zgadza się z `isPaidAttributed` na tych samych przypadkach. (2) Kryterium „po deployu” sprawdza tj po merge'u, jak w FA-1.84 i FA-1.85 — kryterium przeformułowane: lokalny dowód + SELECT dla tj w opisie PR.
+- **2026-11-12, tj — decyzje po STOP (miejsce zapisu):** (A) trzy kolumny na `inquiries`: `first_referrer_host`, `landing_path`, `first_touch_at`; test z wrogimi wartościami idzie przez prawdziwy insert — zła wartość staje się pusta, nigdy nie psuje zapytania. Reguły kanału: szósta wartość `unknown` — brak danych pierwszego dotyku (`first_touch_at` null), brak gclid i brak kluczy utm → `unknown`; `direct` = `first_touch_at` ustawione, brak referrera i brak utm. Organic: google.*, bing.*, duckduckgo.com, yahoo.*, ecosia.org, baidu.com. `web_events`: zewnętrzny referrer zapisuje tylko strona lądowania; kolejne strony po nawigacji wewnątrz serwisu — własny host. Kanał pusty (NULL) dla `source` innego niż `web_form`. Widok: `inquiry_acquisition_channel`. Kryterium „bez pól atrybucji → `direct`” przeformułowane na `unknown` (wynika z tej decyzji).
+- **2026-11-12, tj:** accepted after review of PR #190 and #191 — columns, format checks and the view read on prod (security_invoker, service role only; today ads 58, unknown 9); server normalisers match the database formats, odd values become NULL and never fail an inquiry; local walk under the Ads-domain block. The prod web_events referrer check is done by tj after the merge.
