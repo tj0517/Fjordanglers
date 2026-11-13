@@ -2,7 +2,7 @@
 id: FA-1.92
 title: Lżejsze obrazy i szybszy LCP — kompresja źródeł w `public/`, priorytet obrazu LCP na ofercie i artykule, mniej JS na ofercie
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -38,9 +38,12 @@ W pomiarze laboratoryjnym oferta ma wynik 61 i LCP 9,0 s, artykuł 67 i 6,8 s; o
 - [ ] Ograniczenie JS klienta na ofercie (dynamiczny import ciężkich komponentów, np. mapy/galerii).
 
 ## Gotowe, gdy
-- [ ] Lighthouse po: LCP oferty i artykułu niższe niż „przed”, wynik perf ≥ 80 (lab, 1 przebieg, ta sama metoda) — tabela przed/po wklejona.
-- [ ] `ls -lS public | head` — największy obraz ≤ 500 KB — wklejone.
-- [ ] Wizualnie bez zmian (zrzuty przed/po hero oferty) i CI zielone.
+- [ ] Priorytet obrazu: lokalnie, dla seedowej oferty v1, seedowej oferty v2 i seedowego artykułu, `curl -s http://localhost:3000/<path> | grep -o '<img[^>]*fetchpriority="high"[^>]*>'` zwraca dokładnie jeden tag na stronę i jest to obraz hero / pierwszy obraz galerii — wklejone dla każdej strony. (Zastępuje bramkę Lighthouse na produkcji: mierzone strony istnieją tylko na produkcji, a merge = deploy — decyzja tj D1, 2026-11-13.) Jeśli seed nie ma oferty v2 albo artykułu z obrazem hero — stop i pytanie do tj.
+- [ ] Mniej JS na ofercie: „First Load JS” dla `/experiences/[slug]` w tabeli tras joba CI `check` jest niższe na head PR niż na `main` — obie linie wklejone z hashami commitów. `/blog/[slug]` i `/` nie rosną.
+- [ ] `find public -type f -size +500k` nic nie zwraca, a sprawdzenie wymiarów (komenda wklejona) nie pokazuje obrazu powyżej 2560 px na dłuższym boku — oba wklejone. (Rekurencyjnie zamiast `ls -lS public | head`, które pomija `public/fish_catalog/` — decyzja tj D2.)
+- [ ] Wizualnie bez zmian: zrzuty Playwright hero oferty (v1, v2) i hero artykułu, przed i po, oraz jeden obraz `fish_catalog` wyrenderowany w artykule, przed i po — ścieżki wypisane; tj porównuje okiem.
+- [ ] CI zielone na head commit PR (`check`, `knip`, `db`, `secrets`) — lista wklejona.
+- [ ] Lighthouse „przed” na produkcji (3 przebiegi + mediana, z komendą) jest w opisie PR. „Po” na produkcji mierzy tj po merge i nie jest kryterium agenta.
 
 ## Poza zakresem
 - Cache i TTFB → FA-1.80.
@@ -57,3 +60,4 @@ ls -lS public | head
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** zadanie z audytu SEO (F4); po FA-1.80, bez strojenia przed nim.
+- **2026-11-13, tj:** D1 (a) — gate on mechanisms (priority hint in HTML, First Load JS from the CI route table), production Lighthouse after merge by tj (median of 3); D2 (a) — the size criterion is recursive over the whole `public/`; FA-1.94 paused, this task starts from clean `main`.

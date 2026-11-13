@@ -123,7 +123,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.89 | Oferty — alias dla wycofanego adresu chilijskiego, jeden H1 w v1, generator slugów bez „--” | S | sonnet | done (PR #193) | — |
 | FA-1.90 | Linkowanie wewnętrzne — oferty/przewodnicy przy artykułach i hubach, blog na głównej | M | sonnet | done (PR #192) | FA-1.82, FA-1.83 |
 | FA-1.91 | Strony techniczne poza indeksem — `noindex`/404 dla tokenów, `alt` pinów, bez `SearchAction` | S | sonnet | review (PR #182) | — |
-| FA-1.92 | Lżejsze obrazy i szybszy LCP — kompresja `public/`, priorytet LCP, mniej JS na ofercie | M | sonnet | todo | FA-1.80 |
+| FA-1.92 | Lżejsze obrazy i szybszy LCP — kompresja `public/`, priorytet LCP, mniej JS na ofercie | M | sonnet | in_progress | FA-1.80 |
 | FA-1.93 | Rolę nadaje tylko serwer — użytkownik nie zmieni swojej roli (`profiles`), `handle_new_user` i `auth/callback` nie przyjmą `admin` z danych konta (pilne, przed SEO) | M | opus | done (PR #175) | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
