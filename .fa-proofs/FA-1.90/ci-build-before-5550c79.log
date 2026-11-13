@@ -11,3 +11,10 @@ Route (app)                        Revalidate  Expire
 ○  (Static)   prerendered as static content
 ●  (SSG)      prerendered as static HTML (uses generateStaticParams)
 ƒ  (Dynamic)  server-rendered on demand
+# Same code, shown — trees of 5550c79 and the merge the check job built (feac13e, fetched from origin):
+$ git rev-parse '5550c79^{tree}' 'feac13e3129714252757530df05c2d858746bf6b^{tree}'
+b8abeca4ee26f460c024d5a0c274fdff3cf09139
+b8abeca4ee26f460c024d5a0c274fdff3cf09139
+$ gh api repos/tj0517/Fjordanglers/git/commits/<sha> --jq '"\(.sha[0:7]) tree \(.tree.sha)  parents …"'
+5550c79 tree b8abeca4ee26f460c024d5a0c274fdff3cf09139  parents 2f692a8 9b9197d
+feac13e tree b8abeca4ee26f460c024d5a0c274fdff3cf09139  parents 2f692a8 9b9197d
