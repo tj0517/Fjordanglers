@@ -58,6 +58,7 @@ import {
   tripLengthFromBrief,
 } from '@/lib/inquiries/brief'
 import { sendInquiryReceivedFaEmail, sendInquiryReceivedAnglerEmail } from '@/lib/email'
+import { normaliseFirstTouchAt, normaliseLandingPath, normaliseReferrerHost } from '@/lib/attribution'
 import { env } from '@/lib/env'
 import { classifyInquiry } from '@/lib/ai/inquiry-agent'
 import { autoSendReply } from '@/lib/ai/auto-send'
@@ -100,6 +101,12 @@ const InquirySchema = z.object({
   // is stored as NULL, never a 400: a measurement must not cost an inquiry.
   page_version:    z.union([z.literal(1), z.literal(2)]).nullable().optional().catch(null),
   page_slug:       z.string().max(200).regex(/^[a-z0-9-]+$/).nullable().optional().catch(null),
+  // FA-1.87 — the visitor's first touch as the browser stored it (src/lib/first-touch.ts).
+  // Untrusted: reduced to a host / a site path / a plausible time; anything else is NULL,
+  // never a 400 — same rule as page_slug above.
+  first_referrer_host: z.unknown().optional().transform(normaliseReferrerHost),
+  landing_path:        z.unknown().optional().transform(normaliseLandingPath),
+  first_touch_at:      z.unknown().optional().transform(v => normaliseFirstTouchAt(v)),
   // FA-1.43 — anything is accepted here on purpose: an odd value is "no information",
   // never a 400 (a 400 would tell a bot which field it got wrong). See suspicionReason.
   trip_notes_extra: z.unknown().optional(),
@@ -247,6 +254,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       utm:               parsed.data.utm ?? null,
       pageVersionShown:  parsed.data.page_version ?? null,
       pageSlug:          parsed.data.page_slug ?? null,
+      firstReferrerHost: parsed.data.first_referrer_host,
+      landingPath:       parsed.data.landing_path,
+      firstTouchAt:      parsed.data.first_touch_at,
       source:            'web_form',
       actor:             { kind: 'system' },
     })

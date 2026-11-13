@@ -6,7 +6,10 @@
  * personal identifier is stored (no IP, no browser fingerprint, no ad-click id, no session id).
  *
  * device: derived server-side from sec-ch-ua-mobile / User-Agent; never stored.
- * referrer_host: extracted from the Referer header (host only, no path/query).
+ * referrer_host: sent by the page (FA-1.87, see src/lib/web-events.ts), reduced again here to a
+ *   host; an odd value is stored as NULL, never a 400. Payloads without it (pages cached before
+ *   FA-1.87) are accepted and stored with NULL. The beacon's own Referer header is not read —
+ *   it is always our own site.
  * country: passed by the client from the page's destination data (not geolocation).
  * utm_campaign / utm_content: from window.location.search on page_view only.
  */
@@ -14,6 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
+import { normaliseReferrerHost } from '@/lib/attribution'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -61,18 +65,6 @@ function detectDevice(req: NextRequest): 'mobile' | 'desktop' | 'tablet' | 'unkn
   return 'unknown'
 }
 
-// ─── Referer host extraction ──────────────────────────────────────────────────
-
-function extractReferrerHost(req: NextRequest): string | null {
-  const referer = req.headers.get('referer')
-  if (!referer) return null
-  try {
-    return new URL(referer).host
-  } catch {
-    return null
-  }
-}
-
 // ─── Zod schema — strict() rejects unknown fields with a 400 ─────────────────
 
 const EventSchema = z
@@ -82,6 +74,8 @@ const EventSchema = z
     country:      z.string().max(40).optional(),
     utm_campaign: z.string().max(200).optional(),
     utm_content:  z.string().max(200).optional(),
+    // Untrusted, analytics only: anything odd becomes NULL rather than costing the event.
+    referrer_host: z.unknown().optional().transform(normaliseReferrerHost),
   })
   .strict()
 
@@ -104,15 +98,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     )
   }
 
-  const { event, path, country, utm_campaign, utm_content } = parsed.data
+  const { event, path, country, utm_campaign, utm_content, referrer_host } = parsed.data
 
   // Rate limit per path — never reads client IP
   if (isRateLimited(path)) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
 
-  const device        = detectDevice(req)
-  const referrer_host = extractReferrerHost(req)
+  const device = detectDevice(req)
 
   const svc = createServiceClient()
   const { error } = await svc.from('web_events').insert({
