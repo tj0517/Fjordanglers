@@ -50,8 +50,8 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
+import { briefSchema } from '@/lib/inquiries/brief-schema'
 import {
-  briefSchema,
   composeBriefMessage,
   partySizeFromBrief,
   requestedDatesFromBrief,

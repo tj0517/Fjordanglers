@@ -17,10 +17,11 @@
  * the old columns and the brief can never disagree.
  *
  * Imported by the public API route, by the data layer and by the browser wizard: plain
- * TypeScript + zod, no server-only imports.
+ * TypeScript, no server-only imports — and no zod. The zod schema lives in `./brief-schema`,
+ * which only the server imports, so zod stays out of the offer page's client JS (FA-1.92).
  */
 
-import { z } from 'zod'
+import type { Brief } from './brief-schema'
 import { formatCents } from '@/lib/format-price'
 
 export const DATES_MODES = ['exact', 'flexible'] as const
@@ -38,76 +39,9 @@ export type Fitness   = (typeof FITNESS)[number]
 export const MAX_BRIEF_DAYS = 30
 
 /** Mirrors the API schema's own ceiling on `party_size`. */
-const MAX_PEOPLE = 20
+export const MAX_PEOPLE = 20
 
-const isoDate  = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD')
-const isoMonth = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Month must be YYYY-MM')
-
-/**
- * `CUR:<from>-<to>` or `CUR:<from>+`, both ends in integer cents (CLAUDE.md rule 6).
- * The labels the angler saw are rebuilt from it by `budgetBandLabel`, so the stored value
- * survives a copy change on the page.
- */
-const budgetBand = z
-  .string()
-  .regex(/^[A-Z]{3}:\d{1,12}(?:-\d{1,12}|\+)$/, 'Budget band must be CUR:from-to or CUR:from+')
-
-const briefObject = z
-  .object({
-    dates_mode:  z.enum(DATES_MODES),
-    /** `exact` only. */
-    date_from:   isoDate.optional(),
-    /** `exact` only; the last day of fishing, so a one-day trip may omit it. */
-    date_to:     isoDate.optional(),
-    /** `flexible` only. */
-    flex_month:  isoMonth.optional(),
-    days:        z.number().int().min(1).max(MAX_BRIEF_DAYS),
-    anglers:     z.number().int().min(1).max(MAX_PEOPLE),
-    non_anglers: z.number().int().min(0).max(MAX_PEOPLE),
-    skill_level: z.number().int().min(1).max(5),
-    priority:    z.enum(PRIORITIES),
-    fitness:     z.enum(FITNESS),
-    wading_ok:   z.boolean(),
-    /** `fixed` pages: the angler confirmed the price shown on the page. */
-    budget_ack:  z.boolean().optional(),
-    /** `custom` pages: which band of the page's indicative range they are planning for. */
-    budget_band: budgetBand.optional(),
-    /** An archetype of a `custom` page, when the form offered one. */
-    selected_option_id: z.string().uuid().optional(),
-  })
-  .strict()
-
-/**
- * A brief must not be able to describe two different trips at once: `exact` carries dates
- * and no month, `flexible` carries a month and no dates. Anything else is a 400 — the form
- * that produced it is broken, and storing it would leave FA guessing which half is true.
- */
-export const briefSchema = briefObject.superRefine((b, ctx) => {
-  if (b.dates_mode === 'exact') {
-    if (b.date_from == null) {
-      ctx.addIssue({ code: 'custom', path: ['date_from'], message: 'Exact dates need a start date' })
-    }
-    if (b.flex_month != null) {
-      ctx.addIssue({ code: 'custom', path: ['flex_month'], message: 'Exact dates cannot also carry a flexible month' })
-    }
-    if (b.date_from != null && b.date_to != null) {
-      if (b.date_to < b.date_from) {
-        ctx.addIssue({ code: 'custom', path: ['date_to'], message: 'The last day cannot be before the first' })
-      } else if (daysBetween(b.date_from, b.date_to) + 1 > MAX_BRIEF_DAYS) {
-        ctx.addIssue({ code: 'custom', path: ['date_to'], message: `A trip cannot span more than ${MAX_BRIEF_DAYS} days` })
-      }
-    }
-  } else {
-    if (b.flex_month == null) {
-      ctx.addIssue({ code: 'custom', path: ['flex_month'], message: 'Flexible dates need a month' })
-    }
-    if (b.date_from != null || b.date_to != null) {
-      ctx.addIssue({ code: 'custom', path: ['date_from'], message: 'Flexible dates cannot also carry exact dates' })
-    }
-  }
-})
-
-export type Brief = z.infer<typeof briefObject>
+export type { Brief } from './brief-schema'
 
 // ─── Dates ────────────────────────────────────────────────────────────────────
 
@@ -117,7 +51,7 @@ function utcOf(iso: string): number {
 
 const DAY_MS = 86_400_000
 
-function daysBetween(from: string, to: string): number {
+export function daysBetween(from: string, to: string): number {
   return Math.round((utcOf(to) - utcOf(from)) / DAY_MS)
 }
 
