@@ -1,0 +1,53 @@
+
+ RUN  v4.0.18 /home/tj/fjordanglers-1.90
+
+ ❯ src/lib/supabase/internal-links.test.tsx (11 tests | 2 failed) 27ms
+     ✓ country tier: 3 offers from the post's country, 2 active visible guides from it, the country's hub 12ms
+     ✓ group fallback: no offer in the country → offers from the same part of the world (Nordic), never further 1ms
+     ✓ anywhere: nothing in the country or the group → any active offer 1ms
+     ✓ NULL country (a general post): starts at "anywhere", no guides read, no hub 1ms
+     ✓ no guides in the country → guides empty (the part hides), offers and hub unaffected 1ms
+     ✓ failed offer and guide reads → an empty block, not a failed page 0ms
+     ✓ /norway lists the published Norway posts, newest first — not Sweden's, not a general post, not a draft 2ms
+     ✓ a hub with no posts of its countries has no articles 0ms
+     ✓ the three newest published posts, any country 1ms
+     × home: no "From the journal" block, the page still renders, the failure is logged 6ms
+     × hub: no articles section, offers and the rest of the page still render, the failure is logged 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/supabase/internal-links.test.tsx > fail-soft: the blog read fails (a build has no database; an outage) > home: no "From the journal" block, the page still renders, the failure is logged
+Error: [getBlogPosts] fake: blog_posts unavailable
+ ❯ revalidate src/lib/supabase/queries.ts:1659:24
+    1657|         .order('published_at', { ascending: false })
+    1658| 
+    1659|       if (error) throw new Error(`[getBlogPosts] ${error.message}`)
+       |                        ^
+    1660| 
+    1661|       return (data ?? []).flatMap(row => {
+ ❯ Module.getLatestBlogPosts src/lib/supabase/queries.ts:1703:11
+ ❯ src/lib/supabase/internal-links.test.tsx:204:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/lib/supabase/internal-links.test.tsx > fail-soft: the blog read fails (a build has no database; an outage) > hub: no articles section, offers and the rest of the page still render, the failure is logged
+Error: [getBlogPosts] fake: blog_posts unavailable
+ ❯ revalidate src/lib/supabase/queries.ts:1659:24
+    1657|         .order('published_at', { ascending: false })
+    1658| 
+    1659|       if (error) throw new Error(`[getBlogPosts] ${error.message}`)
+       |                        ^
+    1660| 
+    1661|       return (data ?? []).flatMap(row => {
+ ❯ hubArticles src/lib/supabase/queries.ts:1157:11
+ ❯ Module.getDestinationHub src/lib/supabase/queries.ts:1388:16
+ ❯ src/lib/supabase/internal-links.test.tsx:213:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 9 passed (11)
+   Start at  18:27:49
+   Duration  1.15s (transform 469ms, setup 31ms, import 854ms, tests 27ms, environment 0ms)
+

@@ -180,9 +180,9 @@ function Guides({ data }: { data: DestinationHubData }) {
   )
 }
 
-/** Articles the hub's config lists; nothing until there are some (FA-1.83). */
+/** Published articles about the hub's countries, newest first (FA-1.90); nothing when there are none. */
 function Articles({ data }: { data: DestinationHubData }) {
-  const articles = data.hub.articles ?? []
+  const { articles } = data
   if (articles.length === 0) return null
 
   return (

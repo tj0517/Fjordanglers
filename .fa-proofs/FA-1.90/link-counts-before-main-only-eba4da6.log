@@ -1,0 +1,30 @@
+# BASELINE INSIDE <main> — dev server from eba4da6 (= 5550c79 + the <main> landmark only, no link changes)
+$ RESEND_DEV_FAKE=1 node .fa-proofs/FA-1.90/link-counts.mjs http://localhost:3001/blog/fishing-regulations-norway-2026 http://localhost:3001/norway http://localhost:3001/
+
+=== http://localhost:3001/blog/fishing-regulations-norway-2026
+status 200 · <main> elements: 1
+unique internal hrefs in <main>: 1
+  /experiences/    0  
+  /guides/         0  
+  /blog/           0  
+  hub              0  
+  other            1  /blog
+
+=== http://localhost:3001/norway
+status 200 · <main> elements: 1
+unique internal hrefs in <main>: 6
+  /experiences/    0  
+  /guides/         0  
+  /blog/           1  /blog/fishing-regulations-norway-2026
+  hub              5  /finland /iceland /new-zealand /patagonia /sweden
+  other            0  
+
+=== http://localhost:3001/
+status 200 · <main> elements: 1
+unique internal hrefs in <main>: 3
+  /experiences/    2  /experiences/seed-backcountry-day-nz /experiences/seed-salmon-week-iceland
+  /guides/         0  
+  /blog/           0  
+  hub              0  
+  other            1  /trips
+exit=0

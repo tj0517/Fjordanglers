@@ -1,0 +1,12 @@
+# <main> landmark — no visual change. Full-page screenshots, Playwright, Ads domains blocked, <video> hidden,
+# animations off. before = dev server on a detached checkout of 5550c79; after = eba4da6 (<main> only).
+# Pixel diff computed in the browser (canvas getImageData, RGB exact).
+home-1280: before(5550c79) vs <main>-only(eba4da6): 191354 px differ of 7946240 (1280x6208), rows 1825-2124
+home-390: before(5550c79) vs <main>-only(eba4da6): identical 390x7975
+norway-1280: before(5550c79) vs <main>-only(eba4da6): identical 1280x2901
+norway-390: before(5550c79) vs <main>-only(eba4da6): identical 390x4055
+article-1280: before(5550c79) vs <main>-only(eba4da6): identical 1280x8792
+article-390: before(5550c79) vs <main>-only(eba4da6): identical 398x11951
+# home-1280 rows 1825-2124 = the "Trips you can book" slider: the same two seed cards in swapped order —
+# getFeaturedExperiencePages shuffles (Fisher-Yates) on each cache fill. Crop of that band, before above /
+# after below: .playwright-mcp/fa-1.90-home-1280-diff-band-before-vs-mainonly.png. Same page height.

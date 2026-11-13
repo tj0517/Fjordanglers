@@ -21,6 +21,7 @@ vi.mock('@/lib/supabase/queries', () => ({
   getFeaturedGuides: async () => [guideRow(SLUGGED), guideRow(NO_SLUG)],
   getFeaturedExperiencePages: async () => [],
   getSpeciesCounts: async () => ({}),
+  getLatestBlogPosts: async () => [],
 }))
 vi.mock('@/lib/supabase/testimonials', () => ({ getTestimonial: async () => null }))
 vi.mock('@/app/(public)/guides/guides-filters', () => ({ GuidesFilters: () => null }))

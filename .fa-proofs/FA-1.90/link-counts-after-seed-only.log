@@ -1,0 +1,39 @@
+# AFTER, seed only (no temporary rows) — dev server from 6037818. Local seed: no Norway offers or guides.
+$ RESEND_DEV_FAKE=1 node .fa-proofs/FA-1.90/link-counts.mjs …/blog/fishing-regulations-norway-2026 …/norway …/ …/sweden
+
+=== http://localhost:3001/blog/fishing-regulations-norway-2026
+status 200 · <main> elements: 1
+unique internal hrefs in <main>: 3
+  /experiences/    1  /experiences/seed-salmon-week-iceland
+  /guides/         0  
+  /blog/           0  
+  hub              1  /norway
+  other            1  /blog
+
+=== http://localhost:3001/norway
+status 200 · <main> elements: 1
+unique internal hrefs in <main>: 6
+  /experiences/    0  
+  /guides/         0  
+  /blog/           1  /blog/fishing-regulations-norway-2026
+  hub              5  /finland /iceland /new-zealand /patagonia /sweden
+  other            0  
+
+=== http://localhost:3001/
+status 200 · <main> elements: 1
+unique internal hrefs in <main>: 5
+  /experiences/    2  /experiences/seed-backcountry-day-nz /experiences/seed-salmon-week-iceland
+  /guides/         0  
+  /blog/           1  /blog/fishing-regulations-norway-2026
+  hub              0  
+  other            2  /blog /trips
+
+=== http://localhost:3001/sweden
+status 200 · <main> elements: 1
+unique internal hrefs in <main>: 5
+  /experiences/    0  
+  /guides/         0  
+  /blog/           0  
+  hub              5  /finland /iceland /new-zealand /norway /patagonia
+  other            0  
+exit=0

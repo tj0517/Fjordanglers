@@ -1,0 +1,29 @@
+$ psql $LOCAL_DB -v ON_ERROR_STOP=1 -f .fa-proofs/FA-1.90/temp-norway-rows-delete.sql   # LOCAL_DB = postgresql://postgres:…@127.0.0.1:54422/postgres
+BEGIN
+        t         |        slug         
+------------------+---------------------
+ experience_pages | fa190-norway-trip-1
+ experience_pages | fa190-norway-trip-2
+(2 rows)
+
+DELETE 2
+   t    |        slug        
+--------+--------------------
+ guides | fa190-norway-guide
+(1 row)
+
+DELETE 1
+     t     | operation 
+-----------+-----------
+ audit_log | INSERT
+ audit_log | DELETE
+(2 rows)
+
+DELETE 2
+COMMIT
+ experience_pages_left | guides_left | experience_guides_left | audit_log_left 
+-----------------------+-------------+------------------------+----------------
+                     0 |           0 |                      0 |              0
+(1 row)
+
+exit=0

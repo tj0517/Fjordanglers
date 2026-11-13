@@ -1,0 +1,25 @@
+$ psql $LOCAL_DB -v ON_ERROR_STOP=1 -f .fa-proofs/FA-1.90/temp-norway-rows-insert.sql   # LOCAL_DB = postgresql://postgres:…@127.0.0.1:54422/postgres
+BEGIN
+CREATE FUNCTION
+ copy_row 
+----------
+ 
+(1 row)
+
+ copy_row 
+----------
+ 
+ 
+(2 rows)
+
+COMMIT
+         t         |                 slug                 |               country                | status | is_hidden 
+-------------------+--------------------------------------+--------------------------------------+--------+-----------
+ experience_guides | fa190000-0000-4000-8000-0000000000a1 | fa190000-0000-4000-8000-000000000001 | active | 
+ experience_guides | fa190000-0000-4000-8000-0000000000a2 | fa190000-0000-4000-8000-000000000001 | active | 
+ experience_pages  | fa190-norway-trip-1                  | Norway                               | active | 
+ experience_pages  | fa190-norway-trip-2                  | Norway                               | active | 
+ guides            | fa190-norway-guide                   | Norway                               | active | false
+(5 rows)
+
+exit=0

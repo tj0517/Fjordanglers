@@ -1,0 +1,32 @@
+$ docker ps --format "{{.Names}}\t{{.Status}}"
+supabase_db_Seaclouds_management_system	Up 50 minutes (healthy)
+supabase_db_fjordanglers	Up 50 minutes (healthy)
+supabase_storage_fjordanglers	Up 50 minutes (healthy)
+supabase_rest_fjordanglers	Up 50 minutes
+supabase_auth_fjordanglers	Up 50 minutes (healthy)
+supabase_kong_fjordanglers	Up 50 minutes (healthy)
+supabase_studio_Seaclouds_management_system	Up 50 minutes (healthy)
+supabase_pg_meta_Seaclouds_management_system	Up 50 minutes (healthy)
+supabase_storage_Seaclouds_management_system	Up 50 minutes (healthy)
+supabase_rest_Seaclouds_management_system	Up 50 minutes
+supabase_realtime_Seaclouds_management_system	Up 50 minutes (healthy)
+supabase_inbucket_Seaclouds_management_system	Up 50 minutes (healthy)
+supabase_auth_Seaclouds_management_system	Up 50 minutes (healthy)
+supabase_kong_Seaclouds_management_system	Up 50 minutes (healthy)
+supabase_vector_Seaclouds_management_system	Up 50 minutes (healthy)
+supabase_analytics_Seaclouds_management_system	Up 50 minutes (healthy)
+
+$ df -h /mnt/c
+Filesystem      Size  Used Avail Use% Mounted on
+C:\             476G  267G  210G  56% /mnt/c
+
+$ free -h
+               total        used        free      shared  buff/cache   available
+Mem:           9.7Gi       3.5Gi       3.5Gi       262Mi       3.3Gi       6.2Gi
+Swap:          8.0Gi       3.5Mi       8.0Gi
+
+$ grep NEXT_PUBLIC_SUPABASE_URL start-dev.sh
+export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54421
+
+$ ss -ltn | grep :3001
+port 3001 free

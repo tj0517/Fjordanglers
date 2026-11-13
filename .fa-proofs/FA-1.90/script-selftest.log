@@ -1,0 +1,19 @@
+$ RESEND_DEV_FAKE=1 node .fa-proofs/FA-1.90/link-counts.mjs http://localhost:3999/index.html   # page = script-selftest.html
+
+=== http://localhost:3999/index.html
+status 200 · <main> elements: 1
+unique internal hrefs in <main>: 5
+  /experiences/    1  /experiences/a
+  /guides/         1  /guides/g
+  /blog/           1  /blog/p
+  hub              1  /norway
+  other            1  /trips
+exit=0
+
+$ node .fa-proofs/FA-1.90/link-counts.mjs http://localhost:3999/   # no fake flag
+STOP: set RESEND_DEV_FAKE=1 before running this proof script
+exit=1
+
+$ RESEND_DEV_FAKE=1 node .fa-proofs/FA-1.90/link-counts.mjs https://www.fjordanglers.com/   # not local
+STOP: https://www.fjordanglers.com/ is not a local server
+exit=2

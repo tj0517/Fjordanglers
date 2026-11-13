@@ -68,7 +68,9 @@ export default async function DestinationHubPage({
       {/* Spacer for fixed nav */}
       <div style={{ height: '72px' }} />
 
-      <DestinationHubView data={data} />
+      <main>
+        <DestinationHubView data={data} />
+      </main>
     </div>
   )
 }

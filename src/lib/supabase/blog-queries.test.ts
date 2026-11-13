@@ -7,7 +7,7 @@
  *   draft rows      — never returned: not by getBlogPosts, not by getBlogPost, not to a raw anon client
  *   write path      — an anon client cannot INSERT (42501), UPDATE or DELETE
  *   malformed slug  — answered null before any query
- *   hub links       — a hub shows only the article links whose post is published
+ *   hub links       — a hub lists the published posts of its own countries, read from the table (FA-1.90)
  */
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
@@ -17,11 +17,6 @@ import type { DestinationHubSkeleton } from '@/lib/destinations'
 const h = vi.hoisted(() => ({
   hub: {
     slug: 'fa183-test-hub', group: 'Nordic', countries: ['Denmark'],
-    articles: [
-      { slug: 'fa183-published', title: 'Published' },
-      { slug: 'fa183-draft',     title: 'Draft' },
-      { slug: 'fa183-missing',   title: 'No such post' },
-    ],
   } as DestinationHubSkeleton,
 }))
 
@@ -66,8 +61,16 @@ beforeAll(async () => {
   })
   if (published.error) throw new Error(published.error.message)
 
-  const draft = await svc.from('blog_posts').insert({ slug: 'fa183-draft', title: 'A draft', body_md: 'secret draft text', status: 'draft' })
+  const draft = await svc.from('blog_posts').insert({ slug: 'fa183-draft', title: 'A draft', body_md: 'secret draft text', status: 'draft', country: 'Denmark' })
   if (draft.error) throw new Error(draft.error.message)
+
+  // FA-1.90: a published post about the test hub's country (Denmark — no seed post has it).
+  const denmark = await svc.from('blog_posts').insert({
+    slug: 'fa183-denmark', title: 'Fishing in Denmark', seo_title: 'Fishing in Denmark', description: 'Short description.',
+    body_md: BODY, image_url: '/fish_catalog/salmon.png', image_alt: 'Salmon', category: 'Planning', country: 'Denmark',
+    status: 'published', published_at: '2026-05-01T00:00:00Z',
+  })
+  if (denmark.error) throw new Error(denmark.error.message)
 })
 
 afterAll(cleanup)
@@ -131,9 +134,9 @@ describe('blog_posts — what the browser key can do (RLS, through supabase-js)'
   })
 })
 
-describe('hub article links', () => {
-  it('a hub links only to posts that are published', async () => {
+describe('hub article links (FA-1.90: from the table, by country)', () => {
+  it('a hub lists the published posts of its countries — not a draft, not another country\'s post', async () => {
     const data = await getDestinationHub('fa183-test-hub')
-    expect(data?.hub.articles?.map(a => a.slug)).toEqual(['fa183-published'])
+    expect(data?.articles).toEqual([{ slug: 'fa183-denmark', title: 'Fishing in Denmark' }])
   })
 })

@@ -207,7 +207,7 @@ describe('DestinationHubView — guides and articles blocks (FA-1.82)', () => {
 
   it('FA-1.82: guides sit after the trips and before the FAQ; articles after the FAQ', () => {
     const data = completeHub()
-    data.hub = { ...data.hub, articles: [{ slug: 'fixture-article', title: 'Fixture article' }] }
+    data.articles = [{ slug: 'fixture-article', title: 'Fixture article' }]
     const { container } = render(<DestinationHubView data={{ ...data, guides }} />)
     expect(order(container)).toEqual([
       'hero', 'season', 'species', 'trips', 'guides', 'faq', 'articles', 'reviews', 'how-it-works', 'destinations', 'contact',
@@ -225,7 +225,7 @@ describe('DestinationHubView — guides and articles blocks (FA-1.82)', () => {
 
   it('FA-1.82: the blocks add no data-section — the six measured anchors stay six', () => {
     const data = completeHub()
-    data.hub = { ...data.hub, articles: [{ slug: 'a', title: 'A' }] }
+    data.articles = [{ slug: 'a', title: 'A' }]
     const { container } = render(<DestinationHubView data={{ ...data, guides }} />)
     const anchors = [...container.querySelectorAll('[data-section]')].map(el => el.getAttribute('data-section'))
     expect([...new Set(anchors)].sort()).toEqual(['contact', 'faq', 'reviews', 'season', 'species', 'trips'])
