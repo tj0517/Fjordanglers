@@ -12,6 +12,7 @@
 
 import type { Json } from '@/lib/supabase/database.types'
 import { DAY_LENGTHS, pageBlockSection, type ContentBlockSection, type DayLength } from '@/lib/experiences/v2-editor'
+import { safeHttpUrl } from '@/lib/safe-http-url'
 
 type Dict = { [key: string]: Json | undefined }
 
@@ -31,21 +32,6 @@ function num(value: Json | undefined): number | null {
 
 function entries(value: Json | null | undefined): Dict[] {
   return Array.isArray(value) ? value.filter(isDict) : []
-}
-
-/**
- * Only `http(s)` URLs may become links (the value is admin-typed text, and `javascript:`
- * is the classic way an href turns into code). Anything else returns null and the caller
- * prints the text instead.
- */
-export function safeHttpUrl(value: string | null | undefined): string | null {
-  if (value == null) return null
-  try {
-    const url = new URL(value.trim())
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : null
-  } catch {
-    return null
-  }
 }
 
 /** Names of the target species, in the order the admin stored them. */

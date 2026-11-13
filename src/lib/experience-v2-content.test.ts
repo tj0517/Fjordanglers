@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
-  safeHttpUrl, speciesNames, parseLicenseInfo, parseDaySchedule, parseItinerary, languageNames,
+  speciesNames, parseLicenseInfo, parseDaySchedule, parseItinerary, languageNames,
   parseSeasonPeriods, parseContentBlocks, parseSpeciesDetails,
 } from './experience-v2-content'
+import { safeHttpUrl } from '@/lib/safe-http-url'
 import type { Json } from '@/lib/supabase/database.types'
 
 describe('safeHttpUrl', () => {
