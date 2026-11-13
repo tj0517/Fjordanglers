@@ -431,11 +431,14 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
             )}
           </div>
 
-          {/* H1 */}
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold f-display leading-[1.0] mb-5"
+          {/* Title — a p tagged as a level-1 heading for assistive tech: the page's only h1 tag is the
+              mobile title block above (the copy Google's mobile-first crawler sees rendered), which is
+              display:none at md+, so without the role desktop screen readers would find no main heading
+              (FA-1.89, tj 2026-11-13). */}
+          <p role="heading" aria-level={1} className="text-3xl sm:text-4xl lg:text-5xl font-bold f-display leading-[1.0] mb-5"
             style={{ color: '#0A2E4D', letterSpacing: '-0.01em' }}>
             {page.experience_name}
-          </h1>
+          </p>
 
           {/* Pills */}
           <div className="flex flex-wrap items-center gap-2">

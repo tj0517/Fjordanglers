@@ -2,14 +2,14 @@
 id: FA-1.89
 title: Oferty — alias dla wycofanego adresu chilijskiego (→ Punta Arenas), jeden H1 na stronie v1, generator slugów bez „--”
 stage: 1
-status: todo
+status: done
 difficulty: S
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-1.89-offer-slugs
-pr:
+pr: 193
 depends_on: []
 blocked_by_questions: []
 touches_db: true
@@ -62,3 +62,7 @@ pnpm test -- slug
 ## Notatki z realizacji
 - **2026-11-03, tj:** D3 — alias na Punta Arenas; slugów z „--” nie ruszamy.
 - **2026-11-03, Claude (GSC):** niski CTR `fiskedan-stockholm-fishing` i `/trips` wynika z pozycji 20–90 na ogólne frazy, nie z opisu — przepisywanie opisów wycięte z zakresu audytu (zadanie 9 raportu).
+- **2026-11-13, tj:** alias `fly-fishing-across-magallanes-torres-del-paine--tierra-del-fuego` → Punta Arenas dodaje tj w panelu admina (edytor v2, sekcja Publication) — bez migracji danych; agent tylko weryfikuje (SELECT + `curl -sI` na prod). Kryterium H1 liczy wystąpienia (`grep -o '<h1' | wc -l`), nie linie — wyrenderowany HTML ma mało linii, `grep -c` przeszedłby z dwoma H1.
+- **2026-11-13, tj (review PR #193):** desktopowy tytuł dostaje `role="heading" aria-level={1}` (a11y — jedyny tag `<h1>` jest w bloku mobilnym, `display:none` od `md`); tag zostaje `<p>`, liczba `<h1>` = 1. Na prod jest 5 żywych slugów z „--”, nie 4, jak mówi „Gotowe, gdy”.
+- **2026-11-13, tj — incydent przy dodawaniu aliasu:** o 14:40:02 UTC wycofany slug wpisano w pole „URL slug” strony Punta Arenas (zamiast „Old slug”) — strona zmieniła adres na wycofany, a `…punta-arenas-tierra-del-fuego--torres-del-paine` (zaindeksowany, w sitemapie, cel aliasu `walk-and-wade-magallanes-punta-arenas`) działał już tylko z cache i po jego wygaśnięciu (≤ 1 h) dałby 404. Przywrócone przez tj o 14:44:50 UTC (slug strony z powrotem, potem alias w „Old slug”), zanim cache wygasł. Wykryte przez odczyt weryfikacyjny (SELECT pusty, `curl` → 200 zamiast 308). Dwa wiersze do deferred zatwierdzone przez tj: zmiana slugu w panelu nie zachowuje starego adresu jako aliasu; przekierowania aliasów gubią query string (gclid/utm).
+- **2026-11-13, tj — accepted:** all four criteria proven: alias row on prod + 308 to Punta Arenas, walk-and-wade still 308 (pasted in PR); one <h1> in v1 with desktop title as role="heading" aria-level=1; offer slug generator with red proof; CI green on b08f7ec. Incident 14:40–14:44:50 UTC (retired slug typed into the URL slug field, restored before cache expiry, no 404 observed) recorded in PR and Notatki. Follow-ups in docs/deferred-tasks.md (slug rename without alias; alias redirects drop the query string).
