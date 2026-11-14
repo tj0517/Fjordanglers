@@ -16,10 +16,10 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { Images } from 'lucide-react'
-import { Dialog, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogTrigger } from '@/components/ui/dialog-root'
 import type { StoryBlock } from '@/lib/experience-v2-content'
 import { Box } from './offer-box'
-import { PhotoLightbox, useLightboxIndex } from './offer-photo-lightbox'
+import { PhotoLightbox, useLightboxIndex } from './offer-photo-lightbox-loader'
 
 export default function OfferStoryBlock({ block, single }: { block: StoryBlock; single: boolean }) {
   const [open, setOpen] = useState(false)

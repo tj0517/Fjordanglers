@@ -2,14 +2,14 @@
 id: FA-1.92
 title: Lżejsze obrazy i szybszy LCP — kompresja źródeł w `public/`, priorytet obrazu LCP na ofercie i artykule, mniej JS na ofercie
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-1.92-images-lcp
-pr:
+pr: 194
 depends_on: [FA-1.80]
 blocked_by_questions: []
 touches_db: false
@@ -38,9 +38,12 @@ W pomiarze laboratoryjnym oferta ma wynik 61 i LCP 9,0 s, artykuł 67 i 6,8 s; o
 - [ ] Ograniczenie JS klienta na ofercie (dynamiczny import ciężkich komponentów, np. mapy/galerii).
 
 ## Gotowe, gdy
-- [ ] Lighthouse po: LCP oferty i artykułu niższe niż „przed”, wynik perf ≥ 80 (lab, 1 przebieg, ta sama metoda) — tabela przed/po wklejona.
-- [ ] `ls -lS public | head` — największy obraz ≤ 500 KB — wklejone.
-- [ ] Wizualnie bez zmian (zrzuty przed/po hero oferty) i CI zielone.
+- [ ] Priorytet obrazu: lokalnie, dla seedowej oferty v1, seedowej oferty v2 i seedowego artykułu, `curl -s http://localhost:3000/<path> | grep -o -i '<img[^>]*fetchpriority="high"[^>]*>'` (z `-i`: React zapisuje `fetchPriority`, a nazwy atrybutów HTML nie rozróżniają wielkości liter) zwraca dokładnie jeden tag na stronę i jest to obraz hero / pierwszy obraz galerii — wklejone dla każdej strony. (Zastępuje bramkę Lighthouse na produkcji: mierzone strony istnieją tylko na produkcji, a merge = deploy — decyzja tj D1, 2026-11-13.) Jeśli seed nie ma oferty v2 albo artykułu z obrazem hero — stop i pytanie do tj.
+- [ ] Mniej JS na ofercie: pomiar lokalny wg decyzji tj D4 (a) — build produkcyjny `main` i head PR, `next start` na lokalnym stacku, suma skompresowanych własnych skryptów `/_next/static` ładowanych przez seedową ofertę, artykuł i `/` (skrypt w `.fa-proofs/FA-1.92/`) — dla `/experiences/[slug]` jest niższy na head PR niż na `main`, oba wyniki wklejone z hashami commitów. `/blog/[slug]` i `/` nie rosną.
+- [ ] `find public -type f -size +500k` nic nie zwraca, a sprawdzenie wymiarów (komenda wklejona) nie pokazuje obrazu powyżej 2560 px na dłuższym boku — oba wklejone. (Rekurencyjnie zamiast `ls -lS public | head`, które pomija `public/fish_catalog/` — decyzja tj D2.)
+- [ ] Wizualnie bez zmian: zrzuty Playwright hero oferty (v1, v2) i hero artykułu, przed i po, oraz jeden obraz `fish_catalog` wyrenderowany w artykule, przed i po — ścieżki wypisane; tj porównuje okiem.
+- [ ] CI zielone na head commit PR (`check`, `knip`, `db`, `secrets`) — lista wklejona.
+- [ ] Lighthouse „przed” na produkcji (3 przebiegi + mediana, z komendą) jest w opisie PR. „Po” na produkcji mierzy tj po merge i nie jest kryterium agenta.
 
 ## Poza zakresem
 - Cache i TTFB → FA-1.80.
@@ -57,3 +60,6 @@ ls -lS public | head
 
 ## Notatki z realizacji
 - **2026-11-03, tj:** zadanie z audytu SEO (F4); po FA-1.80, bez strojenia przed nim.
+- **2026-11-13, tj:** D1 (a) — gate on mechanisms (priority hint in HTML, First Load JS from the CI route table), production Lighthouse after merge by tj (median of 3); D2 (a) — the size criterion is recursive over the whole `public/`; FA-1.94 paused, this task starts from clean `main`.
+- **2026-11-13, tj:** D3 (a) — the single `fetchpriority="high"` on offer pages goes on the mobile top photo; the desktop cover keeps its preload at normal priority; the two never-visible gallery copies lose theirs. D4 (a) — Next 16 has no "First Load JS" column in the route table; JS is measured locally instead: production build of `main` and of the PR head, `next start` against the local stack, sum of compressed own `/_next/static` scripts loaded by the seed offer, article and `/` (script in `.fa-proofs/FA-1.92/`); a CI step for it goes to deferred. D5 (a) — fish PNGs keep palette q90 and give way on resolution (1440–2240 px long side) to stay ≤ 500 KB. STOP `public/` deletions: delete nothing (production DB references not ruled out).
+- **2026-11-13, tj (review PR #194):** accepted. Proven: one fetchpriority=high per page (v1, v2, article; red proof 0 on main), offer first-load JS 381.4 → 303.3 kB gzip with /blog/[slug] and / unchanged (D4 a), public/ 125 MB → 15 MB with no file > 500 KB or > 2560 px, production "before" Lighthouse (offer 71 / 3.9 s, article 82 / 3.1 s, median of 3), CI check/knip/db/secrets green on cf67dde. Screenshots removed from docs/ (decision B; copies in .playwright-mcp). Production "after" Lighthouse is run by tj after merge (mobile + `--preset=desktop`): with D3 a the hidden mobile photo is the high-priority fetch on desktop too.

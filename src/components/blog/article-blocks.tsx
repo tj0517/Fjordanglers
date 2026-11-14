@@ -26,14 +26,16 @@ interface BlogImageProps {
   src: string
   alt: string
   priority?: boolean
+  /** 'high' on the page's LCP image only. Next 16's `priority` preloads but sends no fetchpriority (FA-1.92). */
+  fetchPriority?: 'high'
   className?: string
   style?: React.CSSProperties
 }
 
 /** Fills its (positioned) parent. An https host `next/image` does not know falls back to a plain <img>, never a crash. */
-export function BlogImage({ src, alt, priority, className, style }: BlogImageProps) {
+export function BlogImage({ src, alt, priority, fetchPriority, className, style }: BlogImageProps) {
   if (canOptimise(src)) {
-    return <Image src={src} alt={alt} fill priority={priority} className={className} style={style} />
+    return <Image src={src} alt={alt} fill priority={priority} fetchPriority={fetchPriority} className={className} style={style} />
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element -- host is not in next.config images.remotePatterns
@@ -41,6 +43,7 @@ export function BlogImage({ src, alt, priority, className, style }: BlogImagePro
       src={src}
       alt={alt}
       loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={fetchPriority}
       className={className}
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', ...style }}
     />

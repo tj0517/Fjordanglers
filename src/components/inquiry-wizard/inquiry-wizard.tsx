@@ -37,7 +37,7 @@ import { partySizeFromBrief, tripLengthFromBrief } from '@/lib/inquiries/brief'
 import { getStoredGclid } from '@/lib/gclid'
 import { getStoredUtm } from '@/lib/utm'
 import { firstTouchInquiryFields } from '@/lib/first-touch'
-import { safeHttpUrl } from '@/lib/experience-v2-content'
+import { safeHttpUrl } from '@/lib/safe-http-url'
 import {
   briefFromAnswers,
   clearAnswers,

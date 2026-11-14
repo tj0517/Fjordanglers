@@ -32,7 +32,6 @@ import {
   parseFaq,
   parseContentBlocks,
   parseSpeciesDetails,
-  safeHttpUrl,
   type LicenseInfo,
   type HeroFacts,
   type DayStep,
@@ -43,6 +42,7 @@ import {
   type StoryBlock,
   type SpeciesDetail,
 } from '@/lib/experience-v2-content'
+import { safeHttpUrl } from '@/lib/safe-http-url'
 
 // Cache tag constants — used here and revalidated from Server Actions.
 export const CACHE_TAG_EXPERIENCES = 'experiences'

@@ -11,9 +11,9 @@ import Anthropic from '@anthropic-ai/sdk'
 import {
   BRIEF_BLOCK_HEADING,
   anglerTextFromMessage,
-  briefSchema,
   briefSummaryLines,
 } from '@/lib/inquiries/brief'
+import { briefSchema } from '@/lib/inquiries/brief-schema'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

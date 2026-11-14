@@ -17,9 +17,15 @@ interface Props {
   topMobile?: boolean    // full-bleed top carousel for mobile hero
   square?: boolean       // remove rounded corners + bottom margin (for full-bleed top placement)
   mobileHeight?: string  // CSS height override for topMobile mode (default: clamp(280px,42svh,440px))
+  /**
+   * The breakpoint the caller's wrapper shows this instance at (`md:hidden` → 'mobile',
+   * `hidden md:block` → 'desktop'). The layout for the other breakpoint is then not rendered: it could
+   * never be seen, yet its eager images would still download. Omit when the instance shows at every width.
+   */
+  visibleAt?: 'mobile' | 'desktop'
 }
 
-export function ExperienceGallery({ images, title, topMobile = false, square = false, mobileHeight }: Props) {
+export function ExperienceGallery({ images, title, topMobile = false, square = false, mobileHeight, visibleAt }: Props) {
   const [current, setCurrent] = useState(0)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
@@ -74,7 +80,10 @@ export function ExperienceGallery({ images, title, topMobile = false, square = f
                 fill
                 sizes="100vw"
                 className="object-cover"
-                priority
+                // The offer page's LCP image on phones: the page's one high-priority fetch (FA-1.92, tj D3 a).
+                // `priority` alone only preloads — Next 16 sends fetchpriority only from this prop.
+                preload
+                fetchPriority="high"
               />
             </button>
 
@@ -120,7 +129,7 @@ export function ExperienceGallery({ images, title, topMobile = false, square = f
       )}
 
       {/* ─── DESKTOP BENTO GRID ────────────────────────────────────── */}
-      <div className={`hidden md:block select-none${square ? '' : ' mb-8'}`}>
+      {visibleAt !== 'mobile' && <div className={`hidden md:block select-none${square ? '' : ' mb-8'}`}>
         <div
           className={`overflow-hidden${square ? '' : ' rounded-3xl'}`}
           style={{
@@ -181,10 +190,10 @@ export function ExperienceGallery({ images, title, topMobile = false, square = f
             )
           })}
         </div>
-      </div>
+      </div>}
 
       {/* ─── MOBILE CAROUSEL ───────────────────────────────────────── */}
-      {!topMobile && <div className="md:hidden mb-8 select-none">
+      {!topMobile && visibleAt !== 'desktop' && <div className="md:hidden mb-8 select-none">
 
         {/* Main slide */}
         <div className="relative overflow-hidden rounded-3xl mb-3" style={{ height: '300px' }}>

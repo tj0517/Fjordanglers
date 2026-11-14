@@ -176,7 +176,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
         {/* Mobile: the photos run full-bleed under the fixed nav, as on v1. */}
         {images.length > 0 && (
           <div className="relative pt-[72px] md:hidden">
-            <ExperienceGallery images={images} title={page.experienceName} topMobile mobileHeight="clamp(240px, 56vw, 380px)" />
+            <ExperienceGallery images={images} title={page.experienceName} topMobile visibleAt="mobile" mobileHeight="clamp(240px, 56vw, 380px)" />
             <Link
               href="/trips"
               className="absolute left-4 top-[84px] z-10 inline-flex items-center gap-1.5 rounded-full py-1.5 pl-2.5 pr-3 text-[13px] font-semibold text-white"
@@ -241,7 +241,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                  air between the photos and the offer card. ── */}
           {images.length > 0 && (
             <div className="mt-7 hidden md:block">
-              <ExperienceGallery images={images} title={page.experienceName} />
+              <ExperienceGallery images={images} title={page.experienceName} visibleAt="desktop" />
             </div>
           )}
 

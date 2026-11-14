@@ -9,8 +9,8 @@
  */
 
 import { describe, it, expect } from 'vitest'
+import { briefSchema } from './brief-schema'
 import {
-  briefSchema,
   briefSummaryLines,
   budgetBandLabel,
   budgetBandOptions,
