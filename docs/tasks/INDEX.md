@@ -137,7 +137,7 @@ Zakres: dokument „Aplikacja dla przewodników — zakres MVP” (Claude Docs) 
 | id | title | diff | model | status | depends |
 |---|---|---|---|---|---|
 | FA-M.01 | Baseline przed startem — czas zapytanie → oferta i close rate z prod | S | — (Claude w app) | done | — |
-| FA-M.02 | Audyt panelu i kont przewodnika — co z `/dashboard`, logowania, resetu i zaproszeń działa; raport, bez kodu | M | sonnet | review (#195) | — |
+| FA-M.02 | Audyt panelu i kont przewodnika — co z `/dashboard`, logowania, resetu i zaproszeń działa; raport, bez kodu | M | sonnet | review | — |
 | FA-M.03 | Zlecenie do przewodnika w bazie — rekord z podpisanym tokenem, zdarzenia wysłano/otwarto/odpowiedział, skrót na `inquiries` | L | opus | todo | — |
 | FA-M.04 | Strona zlecenia `/r/[token]` — akceptuj / odrzuć / 1–3 inne daty, bez logowania, mobile-first | M | sonnet | todo | FA-M.03 |
 | FA-M.05 | Wysyłka zlecenia z karty zapytania — WhatsApp szablonem z linkiem + oś czasu zlecenia | M | sonnet | todo | FA-M.03, FA-M.04, FA-M.11 |
