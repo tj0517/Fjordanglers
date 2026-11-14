@@ -562,8 +562,9 @@ describe('auth.ts', () => {
       } as unknown as Awaited<ReturnType<typeof createClient>>)
 
       const { signUp } = await import('@/actions/auth')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await signUp('Test User', 'test@example.com', 'password123', 'admin' as any)
+      // A crafted request can still send a fourth "role" argument; it must be ignored.
+      const crafted = signUp as unknown as (n: string, e: string, p: string, role: string) => ReturnType<typeof signUp>
+      await crafted('Test User', 'test@example.com', 'password123', 'admin')
 
       expect(capturedRole).not.toBe('admin')
       expect(capturedRole).toBe('angler')
