@@ -43,8 +43,7 @@ up to the (faked) send, and admin linking of an *existing* account.
   `/auth/callback`, and only Google sign-in reaches that route.
 - An invited guide who picks "I'm a guide" gets a second, empty listing. After that the
   admin can't link them at all (`duplicate key … guides_user_id_unique`).
-- Prod agrees: 12 guides have an invite pending, and **0** guides were ever linked
-  through one.
+- Prod agrees: 12 guides have an invite pending, and no linked guide has `invite_email` set (Q1 `linked_and_invite = 0`; neither `/auth/callback` nor `linkGuideAccount` clears the field, so this is a strong proxy — the admin edit form could still have cleared it by hand).
 
 **The MVP's core move fails.** Answering an assignment in ~10 s from a notification needs
 a sign-in today. The one-click `?action=accept` is lost on the way through login.
@@ -371,6 +370,18 @@ WHERE t.oid='public.guides'::regclass AND a.grantee='authenticated'::regrole ORD
 After the local `GRANT UPDATE (<the 33>) … TO authenticated`: `SELECT 42 / UPDATE 33`
 (`local-guides-acl-after-prod-grants.log`).
 
+**Q9 — use of the trip-page offer form** (`inquiry_trip_details.guide_options`, written by `saveGuideOfferResponse`)
+```sql
+SELECT count(*) AS trip_details_rows,
+  count(*) FILTER (WHERE jsonb_typeof(guide_options)='array' AND jsonb_array_length(guide_options)>0) AS with_guide_options,
+  count(*) FILTER (WHERE jsonb_typeof(guide_options)='array' AND jsonb_array_length(guide_options)>0 AND updated_at >= '2026-09-01') AS since_sep,
+  max(updated_at) FILTER (WHERE jsonb_typeof(guide_options)='array' AND jsonb_array_length(guide_options)>0)::date AS last_use
+FROM public.inquiry_trip_details;
+```
+| trip_details_rows | with_guide_options | since_sep | last_use |
+|---|---|---|---|
+| 41 | 9 | 0 | 2026-08-27 |
+
 ---
 
 ## 7. Against the MVP needs (function 5 "Guide accounts" + scope notes)
@@ -391,7 +402,7 @@ After the local `GRANT UPDATE (<the 33>) … TO authenticated`: `SELECT 42 / UPD
 | Manual blocks in `/dashboard/calendar` | ✅ (R5, screenshot 28); used by 2 guides in prod (Q2) |
 | Out of MVP: profile editing, billing, TODO panel, native app, writing to calendar | present: profile (R6), profile edit (R7), photos (R8), offer form "TODO" (R4) |
 | PWA install | ❌ no manifest / service worker |
-| Existing guides invited via `invite_email` | ❌ broken (F5–F9); 12 pending in prod, 0 ever linked |
+| Existing guides invited via `invite_email` | ❌ broken (F5–F9); 12 pending in prod; no linked guide has `invite_email` set (Q1 `linked_and_invite = 0`; neither `/auth/callback` nor `linkGuideAccount` clears the field, so this is a strong proxy — the admin edit form could still have cleared it by hand) |
 
 ---
 
@@ -464,8 +475,9 @@ relative effort for one agent + tj's reviews, not hours.
 - **Risks:**
   - The kept pages still query directly (rule 3). If FA-M.08 doesn't move them into the
     data layer, the stage-2 move inherits it.
-  - Deleting the offer form changes how guides send offer details today. 9 in-app
-    answers in Aug, 1 since: if a guide relied on it, FA hears it from that guide.
+  - Deleting the offer form changes how guides send offer details today. Q9: 9 of 41
+    trip-detail rows ever had offer-form options, 0 since 2026-09-01, last use 2026-08-27.
+    If a guide relied on it, FA hears it from that guide.
   - The signed-link credential risk is the same as in B.
 - **Cost:** M. Debt: R2/R3/R5 still read `inquiry_trip_details` / `guide_unavailable_dates`
   until stage 4.
