@@ -9,6 +9,7 @@ model_approved:
 effort: medium
 agent: fa-core
 branch: docs/fa-m.02-guide-accounts-audit
+pr: 195
 depends_on: []
 blocked_by_questions: []
 touches_db: false
