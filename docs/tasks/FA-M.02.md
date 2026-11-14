@@ -2,7 +2,7 @@
 id: FA-M.02
 title: Audyt panelu i kont przewodnika — co z `/dashboard`, rejestracji, logowania, resetu hasła i zaproszeń dziś działa
 stage: M
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
