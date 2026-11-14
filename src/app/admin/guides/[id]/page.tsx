@@ -3,9 +3,8 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import DeleteGuideButton from '@/components/admin/delete-guide-button'
-import LinkGuideButton from '@/components/admin/link-guide-button'
-import LinkGuidePanel from '@/components/admin/link-guide-panel'
-import CopyInviteLink from '@/components/admin/copy-invite-link'
+import GuideAccountCard from '@/components/admin/guide-account-card'
+import { getGuideAccountSummary } from '@/actions/guide-invites'
 import { AdminGuideActions } from './AdminGuideActions'
 import { MigratePhotosButton } from './MigratePhotosButton'
 import { ExternalLink, Pencil, Mail, Images, BookOpen } from 'lucide-react'
@@ -118,6 +117,8 @@ export default async function AdminGuideDetailPage({
   ])
 
   if (guide == null) notFound()
+
+  const accountSummary = await getGuideAccountSummary(guide.id)
 
   const guidePhotos = guidePhotosRaw ?? []
   const s = STATUS_STYLES[guide.status as keyof typeof STATUS_STYLES] ?? STATUS_STYLES.pending
@@ -232,12 +233,6 @@ export default async function AdminGuideDetailPage({
                   <Pencil width={11} height={11} strokeWidth={1.3} />
                   Edit guide
                 </Link>
-                {guide.user_id == null && (
-                  <>
-                    <CopyInviteLink />
-                    <LinkGuidePanel guideId={guide.id} />
-                  </>
-                )}
                 <Link href={`/admin/guides/${guide.id}/payouts`}
                   className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all hover:brightness-95 f-body"
                   style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
@@ -269,25 +264,8 @@ export default async function AdminGuideDetailPage({
               )}
             </div>
 
-            {/* Invite email badge */}
-            {guide.invite_email != null && (
-              <div className="mt-4 px-4 py-2.5 rounded-xl flex items-center gap-2" style={{ background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.1)' }}>
-                <Mail width={12} height={12} stroke="#2563EB" strokeWidth={1.3} className="flex-shrink-0" />
-                <p className="text-[11px] f-body" style={{ color: '#1D4ED8' }}>
-                  <strong>Invite email:</strong> {guide.invite_email}
-                  {guide.user_id != null ? (
-                    <span className="ml-1.5 font-semibold" style={{ color: '#16A34A' }}>✓ linked</span>
-                  ) : (
-                    <span className="ml-1.5 opacity-55">— waiting for registration</span>
-                  )}
-                </p>
-                {guide.user_id == null && (
-                  <div className="ml-auto flex-shrink-0">
-                    <LinkGuideButton guideId={guide.id} inviteEmail={guide.invite_email} />
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Guide account: bound account or invite link (FA-M.08) */}
+            {accountSummary != null && <GuideAccountCard guideId={guide.id} summary={accountSummary} />}
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signIn, signUp } from '@/actions/auth'
+import { safeNextPath } from '@/lib/auth/safe-next'
 import { GoogleAuthButton } from '@/components/auth/google-auth-button'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -49,16 +50,11 @@ const errorTextStyle: React.CSSProperties = {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Tab = 'login' | 'register'
-type Role = 'angler' | 'guide'
 
 const CALLBACK_ERRORS: Record<string, string> = {
   auth_callback_failed: 'The confirmation link has expired or is invalid. Please try again.',
 }
 
-const ROLES: { key: Role; icon: string; title: string; desc: string }[] = [
-  { key: 'angler', icon: '🎣', title: "I'm an angler", desc: 'Find & book guided fishing trips' },
-  { key: 'guide',  icon: '🗺',  title: "I'm a guide",  desc: 'List your trips & earn' },
-]
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -66,7 +62,7 @@ export function AuthTabs() {
   const searchParams = useSearchParams()
 
   const initialTab = (searchParams.get('tab') === 'register' ? 'register' : 'login') as Tab
-  const nextUrl = searchParams.get('next') ?? '/dashboard'
+  const nextUrl = safeNextPath(searchParams.get('next'))
   const callbackError = searchParams.get('error')
   const callbackErrorMsg = callbackError != null
     ? (CALLBACK_ERRORS[callbackError] ?? 'An authentication error occurred. Please try again.')
@@ -82,7 +78,6 @@ export function AuthTabs() {
   const [loginFocus, setLoginFocus]       = useState<string | null>(null)
 
   // ── Register state ───────────────────────────────────────────────────────
-  const [role, setRole]                         = useState<Role>('angler')
   const [regName, setRegName]                   = useState('')
   const [regEmail, setRegEmail]                 = useState('')
   const [regPassword, setRegPassword]           = useState('')
@@ -125,13 +120,13 @@ export function AuthTabs() {
 
     setRegLoading(true)
     setRegErrors({})
-    const result = await signUp(regName.trim(), regEmail.trim(), regPassword, role)
+    const result = await signUp(regName.trim(), regEmail.trim(), regPassword)
     if ('error' in result) {
       setRegErrors({ form: result.error })
       setRegLoading(false)
       return
     }
-    window.location.href = role === 'guide' ? '/dashboard' : '/'
+    window.location.href = '/'
   }
 
   // ─── Tab toggle ───────────────────────────────────────────────────────────
@@ -213,24 +208,10 @@ export function AuthTabs() {
 
           {regErrors.form != null && <ErrorBox msg={regErrors.form} />}
 
-          {/* Role selector */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
-            {ROLES.map(r => (
-              <button
-                key={r.key} type="button" onClick={() => setRole(r.key)}
-                style={{
-                  background: role === r.key ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
-                  border: `1.5px solid ${role === r.key ? '#0A2E4D' : 'rgba(10,46,77,0.12)'}`,
-                  borderRadius: '16px', padding: '16px 12px', cursor: 'pointer',
-                  transition: 'all 0.15s ease', textAlign: 'left' as const,
-                }}
-              >
-                <span style={{ fontSize: '22px', display: 'block', marginBottom: '8px' }}>{r.icon}</span>
-                <p style={{ color: role === r.key ? '#fff' : '#0A2E4D', fontSize: '13px', fontWeight: 700, margin: '0 0 2px', fontFamily: font }}>{r.title}</p>
-                <p style={{ color: role === r.key ? 'rgba(255,255,255,0.6)' : 'rgba(10,46,77,0.4)', fontSize: '11px', margin: 0, fontFamily: font, lineHeight: 1.4 }}>{r.desc}</p>
-              </button>
-            ))}
-          </div>
+          {/* Self sign-up always creates an angler account (FA-M.08). */}
+          <p style={{ color: 'rgba(10,46,77,0.55)', fontSize: '12px', margin: '0 0 20px', fontFamily: font, lineHeight: 1.5 }}>
+            Are you a guide? FjordAnglers sends you a personal invite link — no sign-up needed here.
+          </p>
 
           <GoogleAuthButton label="Sign up with Google" next={nextUrl} />
 
@@ -280,7 +261,7 @@ export function AuthTabs() {
 
           <SubmitButton
             loading={regLoading}
-            label={role === 'guide' ? 'Create guide account' : 'Create angler account'}
+            label="Create account"
             loadingLabel="Creating account…"
           />
         </form>

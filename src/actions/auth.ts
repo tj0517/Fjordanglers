@@ -47,27 +47,27 @@ export async function signIn(email: string, password: string): Promise<AuthResul
 
 // ─── Sign up ──────────────────────────────────────────────────────────────────
 
+/**
+ * Self sign-up. Always creates an angler: the role is not a parameter, and nothing the caller
+ * sends can change it. Guides get their account only through an invite link from FA
+ * (FA-M.08, `src/actions/guide-invites.ts`); the `on_auth_user_created` trigger creates the
+ * profile row as 'angler' and ignores account metadata (FA-1.93).
+ */
 export async function signUp(
   fullName: string,
   email: string,
   password: string,
-  role: 'angler' | 'guide' = 'angler',
 ): Promise<AuthResult> {
   try {
-    // Runtime defence: server actions are publicly addressable — a crafted
-    // request could pass role:'admin'. Clamp to the only two values the
-    // registration UI is allowed to set.
-    const safeRole: 'angler' | 'guide' = role === 'guide' ? 'guide' : 'angler'
-
     const service = createServiceClient()
 
     // Create user directly — email_confirm: true skips the verification email
     // since mailer_autoconfirm is enabled on the Supabase project.
-    const { data, error: createError } = await service.auth.admin.createUser({
+    const { data: created, error: createError } = await service.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name: fullName, role: safeRole },
+      user_metadata: { full_name: fullName },
     })
 
     if (createError != null) {
@@ -80,14 +80,15 @@ export async function signUp(
       return { error: createError.message }
     }
 
-    // DB trigger creates the profile row as 'angler' — fix the role if needed.
-    if (data.user != null) {
+    // The trigger normally creates the profile row; this only covers an account that has
+    // none. ignoreDuplicates means it can never change an existing row's role.
+    if (created.user != null) {
       await service
         .from('profiles')
-        .upsert({ id: data.user.id, role: safeRole }, { onConflict: 'id' })
+        .upsert({ id: created.user.id, role: 'angler' }, { onConflict: 'id', ignoreDuplicates: true })
     }
 
-    // Sign in immediately so the user lands on their dashboard.
+    // Sign in immediately so the user lands signed in.
     const supabase = await createClient()
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
