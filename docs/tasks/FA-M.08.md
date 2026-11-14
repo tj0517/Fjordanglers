@@ -37,7 +37,7 @@ Przewodnik ma normalne konto: zaproszenie od FA, ustawienie hasła, logowanie, r
 - [ ] Zaproszenie przewodnika z admina: link zaproszenia (jednorazowy, z terminem), ustawienie hasła, powiązanie z rekordem `guides` po stronie serwera — **bez** autolinku po samym adresie e-mail (ryzyko z deferred FA-1.93).
 - [ ] Logowanie, reset hasła, wylogowanie, po zalogowaniu przewodnik ląduje w swoim panelu.
 - [ ] Rejestracja „z ulicy” jako przewodnik — wyłączona lub zostawiona wg decyzji tj po audycie.
-- [ ] Ustawienia powiadomień w koncie (pole na zgodę na push — używa FA-M.12).
+- ~~Ustawienia powiadomień w koncie (pole na zgodę na push — używa FA-M.12).~~ Przeniesione do FA-M.12 (decyzja tj D8, 2026-11-14).
 - [ ] Testy z red proofami (lokalny stack, konta seeda), maile tylko przez fake.
 
 ## Gotowe, gdy
@@ -75,3 +75,13 @@ grep -n "invite_email" -r src
 - **2026-11-10, tj (wf-plan):** konta przewodników wchodzą w MVP na 1.12 (D1 → wszystkie 6 funkcji); zakres po audycie FA-M.02.
 - **2026-11-14, tj (decyzja o zakresie po audycie FA-M.02):** Opcja C (hybryda). Zostaje: logowanie Supabase Auth, wylogowanie, reset hasła, `/dashboard/calendar`, lista zleceń + Accept/Decline na stronie zlecenia. Przebudowa: zaproszenie — jednorazowy link z terminem ważności, który wiąże wiersz `guides` po stronie serwera, bez wiązania po dopasowaniu adresu e-mail. Usunięte: rejestracja „z ulicy” jako przewodnik (wyłączona — każda samodzielna rejestracja tworzy anglera), auto-insert pustego wiersza `guides` w layoucie dashboardu, strony profilu / edycji profilu / zdjęć i formularz oferty na stronie zlecenia. Podpisane linki zleceń `/r/[token]` i rekord zlecenia → FA-M.03/M.04; brakujące zdarzenie `respondToAssignment` → FA-M.03/M.05.
 - **2026-11-14, tj (kryteria):** zawężone — (1) czerwony dowód „konto na `invite_email` bez linku nie jest wiązane” celuje w autolink `/auth/callback`, bo rejestracja hasłem dziś nie wiąże (audyt F5); (2) reset hasła do udawanej wysyłki + test linku odzyskiwania na lokalnym stacku, bez budowy fake outboxa; (3) strony z tokenem: `/offers/[token]` i strona opinii, `/r/[token]` w FA-M.04. Dodane kryteria: 404 usuniętych stron + trzy pozycje nawigacji; RLS + polityki w tej samej migracji i typy w diffie. Kryteria w sekcji „Gotowe, gdy” zastąpione tą wersją.
+- **2026-11-14, tj (projekt zaproszenia — zatwierdzony projekt i szkic schematu `guide_invites`):**
+  - D1 A — admin kopiuje link i sam go wysyła; aplikacja nie wysyła maila.
+  - D2 B — link ważny 7 dni.
+  - D3 A — w bazie tylko sha256 kodu; link pokazany raz; „New link” do ponownej wysyłki.
+  - D4 A — e-mail konta ustawia admin na zaproszeniu (podpowiedź z `invite_email`); przewodnik ustawia tylko hasło.
+  - D5 A z dwoma warunkami: (1) powiązanie istniejącego konta tylko gdy e-mail zalogowanego konta = e-mail zaproszenia (bez wielkości liter, po trim); niezgodność → ten sam ogólny komunikat „no longer valid”, powód widoczny na karcie admina; czerwony dowód: inne zalogowane konto z ważnym kodem → odmowa, brak powiązania. (2) `/auth/callback` przyjmuje `next` tylko jako ścieżkę względną z allowlisty (`/dashboard`, `/invite/<kod>`, `/reset-password` i to, czego obecny kod już potrzebuje); wszystko inne → `/dashboard`; czerwony dowód: `next=//evil.example` i `next=https://evil.example` lądują na `/dashboard`.
+  - D6 A — oba ręczne „Link account” usunięte; usunięcia pod bramką STOP listy plików razem z resztą.
+  - D7 A — wiersze `audit_log` dla wydania, cofnięcia i użycia zaproszenia, w tej samej transakcji.
+  - D8 A — zgoda na push zostaje w FA-M.12; punkt usunięty z zakresu tego zadania.
+  - Zaakceptowane ryzyko resztkowe: kto ma ważny link, może założyć konto na e-mail zaproszenia; ograniczone 7 dniami, jednorazowością i „Revoke”, a prawdziwy przewodnik odzyskuje konto resetem hasła. W raporcie w „Needs a decision” tylko jeśli okaże się gorsze.
