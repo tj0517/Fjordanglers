@@ -1367,6 +1367,56 @@ export type Database = {
           },
         ]
       }
+      guide_invites: {
+        Row: {
+          created_at: string
+          created_by: string
+          email: string
+          expires_at: string
+          guide_id: string
+          id: string
+          redeemed_at: string | null
+          redeemed_by: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          email: string
+          expires_at: string
+          guide_id: string
+          id?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          email?: string
+          expires_at?: string
+          guide_id?: string
+          id?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_invites_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guide_photos: {
         Row: {
           caption: string | null
@@ -3419,6 +3469,15 @@ export type Database = {
         }
         Returns: string
       }
+      issue_guide_invite: {
+        Args: {
+          p_admin_id: string
+          p_email: string
+          p_guide_id: string
+          p_token_hash: string
+        }
+        Returns: string
+      }
       longtransactionsenabled: { Args: never; Returns: boolean }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
@@ -3460,6 +3519,17 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      redeem_guide_invite: {
+        Args: { p_token_hash: string; p_user_email: string; p_user_id: string }
+        Returns: {
+          bound_guide_id: string
+          outcome: string
+        }[]
+      }
+      revoke_guide_invite: {
+        Args: { p_admin_id: string; p_invite_id: string }
+        Returns: boolean
+      }
       search_trips_near: {
         Args: {
           filter_species?: string
