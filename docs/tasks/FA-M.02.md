@@ -2,7 +2,7 @@
 id: FA-M.02
 title: Audyt panelu i kont przewodnika — co z `/dashboard`, rejestracji, logowania, resetu hasła i zaproszeń dziś działa
 stage: M
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -69,3 +69,4 @@ pnpm knip
 - **2026-11-14, tj (decyzja 1 — bramka regulaminu lokalnie):** (a) z warunkami — najpierw pełny zestaw uprawnień kolumnowych `authenticated` na `public.guides` w prod i lokalnie (oba wklejone), lokalnie nadany dokładnie zestaw z prod (tylko lokalna baza, nic w repo, bez migracji); wiersz w deferred: lokalny `db reset` nie odtwarza grantów kolumnowych z prod na `guides` (baseline_prod.sql l. 9304/9497/9522 je deklaruje, żadna późniejsza migracja ich nie odbiera) — job CI `db` dotknięty tak samo; w raporcie każdy krok za bramką oznaczony „przejście na lokalnej bazie ze skopiowanymi grantami z prod”. Modal regulaminu zasłaniający „Log out” to ustalenie produktowe niezależnie od tego.
 - **2026-11-14, tj (decyzja 2 — ścieżka zaproszenia):** (a) — `invite_email` na seedowym wierszu Hana ustawiony lokalnym SQL, potem obie rejestracje (domyślnie „angler” i „guide”) tym mailem i odczyt, czy wiersz się powiązał. Crash formularzy admina zapisany jako artefakt lokalnego env (konfiguracja hosta obrazów), nie ustalenie produktowe — chyba że da się pokazać, że występuje z konfiguracją prod.
 - **2026-11-14, tj (trafienia Ads z lokalnego przejścia):** (a) zostawić 33 `page_view` w AW-18171634204 (0 konwersji) + (c) wiersz w deferred: tagi Ads/GA tylko na hoście produkcyjnym, przed następnym zadaniem z krokami w przeglądarce (FA-M.04). Plik dowodu przemianowany na `ads-requests-sent.txt`; sprawdzić GA4 w tym samym logu. Lądowanie na stronie głównej po zalogowaniu z linku „accept” → w raporcie jako „zaobserwowane raz, nie odtworzone”, z czasem.
+- **2026-11-14, tj (review PR #195):** przyjęte z dwiema poprawkami tekstu (proxy zaproszeń, liczba użycia formularza oferty). Liczby z prod potwierdzone niezależnym odczytem; zrzuty 08/09/14/17 i CI obejrzane przez tj. Raport jest wejściem do decyzji o zakresie FA-M.08.
