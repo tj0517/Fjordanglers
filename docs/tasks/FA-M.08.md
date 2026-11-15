@@ -9,6 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-m.08-guide-accounts
+pr: 196
 depends_on: [FA-M.02]
 blocked_by_questions: []
 touches_db: true
