@@ -90,3 +90,12 @@ grep -n "invite_email" -r src
   - E2 A — `updateGuideProfile` zastąpione wąską akcją, która ustawia tylko `photo_marketing_consent` we własnym wierszu zalogowanego przewodnika; szeroka akcja i `UpdateGuideProfileData` usunięte. Czerwony dowód: spreparowane wywołanie wąskiej akcji próbujące zmienić inne pole (bio, cena) albo cudzy wiersz niczego nie zmienia i jest odrzucone. Pokrycie z `authorization.test.ts` przeniesione na nową akcję.
   - E3 A — usunięte pole ETA, `EtaField`, prop `guideOfferEta` i `saveGuideOfferEta`; kolumna `guide_offer_eta` zostaje.
   - Też: `profiles-role.test.ts` wspomina `linkGuideAccount` — aktualizacja razem z resztą; `pnpm knip` czysty po usunięciach.
+- **2026-11-15, tj (dziura REST w `guides` — zamykana w FA-M.08):**
+  - Nowa migracja (nie edycja tej z `e78795b`) odbiera `authenticated` wszystkie kolumnowe UPDATE na `public.guides` — `authenticated` nie ma UPDATE na `guides` wcale; granty SELECT/INSERT i polityki bez zmian.
+  - `acceptGuideTerms` w tym samym wzorcu co `setPhotoMarketingConsent`: `requireGuide()`, potem zapis service clientem tylko `terms_accepted_at`, tylko we własnym wierszu.
+  - Grep wszystkich zapisów do `guides` sesją użytkownika w `src/` — oczekiwane: zero.
+  - Czerwone dowody: sesja przewodnika aktualizuje własne `bio` przez klienta REST — na starych grantach przechodzi, po migracji 42501; `acceptGuideTerms` dla cudzego wiersza albo bez przewodnika — odmowa.
+  - Zapytanie ACL kolumn (audyt Q8b) lokalnie po `db reset`: UPDATE 0.
+  - Wiersz FA-M.02 o dryfie grantów: dla `guides` dryf kończy się, gdy ta migracja trafi na prod.
+  - E4: A tylko jako awaryjne — po kroku 2 modal regulaminu powinien działać lokalnie przez serwer; jeśli nie, zrzut ekranu, `terms_accepted_at` ustawione lokalnym SQL na jednym testowym wpisie, odnotowane w raporcie.
+  - STOP prod bez zmian: obie migracje tylko przez `deploy-db.yml` zatwierdzony przez tj, bez merge przed tym; potem polityki nowej tabeli i ACL kolumn `guides` z prod (UPDATE 0).
