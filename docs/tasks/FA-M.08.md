@@ -2,7 +2,7 @@
 id: FA-M.08
 title: Konta przewodników — logowanie, reset hasła, sesje, zaproszenie i powiązanie z rekordem przewodnika (zakres wg audytu FA-M.02)
 stage: M
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
