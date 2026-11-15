@@ -1011,7 +1011,7 @@ export async function updateNextAction(
 
 // ─── Trip brief + Todo types ─────────────────────────────────────────────────
 
-export interface GuideOption {
+interface GuideOption {
   spot:          string
   species:       string[] | null   // multi-select; null = not filled
   currency:      'EUR' | 'USD' | 'ISK'
@@ -1263,44 +1263,6 @@ export async function respondToAssignment(
   return { success: true }
 }
 
-// ─── saveGuideOfferEta ────────────────────────────────────────────────────────
-
-/**
- * Guide: save when they expect to send the offer (free text).
- * Verifies ownership: the inquiry must be assigned to this guide.
- */
-export async function saveGuideOfferEta(
-  inquiryId: string,
-  eta: string,
-): Promise<ActionResult> {
-  const { guide } = await requireGuide()
-
-  const svc = createServiceClient()
-
-  // Verify ownership — like saveGuideOfferResponse; prevents silent "0 rows updated"
-  // when the inquiry is assigned to a different guide.
-  const { data: owned } = await svc
-    .from('inquiries')
-    .select('id')
-    .eq('id', inquiryId)
-    .eq('assigned_guide_id', guide.id)
-    .single()
-  if (owned == null) throw new UnauthorizedError('Inquiry not found or not assigned to you')
-
-  const { error } = await svc
-    .from('inquiries')
-    .update({ guide_offer_eta: eta.trim() || null })
-    .eq('id', inquiryId)
-    .eq('assigned_guide_id', guide.id)
-
-  if (error != null) {
-    console.error('[saveGuideOfferEta] DB error:', error)
-    return { success: false, error: error.message }
-  }
-
-  return { success: true }
-}
-
 // ─── saveTripDetails ──────────────────────────────────────────────────────────
 
 /**
@@ -1326,50 +1288,6 @@ export async function saveTripDetails(
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   console.log(`[saveTripDetails] Saved trip details for inquiry ${inquiryId}`)
-  return { success: true }
-}
-
-// ─── saveGuideOfferResponse ───────────────────────────────────────────────────
-
-/**
- * Guide: saves their offer response (spot options + description) for an inquiry.
- * Verifies ownership: the inquiry must be assigned to this guide.
- */
-export async function saveGuideOfferResponse(
-  inquiryId: string,
-  data: {
-    guide_final_dates?: string | null
-    guide_options: GuideOption[]
-  },
-): Promise<ActionResult> {
-  const { guide } = await requireGuide()
-
-  const svc = createServiceClient()
-
-  // Verify ownership
-  const { data: inquiry } = await svc
-    .from('inquiries')
-    .select('id')
-    .eq('id', inquiryId)
-    .eq('assigned_guide_id', guide.id)
-    .single()
-  if (inquiry == null) throw new UnauthorizedError('Inquiry not found or not assigned to you')
-
-  const { error } = await svc
-    .from('inquiry_trip_details')
-    .upsert(
-      { inquiry_id: inquiryId, ...data, guide_options: data.guide_options as unknown as Json, updated_at: new Date().toISOString() },
-      { onConflict: 'inquiry_id' },
-    )
-
-  if (error != null) {
-    console.error('[saveGuideOfferResponse] DB error:', error)
-    return { success: false, error: error.message }
-  }
-
-  revalidatePath('/dashboard/trips/' + inquiryId)
-  revalidatePath('/admin/inquiries/' + inquiryId)
-  console.log(`[saveGuideOfferResponse] Saved offer response for inquiry ${inquiryId}`)
   return { success: true }
 }
 

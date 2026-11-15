@@ -14,7 +14,7 @@
  *   - `/reset-password` — the password recovery landing page.
  */
 
-export const DEFAULT_NEXT_PATH = '/dashboard'
+const DEFAULT_NEXT_PATH = '/dashboard'
 
 const ALLOWED: readonly RegExp[] = [
   /^\/dashboard(?:\/[A-Za-z0-9_-]+)*$/,

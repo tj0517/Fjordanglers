@@ -131,9 +131,8 @@ type GuideFormDefaults = {
   instagram_url?: string
   youtube_url?: string
   /**
-   * Email address that will be stored as guides.invite_email.
-   * When the guide registers with this email, /auth/callback auto-links
-   * their auth account to this listing. Pre-filled from lead, editable.
+   * Stored as guides.invite_email — the guide's contact e-mail. It binds no account (FA-M.08);
+   * it prefills the invite link on the guide page. Pre-filled from lead, editable.
    */
   invite_email?: string
   pricing_model?: 'flat_fee' | 'commission'
@@ -243,7 +242,7 @@ export default function CreateGuideForm({ defaultValues }: Props) {
       instagram_url:    instagramUrl || undefined,
       youtube_url:      youtubeUrl || undefined,
       pricing_model:    pricingModel,
-      // Auto-link the guide's auth account on registration
+      // Contact e-mail; prefills the invite link (binds no account — FA-M.08)
       invite_email:     inviteEmail.trim() || undefined,
     }
 
@@ -426,17 +425,17 @@ export default function CreateGuideForm({ defaultValues }: Props) {
             </SelectInput>
           </div>
 
-          {/* Invite email — for auto-linking guide's future auth account */}
+          {/* Contact e-mail — prefills the invite link; binds no account (FA-M.08) */}
           <div className="md:col-span-2">
-            <FieldLabel>Guide&apos;s email (invite)</FieldLabel>
+            <FieldLabel>Guide&apos;s email</FieldLabel>
             <TextInput
               type="email"
               value={inviteEmail}
               onChange={e => setInviteEmail(e.target.value)}
-              placeholder="guide@email.com — they register with this email to auto-claim this profile"
+              placeholder="guide@email.com"
             />
             <p className="mt-1.5 text-[11px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.38)' }}>
-              When the guide registers with this exact email, their account is automatically pinned to this profile. You can also link manually later.
+              The guide's contact e-mail: assignment e-mails go here, and it prefills the invite link on the guide page. It does not link an account — guides get access only through an invite link.
             </p>
           </div>
 

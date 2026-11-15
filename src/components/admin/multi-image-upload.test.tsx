@@ -7,7 +7,7 @@
  *   • a click adds a photo exactly as an upload would (URL in the list, first = cover);
  *   • a photo already in the field is never added a second time — its tile takes it out;
  *   • a full field refuses more: free tiles are disabled and the red line says why;
- *   • without a library (guide forms, /dashboard/photos) there is no tab at all.
+ *   • without a library (e.g. a guide form) there is no tab at all.
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest'

@@ -528,7 +528,7 @@ export default async function AdminGuideDetailPage({
               No photos uploaded yet.
             </p>
             <p className="text-[11px] f-body mt-1" style={{ color: 'rgba(10,46,77,0.28)' }}>
-              Guide uploads photos at /dashboard/photos
+              Guides no longer upload photos (FA-M.08) — FA adds them to the listing.
             </p>
           </div>
         ) : (

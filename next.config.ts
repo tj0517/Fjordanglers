@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
       // Guide application funnel removed in FA-1.06 (leads table archived, 0 rows).
       // The page had a canonical and is indexed — keep the URL alive with a 301.
       { source: '/guides/apply', destination: '/guides',                 permanent: true },
+      // The guide overview page was removed in FA-M.08 (tj decision E1 B): the dashboard opens on
+      // the assignments list. Temporary, so a later landing page (FA-M.13) can take /dashboard back.
+      { source: '/dashboard',    destination: '/dashboard/trips',        permanent: false },
     ]
   },
   images: {

@@ -135,7 +135,7 @@ export function DashboardSidenav({ guideName, avatarUrl }: Props) {
         style={{ background: '#F3EDE4', borderBottom: '1px solid rgba(10,46,77,0.09)' }}
       >
         <Link
-          href="/dashboard"
+          href="/dashboard/trips"
           className="f-display font-bold text-[17px]"
           style={{ color: '#0A2E4D', textDecoration: 'none' }}
         >

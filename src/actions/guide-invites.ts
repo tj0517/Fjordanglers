@@ -223,7 +223,7 @@ export async function revokeGuideInvite(inviteId: string, guideId: string): Prom
   return { success: true }
 }
 
-export type GuideInviteState = 'open' | 'expired' | 'used' | 'revoked'
+type GuideInviteState = 'open' | 'expired' | 'used' | 'revoked'
 
 export type GuideAccountSummary = {
   /** The bound account, when guides.user_id is set. */

@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PasswordResetButton } from './AccountActions'
 import { MarketingConsentToggle } from './MarketingConsentToggle'
@@ -23,7 +23,8 @@ export default async function AccountPage() {
     .eq('user_id', user.id)
     .single()
 
-  if (guide == null) redirect('/dashboard')
+  // The layout shows the no-listing notice before this page renders; this is a fallback.
+  if (guide == null) notFound()
 
   const email       = user.email ?? '—'
   const provider    = user.app_metadata?.provider ?? 'email'

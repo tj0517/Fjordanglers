@@ -1,12 +1,13 @@
 /**
  * FA-1.93 / FA-M.08 — self sign-up only ever creates an angler (a "guide" or "admin" in the
- * request is ignored), and the admin's linkGuideAccount still grants guide — against the real
- * local stack.
+ * request is ignored), and the dashboard never creates a guide listing — against the real local
+ * stack. Granting guide is now only done by redeeming an invite (guide-accounts.test.ts); the
+ * admin's manual linkGuideAccount was removed in FA-M.08 (tj decision D6).
  *
  * Mocked: next/cache (no request store), @/lib/email and @/lib/stripe/client (their modules
  * need keys we do not have locally and are irrelevant here), and @/lib/supabase/server —
  * createClient() returns a real supabase-js client, createServiceClient() a real service client.
- * Throw-away users and the guide row live under the `fa193-` prefix / a fixed id and are deleted in afterAll.
+ * Throw-away users live under the `fa193-signup-` prefix and are deleted (with any guides row) in afterAll.
  */
 
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
@@ -36,13 +37,11 @@ vi.mock('@/lib/supabase/server', async () => {
 })
 
 import { signUp } from '@/actions/auth'
-import { linkGuideAccount } from '@/actions/admin'
 
 type Db = SupabaseClient<Database>
 
 const PREFIX   = 'fa193-signup-'
 const PASSWORD = 'fa193-test-password-2026'
-const GUIDE_ID = '93a00000-0000-4000-8000-000000000001'
 
 function svc(): Db {
   return createSupabaseClient<Database>(
@@ -61,7 +60,6 @@ function anonClient(): Db {
 }
 
 async function sweep() {
-  await svc().from('guides').delete().eq('id', GUIDE_ID)
   // A dashboard visit on old code inserts a row for the role-only account; remove it too.
   const { data: users } = await svc().auth.admin.listUsers({ perPage: 1000 })
   const ids = users.users.filter(u => u.email?.startsWith(PREFIX)).map(u => u.id)
@@ -144,30 +142,5 @@ describe('the dashboard never creates a guide listing (FA-M.08)', () => {
 
     const { count } = await svc().from('guides').select('id', { count: 'exact', head: true }).eq('user_id', userId)
     expect(count).toBe(0)
-  })
-})
-
-describe('linkGuideAccount grants guide', () => {
-  it('admin links an angler account to a guide listing → the profile becomes guide', async () => {
-    const email = `${PREFIX}linked@seed.test`
-    const { data: made, error } = await svc().auth.admin.createUser({ email, password: PASSWORD, email_confirm: true })
-    expect(error).toBeNull()
-    expect((await profileOf(email))?.role).toBe('angler')
-
-    const ins = await svc().from('guides').insert({ id: GUIDE_ID, full_name: 'FA-1.93 listing', country: 'Iceland', invite_email: email })
-    expect(ins.error).toBeNull()
-
-    // Real admin session, so requireAdmin() inside the action runs unchanged.
-    const admin = anonClient()
-    const { error: signInErr } = await admin.auth.signInWithPassword({ email: 'admin@seed.test', password: 'seed-admin-password-2026' })
-    expect(signInErr).toBeNull()
-    h.sessionClient = admin
-
-    const res = await linkGuideAccount(GUIDE_ID)
-
-    expect(res).toEqual({ success: true })
-    expect((await profileOf(email))?.role).toBe('guide')
-    const { data: guide } = await svc().from('guides').select('user_id').eq('id', GUIDE_ID).single()
-    expect(guide?.user_id).toBe(made.user?.id)
   })
 })

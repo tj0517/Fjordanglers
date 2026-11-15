@@ -1,7 +1,7 @@
 /**
  * FA-M.08 — guide accounts against the real local stack: invite links, binding, self sign-up,
- * the dashboard layout, cross-guide isolation, password reset, and the database guards on
- * `guide_invites`.
+ * the dashboard layout, cross-guide isolation, the narrow marketing-consent action, password
+ * reset, and the database guards on `guide_invites`.
  *
  * Env comes from .env.test through src/tests/setup.ts (127.0.0.1 only). The only mocks:
  *   - @/lib/supabase/server: createClient() returns a real supabase-js client holding a real
@@ -48,6 +48,7 @@ import {
 } from '@/actions/guide-invites'
 import { resetPassword, updatePassword } from '@/actions/auth'
 import { respondToAssignment } from '@/actions/inquiries'
+import { setPhotoMarketingConsent } from '@/actions/dashboard'
 import { UnauthorizedError } from '@/lib/auth/guards'
 
 type Db = SupabaseClient<Database>
@@ -383,17 +384,22 @@ describe('guide_invites is closed to anon and authenticated', () => {
 
 // ─── Dashboard: cross-guide isolation ─────────────────────────
 
+/** Two fresh listings, each bound to its own guide account (cross-a → A, cross-b → B). */
+async function twoBoundGuides(): Promise<{ aEmail: string; bEmail: string }> {
+  await freshListings()
+  const aEmail = `${PREFIX}cross-a@seed.test`
+  const bEmail = `${PREFIX}cross-b@seed.test`
+  for (const [email, guideId] of [[aEmail, GUIDE_A], [bEmail, GUIDE_B]] as const) {
+    const u = await svc().auth.admin.createUser({ email, password: PASSWORD, email_confirm: true })
+    await svc().from('guides').update({ user_id: u.data.user!.id }).eq('id', guideId)
+    await svc().from('profiles').update({ role: 'guide' }).eq('id', u.data.user!.id)
+  }
+  return { aEmail, bEmail }
+}
+
 describe('dashboard', () => {
   it('a signed-in guide sees only their own trip; another guide is refused (page 404, action throws)', async () => {
-    // Self-contained: two fresh listings, each bound to its own guide account.
-    await freshListings()
-    const aEmail = `${PREFIX}cross-a@seed.test`
-    const bEmail = `${PREFIX}cross-b@seed.test`
-    for (const [email, guideId] of [[aEmail, GUIDE_A], [bEmail, GUIDE_B]] as const) {
-      const u = await svc().auth.admin.createUser({ email, password: PASSWORD, email_confirm: true })
-      await svc().from('guides').update({ user_id: u.data.user!.id }).eq('id', guideId)
-      await svc().from('profiles').update({ role: 'guide' }).eq('id', u.data.user!.id)
-    }
+    const { aEmail, bEmail } = await twoBoundGuides()
     const ins = await svc().from('inquiries').insert({
       id: INQUIRY_B, angler_name: 'Cross Guide Test', angler_email: 'cross@seed.test',
       status: 'qualifying', assigned_guide_id: GUIDE_B, assigned_at: new Date().toISOString(),
@@ -414,6 +420,55 @@ describe('dashboard', () => {
     h.sessionClient = await signedIn(bEmail, PASSWORD)
     await expect(TripPage(props)).resolves.toBeTruthy()
     expect(await respondToAssignment(INQUIRY_B, true)).toEqual({ success: true })
+  })
+})
+
+// ─── Marketing consent — the only listing field a guide sets (tj decision E2) ─
+
+describe('setPhotoMarketingConsent', () => {
+  const LISTING_COLS = 'bio, status, is_hidden, full_name, photo_marketing_consent'
+  type Crafted = (...args: unknown[]) => ReturnType<typeof setPhotoMarketingConsent>
+  const crafted = setPhotoMarketingConsent as unknown as Crafted
+
+  it('the signed-in guide sets their own consent, and only that column changes', async () => {
+    const { aEmail } = await twoBoundGuides()
+    const before = await svc().from('guides').select(LISTING_COLS).eq('id', GUIDE_A).single()
+
+    h.sessionClient = await signedIn(aEmail, PASSWORD)
+    expect(await setPhotoMarketingConsent(true)).toEqual({ success: true })
+
+    const after = await svc().from('guides').select(LISTING_COLS).eq('id', GUIDE_A).single()
+    expect(after.data).toEqual({ ...before.data, photo_marketing_consent: true })
+  })
+
+  it('RED: a crafted call that tries to change another field (bio, is_hidden) is refused and changes nothing', async () => {
+    const { aEmail } = await twoBoundGuides()
+    const before = await svc().from('guides').select(LISTING_COLS).eq('id', GUIDE_A).single()
+
+    h.sessionClient = await signedIn(aEmail, PASSWORD)
+    const res = await crafted({ photo_marketing_consent: true, bio: 'fam08 crafted bio', is_hidden: true })
+
+    expect(res).toEqual({ success: false, error: 'Invalid value.' })
+    const after = await svc().from('guides').select(LISTING_COLS).eq('id', GUIDE_A).single()
+    expect(after.data).toEqual(before.data)
+  })
+
+  it("RED: a crafted call aimed at another guide's row is refused and changes neither row", async () => {
+    const { aEmail } = await twoBoundGuides()
+    const beforeA = await svc().from('guides').select(LISTING_COLS).eq('id', GUIDE_A).single()
+    const beforeB = await svc().from('guides').select(LISTING_COLS).eq('id', GUIDE_B).single()
+
+    h.sessionClient = await signedIn(aEmail, PASSWORD)
+    const res = await crafted(true, GUIDE_B)
+
+    expect(res).toEqual({ success: false, error: 'Invalid value.' })
+    expect((await svc().from('guides').select(LISTING_COLS).eq('id', GUIDE_A).single()).data).toEqual(beforeA.data)
+    expect((await svc().from('guides').select(LISTING_COLS).eq('id', GUIDE_B).single()).data).toEqual(beforeB.data)
+  })
+
+  it('RED: an account that is not a guide (angler) is refused', async () => {
+    h.sessionClient = await signedIn(ANGLER.email, ANGLER.password)
+    await expect(setPhotoMarketingConsent(true)).rejects.toThrow(UnauthorizedError)
   })
 })
 

@@ -2,92 +2,16 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { respondToAssignment, saveGuideOfferEta } from '@/actions/inquiries'
+import { respondToAssignment } from '@/actions/inquiries'
 
 interface Props {
   inquiryId:          string
   guideAcceptance:    string | null  // 'accepted' | 'declined' | null
   guideDeclineReason: string | null
-  guideOfferEta:      string | null
   autoAccept?:        boolean
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'rgba(10,46,77,0.04)',
-  border: '1px solid rgba(10,46,77,0.12)',
-  borderRadius: 10,
-  padding: '8px 12px',
-  fontSize: 13,
-  color: '#0A2E4D',
-  outline: 'none',
-  fontFamily: 'inherit',
-}
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 10,
-  fontWeight: 700,
-  textTransform: 'uppercase',
-  letterSpacing: '0.13em',
-  color: 'rgba(10,46,77,0.4)',
-  marginBottom: 6,
-}
-
-function EtaField({ inquiryId, initial }: { inquiryId: string; initial: string }) {
-  const [eta,     setEta]     = useState(initial)
-  const [saved,   setSaved]   = useState(false)
-  const [err,     setErr]     = useState<string | null>(null)
-  const [saving, startSaving] = useTransition()
-
-  function handleSave() {
-    setErr(null)
-    setSaved(false)
-    startSaving(async () => {
-      const res = await saveGuideOfferEta(inquiryId, eta)
-      if (!res.success) setErr(res.error ?? 'Failed to save')
-      else setSaved(true)
-    })
-  }
-
-  return (
-    <div className="mt-4">
-      <label style={labelStyle}>When will you send us the offer?</label>
-      <div className="flex gap-2 items-center">
-        <input
-          type="text"
-          value={eta}
-          onChange={e => { setEta(e.target.value); setSaved(false) }}
-          placeholder="e.g. Tomorrow afternoon, Within 2 days…"
-          style={inputStyle}
-        />
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold f-body transition-all"
-          style={{
-            background: '#0A2E4D',
-            color: '#fff',
-            border: 'none',
-            cursor: saving ? 'not-allowed' : 'pointer',
-            opacity: saving ? 0.7 : 1,
-          }}
-        >
-          {saving ? '…' : 'Save'}
-        </button>
-      </div>
-      {saved && (
-        <p className="text-[11px] f-body mt-1.5" style={{ color: '#065F46' }}>Saved</p>
-      )}
-      {err != null && (
-        <p className="text-[11px] f-body mt-1.5" style={{ color: '#DC2626' }}>{err}</p>
-      )}
-    </div>
-  )
-}
-
-export function TripAcceptancePanel({ inquiryId, guideAcceptance, guideDeclineReason, guideOfferEta, autoAccept }: Props) {
+export function TripAcceptancePanel({ inquiryId, guideAcceptance, guideDeclineReason, autoAccept }: Props) {
   const router = useRouter()
   const [showDecline,   setShowDecline]   = useState(false)
   const [declineReason, setDeclineReason] = useState('')
@@ -137,7 +61,6 @@ export function TripAcceptancePanel({ inquiryId, guideAcceptance, guideDeclineRe
             ✓ You accepted this trip
           </span>
         </div>
-        <EtaField inquiryId={inquiryId} initial={guideOfferEta ?? ''} />
       </div>
     )
   }

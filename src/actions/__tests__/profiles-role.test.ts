@@ -190,7 +190,7 @@ describe('sign-up trigger (handle_new_user) — the role in account metadata is 
 })
 
 describe('the server keeps the power to set a role', () => {
-  it('service client changes a role (this is what signUp, linkGuideAccount and the invite autolink use)', async () => {
+  it('service client changes a role (this is what signUp and the invite redemption use)', async () => {
     const u = await createUser('svc-role')
 
     const { error } = await svc().from('profiles').update({ role: 'guide' }).eq('id', u.id)
