@@ -2,7 +2,7 @@
 id: FA-M.08
 title: Konta przewodników — logowanie, reset hasła, sesje, zaproszenie i powiązanie z rekordem przewodnika (zakres wg audytu FA-M.02)
 stage: M
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -100,3 +100,6 @@ grep -n "invite_email" -r src
   - Wiersz FA-M.02 o dryfie grantów: dla `guides` dryf kończy się, gdy ta migracja trafi na prod.
   - E4: A tylko jako awaryjne — po kroku 2 modal regulaminu powinien działać lokalnie przez serwer; jeśli nie, zrzut ekranu, `terms_accepted_at` ustawione lokalnym SQL na jednym testowym wpisie, odnotowane w raporcie.
   - STOP prod bez zmian: obie migracje tylko przez `deploy-db.yml` zatwierdzony przez tj, bez merge przed tym; potem polityki nowej tabeli i ACL kolumn `guides` z prod (UPDATE 0).
+- **2026-11-15, tj (review PR #196):** przyjęte. Kryteria udowodnione testami z red proofami (jednorazowość/termin zaproszenia, brak powiązania bez linku, brak samorejestracji przewodnika i auto-insertu, izolacja przewodników, reset do udawanej wysyłki + link odzyskiwania), migracje odczytane na prod po deploy-db.yml; przejście UI obejrzane przez tj na zrzutach. Merge od razu po zamknięciu — przerwa migracja→kod blokuje regulamin/zgodę na starym kodzie.
+  - Odczyt prod po `deploy-db.yml` (run 43753554180, `main` @ `4c3e77e`; PR #196 zmergowany 19:38:22Z, deploy-db 19:38:31Z): ostatnie migracje `20261115000000`, `20261113000000`, `20261112000000`; `guide_invites` — RLS on, ACL `{postgres=arwdDxtm,service_role=arwdDxtm}`, anon/authenticated bez uprawnień, 0 ACL kolumnowych, jedna polityka „service_role full access on guide_invites”; `issue/revoke/redeem_guide_invite` — INVOKER, `search_path=""`, EXECUTE tylko postgres + service_role; Q8b `authenticated` na `guides` — SELECT 42 + TABLE `MAINTAIN,SELECT,TRIGGER,TRUNCATE`, UPDATE 0.
+  - Korekta: wcześniejsza uwaga o „INSERT na 3 kolumnach” dla `authenticated` na prod była błędem odczytu (`LIKE` na tekście ACL); Q8b przez `aclexplode` pokazuje brak INSERT. Wiersz w `docs/deferred-tasks.md` poprawiony.
