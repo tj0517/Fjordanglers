@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { AvailabilityCalendar } from '@/components/dashboard/availability-calendar'
 import { availabilityWindow } from '@/lib/availability-window'
@@ -18,7 +18,8 @@ export default async function CalendarPage() {
     .eq('user_id', user.id)
     .single()
 
-  if (guide == null) redirect('/dashboard')
+  // The layout shows the no-listing notice before this page renders; this is a fallback.
+  if (guide == null) notFound()
 
   // Fetch blocked dates for this guide (up to 1 year ahead)
   const { from: today, to: yearAhead } = availabilityWindow()

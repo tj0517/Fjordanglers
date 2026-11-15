@@ -158,14 +158,14 @@ describe('what the callback still does', () => {
     expect(h.profiles.get(USER_ID)).toMatchObject({ id: USER_ID, role: 'angler' })
   })
 
-  it('invite autolink: a guide listing whose invite_email matches pins the account and grants guide', async () => {
+  it('FA-M.08: an account whose e-mail equals a listing invite_email is NOT bound to it', async () => {
     h.guides.push({ id: 'g1', invite_email: EMAIL, user_id: null })
-    login({ role: 'admin' }) // hostile metadata must not matter even here
+    login({})
 
     const location = await callback()
 
-    expect(roleNow()).toBe('guide')
-    expect(h.guides[0]).toMatchObject({ user_id: USER_ID, is_beta_listing: false })
+    expect(h.guides[0]).toMatchObject({ id: 'g1', user_id: null })
+    expect(roleNow()).toBe('angler')
     expect(location).toBe('http://localhost:3000/dashboard')
   })
 
@@ -191,5 +191,31 @@ describe('what the callback still does', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
     expect(await callback()).toBe('http://localhost:3000/login?error=auth_callback_failed')
+  })
+})
+
+describe('FA-M.08: next is only an allowlisted relative path', () => {
+  beforeEach(() => login({}))
+
+  it.each([
+    ['//evil.example'],
+    ['https://evil.example'],
+    ['/\\evil.example'],
+    ['http:/evil.example'],
+    ['/somewhere-else'],
+    ['/dashboard/../admin'],
+    ['/dashboard?x=https://evil.example'],
+  ])('next=%s → /dashboard', async (next) => {
+    expect(await callback(`&next=${encodeURIComponent(next)}`)).toBe('http://localhost:3000/dashboard')
+  })
+
+  it.each([
+    ['/reset-password'],
+    ['/dashboard/trips'],
+    ['/dashboard/trips/f2f2f2f2-0000-4000-8000-000000000001?action=accept'],
+    ['/admin/guides/93a00000-0000-4000-8000-000000000001'],
+    ['/invite/abcDEF123_-abcDEF123_-abcDEF123_-abcDEF123_-a'],
+  ])('next=%s is kept', async (next) => {
+    expect(await callback(`&next=${encodeURIComponent(next)}`)).toBe(`http://localhost:3000${next}`)
   })
 })

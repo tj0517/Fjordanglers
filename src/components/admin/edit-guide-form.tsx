@@ -156,8 +156,8 @@ type GuideEditData = {
   status: string
   is_beta_listing: boolean
   /**
-   * Email used to auto-link the guide's auth account on registration.
-   * Editable here so admin can set it at any time — even after creation.
+   * The guide's contact e-mail (assignment e-mails; prefills the invite link). Binds no
+   * account (FA-M.08). Editable here at any time.
    */
   invite_email: string | null
   images?: GuideGalleryImage[]
@@ -423,18 +423,18 @@ export default function EditGuideForm({ guide }: Props) {
             </SelectInput>
           </div>
 
-          {/* Invite email — auto-pin guide's auth account on registration */}
+          {/* Contact e-mail — prefills the invite link; binds no account (FA-M.08) */}
           <div className="md:col-span-2">
-            <FieldLabel htmlFor="edit-invite-email">Guide&apos;s email (invite / auto-link)</FieldLabel>
+            <FieldLabel htmlFor="edit-invite-email">Guide&apos;s email</FieldLabel>
             <TextInput
               id="edit-invite-email"
               type="email"
               value={inviteEmail}
               onChange={e => setInviteEmail(e.target.value)}
-              placeholder="guide@email.com — they register with this email to auto-claim this profile"
+              placeholder="guide@email.com"
             />
             <p className="mt-1.5 text-[11px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.38)' }}>
-              When the guide registers with this exact email, their account is automatically pinned to this profile. Clear to remove the invite link.
+              The guide&apos;s contact e-mail: assignment e-mails go here, and it prefills the invite link on the guide page. It does not link an account — guides get access only through an invite link.
             </p>
           </div>
 

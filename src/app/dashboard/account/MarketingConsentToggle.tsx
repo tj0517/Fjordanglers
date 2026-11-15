@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { updateGuideProfile } from '@/actions/dashboard'
+import { setPhotoMarketingConsent } from '@/actions/dashboard'
 
 export function MarketingConsentToggle({ current }: { current: boolean }) {
   const [enabled, setEnabled]        = useState(current)
@@ -16,7 +16,7 @@ export function MarketingConsentToggle({ current }: { current: boolean }) {
     setError(null)
 
     startTransition(async () => {
-      const result = await updateGuideProfile({ photo_marketing_consent: next })
+      const result = await setPhotoMarketingConsent(next)
       if (!result.success) {
         setEnabled(!next) // revert
         setError(result.error)

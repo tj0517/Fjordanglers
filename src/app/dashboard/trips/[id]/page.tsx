@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { TripAcceptancePanel } from './TripAcceptancePanel'
 import { TripBriefCard } from '@/components/dashboard/TripBriefCard'
-import { GuideTodoList } from '@/components/dashboard/GuideTodoList'
 import type { TripDetails } from '@/actions/inquiries'
 
 export const revalidate = 0
@@ -38,17 +37,18 @@ export default async function GuideTripDetailPage({
 
   const { data: guide } = await svc
     .from('guides')
-    .select('id, fish_expertise')
+    .select('id')
     .eq('user_id', user.id)
     .single()
 
-  if (guide == null) redirect('/dashboard')
+  // The layout shows the no-listing notice before this page renders; this is a fallback.
+  if (guide == null) notFound()
 
   // Fetch inquiry — only if assigned to this guide (ownership check)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rawInquiry } = await (svc as any)
     .from('inquiries')
-    .select('id, angler_name, angler_country, party_size, requested_dates, message, guide_acceptance, guide_decline_reason, guide_offer_eta, external_offer_sent')
+    .select('id, angler_name, angler_country, party_size, requested_dates, message, guide_acceptance, guide_decline_reason')
     .eq('id', id)
     .eq('assigned_guide_id', guide.id)
     .single()
@@ -64,8 +64,6 @@ export default async function GuideTripDetailPage({
     message: string | null
     guide_acceptance: string | null
     guide_decline_reason: string | null
-    guide_offer_eta: string | null
-    external_offer_sent: boolean
   }
 
   // Fetch trip brief (graceful — table may not exist yet)
@@ -112,7 +110,6 @@ export default async function GuideTripDetailPage({
         inquiryId={inquiry.id}
         guideAcceptance={inquiry.guide_acceptance}
         guideDeclineReason={inquiry.guide_decline_reason}
-        guideOfferEta={inquiry.guide_offer_eta}
         autoAccept={action === 'accept'}
       />
 
@@ -135,14 +132,6 @@ export default async function GuideTripDetailPage({
           </p>
         </div>
       )}
-
-      {/* Guide offer form */}
-      <GuideTodoList
-        inquiryId={inquiry.id}
-        initialDetails={tripDetails}
-        guideSpecies={(guide as { id: string; fish_expertise?: string[] }).fish_expertise ?? []}
-        externalOfferSent={inquiry.external_offer_sent ?? false}
-      />
 
     </div>
   )

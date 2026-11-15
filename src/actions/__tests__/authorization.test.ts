@@ -297,11 +297,11 @@ describe('reviews.ts', () => {
 // ─── guide-photos.ts ──────────────────────────────────────────────────────────
 
 describe('guide-photos.ts', () => {
-  describe('saveGuidePhotos', () => {
+  describe('migrateGuidePhotosToFolder', () => {
     it('throws UnauthorizedError when there is no session', async () => {
       mockNoSession()
-      const { saveGuidePhotos } = await import('@/actions/guide-photos')
-      await expect(saveGuidePhotos([])).rejects.toBeInstanceOf(UnauthorizedError)
+      const { migrateGuidePhotosToFolder } = await import('@/actions/guide-photos')
+      await expect(migrateGuidePhotosToFolder('00000000-0000-4000-8000-000000000000')).rejects.toBeInstanceOf(UnauthorizedError)
     })
   })
 })
@@ -343,11 +343,19 @@ describe('availability.ts', () => {
 // ─── dashboard.ts ─────────────────────────────────────────────────────────────
 
 describe('dashboard.ts', () => {
-  describe('updateGuideProfile', () => {
+  describe('setPhotoMarketingConsent', () => {
     it('throws UnauthorizedError when there is no session', async () => {
       mockNoSession()
-      const { updateGuideProfile } = await import('@/actions/dashboard')
-      await expect(updateGuideProfile({} as Parameters<typeof updateGuideProfile>[0])).rejects.toBeInstanceOf(UnauthorizedError)
+      const { setPhotoMarketingConsent } = await import('@/actions/dashboard')
+      await expect(setPhotoMarketingConsent(true)).rejects.toBeInstanceOf(UnauthorizedError)
+    })
+  })
+
+  describe('acceptGuideTerms', () => {
+    it('throws UnauthorizedError when there is no session', async () => {
+      mockNoSession()
+      const { acceptGuideTerms } = await import('@/actions/dashboard')
+      await expect(acceptGuideTerms()).rejects.toBeInstanceOf(UnauthorizedError)
     })
   })
 })
@@ -562,8 +570,9 @@ describe('auth.ts', () => {
       } as unknown as Awaited<ReturnType<typeof createClient>>)
 
       const { signUp } = await import('@/actions/auth')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await signUp('Test User', 'test@example.com', 'password123', 'admin' as any)
+      // A crafted request can still send a fourth "role" argument; it must be ignored.
+      const crafted = signUp as unknown as (n: string, e: string, p: string, role: string) => ReturnType<typeof signUp>
+      await crafted('Test User', 'test@example.com', 'password123', 'admin')
 
       expect(capturedRole).not.toBe('admin')
       expect(capturedRole).toBe('angler')

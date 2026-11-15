@@ -4,10 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import {
-  LayoutDashboard, CalendarDays, User,
-  Image as ImageIcon, Settings, Menu, X, Briefcase,
-} from 'lucide-react'
+import { CalendarDays, Settings, Menu, X, Briefcase } from 'lucide-react'
 
 // ─── Nav definitions ──────────────────────────────────────────────────────────
 
@@ -18,15 +15,11 @@ interface NavItem {
   exact?: boolean
 }
 
+// Three items (FA-M.08, audit Option C): Assignments, Calendar, Settings.
 const mainItems: NavItem[] = [
-  { label: 'Overview', href: '/dashboard',          icon: <LayoutDashboard size={16} strokeWidth={1.6} />, exact: true },
-  { label: 'Calendar', href: '/dashboard/calendar', icon: <CalendarDays size={16} strokeWidth={1.6} /> },
-  { label: 'Profile',  href: '/dashboard/profile',  icon: <User size={16} strokeWidth={1.6} /> },
-  { label: 'Photos',    href: '/dashboard/photos',   icon: <ImageIcon size={16} strokeWidth={1.6} /> },
-  { label: 'My Trips', href: '/dashboard/trips',    icon: <Briefcase size={16} strokeWidth={1.6} /> },
+  { label: 'Assignments', href: '/dashboard/trips',    icon: <Briefcase size={16} strokeWidth={1.6} /> },
+  { label: 'Calendar',    href: '/dashboard/calendar', icon: <CalendarDays size={16} strokeWidth={1.6} /> },
 ]
-
-const contentItems: NavItem[] = []
 
 const bottomItems: NavItem[] = [
   { label: 'Settings', href: '/dashboard/account', icon: <Settings size={16} strokeWidth={1.6} /> },
@@ -142,7 +135,7 @@ export function DashboardSidenav({ guideName, avatarUrl }: Props) {
         style={{ background: '#F3EDE4', borderBottom: '1px solid rgba(10,46,77,0.09)' }}
       >
         <Link
-          href="/dashboard"
+          href="/dashboard/trips"
           className="f-display font-bold text-[17px]"
           style={{ color: '#0A2E4D', textDecoration: 'none' }}
         >

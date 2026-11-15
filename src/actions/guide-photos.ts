@@ -3,8 +3,9 @@
 /**
  * guide-photos.ts — Server Actions for the guide photo gallery.
  *
- * Guide uploads photos via the /dashboard/photos page. Those photos live in
- * the `guide_photos` table and in the `guide-photos` Supabase Storage bucket.
+ * Guide photos live in the `guide_photos` table and in the `guide-photos` Supabase Storage
+ * bucket. Guides no longer upload them — the /dashboard/photos page was removed in FA-M.08;
+ * FA maintains the gallery.
  *
  * Storage path convention:
  *   Old (flat):  guide-photos/{uuid}.ext
@@ -19,48 +20,7 @@
  */
 
 import { createServiceClient } from '@/lib/supabase/server'
-import type { GalleryImage } from '@/components/admin/multi-image-upload'
-import { requireAdmin, requireGuide } from '@/lib/auth/guards'
-
-// ─── Write ────────────────────────────────────────────────────────────────────
-
-/**
- * Guide: replace their entire photo gallery with `photos`.
- *
- * Pattern: DELETE all rows for this guide → INSERT fresh list.
- * Idempotent — safe to call multiple times.
- * Validates that the caller is the authenticated guide who owns this profile.
- */
-export async function saveGuidePhotos(
-  photos: GalleryImage[],
-): Promise<{ success: true } | { success: false; error: string }> {
-  const { guide } = await requireGuide()
-
-  const svc = createServiceClient()
-
-  // Full replace — delete then insert
-  const { error: delErr } = await svc
-    .from('guide_photos')
-    .delete()
-    .eq('guide_id', guide.id)
-
-  if (delErr != null) return { success: false, error: delErr.message }
-
-  if (photos.length === 0) return { success: true }
-
-  const rows = photos.map((p, i) => ({
-    guide_id:   guide.id,
-    url:        p.url,
-    sort_order: i,
-    is_cover:   i === 0,   // first photo = cover
-    caption:    null,
-  }))
-
-  const { error: insErr } = await svc.from('guide_photos').insert(rows)
-  if (insErr != null) return { success: false, error: insErr.message }
-
-  return { success: true }
-}
+import { requireAdmin } from '@/lib/auth/guards'
 
 // ─── Migration ────────────────────────────────────────────────────────────────
 

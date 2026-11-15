@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getInquiryExperiences } from '@/lib/inquiries/experience-lookup'
@@ -47,7 +47,8 @@ export default async function GuideTripsPage() {
     .eq('user_id', user.id)
     .single()
 
-  if (guide == null) redirect('/dashboard')
+  // The layout shows the no-listing notice before this page renders; this is a fallback.
+  if (guide == null) notFound()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rawTrips } = await (svc as any)

@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { createServiceClient } from '@/lib/supabase/server'
-import LinkGuideButton from '@/components/admin/link-guide-button'
 import { QuickApproveButton } from '@/components/admin/quick-approve-button'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { Plus } from 'lucide-react'
@@ -38,7 +37,7 @@ export default async function AdminGuidesPage({
 
   const { data: guides } = await supabase
     .from('guides')
-    .select('id, slug, full_name, country, city, status, is_beta_listing, user_id, invite_email, avatar_url, cover_url, bio, photo_marketing_consent, fish_expertise, created_at, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, iban, payment_ready')
+    .select('id, slug, full_name, country, city, status, is_beta_listing, user_id, avatar_url, cover_url, bio, photo_marketing_consent, fish_expertise, created_at, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, iban, payment_ready')
     .order('created_at', { ascending: false })
 
   const allGuides = guides ?? []
@@ -296,9 +295,6 @@ export default async function AdminGuidesPage({
                       >
                         ↗
                       </Link>
-                      {guide.user_id == null && guide.invite_email != null && (
-                        <LinkGuideButton guideId={guide.id} inviteEmail={guide.invite_email} />
-                      )}
                     </div>
                   </div>
                 )

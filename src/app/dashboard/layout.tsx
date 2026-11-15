@@ -1,17 +1,18 @@
 import { redirect } from 'next/navigation'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { TermsGate } from '@/components/dashboard/terms-gate'
 import { DashboardSidenav } from '@/components/dashboard/sidenav'
+import { signOut } from '@/actions/auth'
 
 /**
  * Dashboard layout — server component.
  *
  * Flow:
  *   1. Auth check — redirect to /login if unauthenticated.
- *   2. Admin accounts → redirect to /admin.
- *   3. If NO guides row yet → auto-create a minimal row (first dashboard visit after
- *      registration).  There is no blocking onboarding step: guides land directly in
- *      the dashboard and complete their profile via in-page banners.
+ *   2. Admin accounts → redirect to /admin; non-guide accounts → /.
+ *   3. A guide account must already be bound to a guides row — bound only by redeeming an
+ *      invite link (FA-M.08). The layout never creates a row: an account with role 'guide'
+ *      and no listing sees a notice instead of the dashboard.
  *   4. Render normal sidebar + page content.
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -39,75 +40,53 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/')
   }
 
-  // ── Fetch guide profile ───────────────────────────────────────────────────
+  // ── The guide's own listing ───────────────────────────────────────────────
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent, iban')
+    .select('id, full_name, avatar_url, terms_accepted_at, photo_marketing_consent')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
-  // ── Auto-create minimal guide row on first dashboard visit ─────────────────
-  // Fires once per guide's lifetime.  Service client bypasses RLS for the insert.
-  // The guide then completes their profile from the dashboard home page banners.
-  let resolvedGuide = guide
-
-  if (resolvedGuide == null) {
-    const service = createServiceClient()
-    const fullName = (user.user_metadata?.full_name as string | undefined) ?? ''
-
-    const { data: created, error: insertErr } = await service
-      .from('guides')
-      .insert({
-        user_id:                user.id,
-        full_name:              fullName,
-        country:                '',   // placeholder — filled via profile edit
-        pricing_model:          'commission',
-        status:                 'pending',
-        is_beta_listing:        false,
-        stripe_charges_enabled: false,
-        stripe_payouts_enabled: false,
-        total_reviews:          0,
-      })
-      .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent, iban')
-      .single()
-
-    if (insertErr != null) {
-      // Race condition — row was created between our SELECT and INSERT; re-fetch it.
-      console.warn('[layout] guide auto-create failed, re-fetching:', insertErr.message)
-      const { data: refetched } = await service
-        .from('guides')
-        .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent, iban')
-        .eq('user_id', user.id)
-        .single()
-      resolvedGuide = refetched
-    } else {
-      resolvedGuide = created
-    }
-  }
-
-  // Extremely unlikely (creation + re-fetch both failed) — render without sidebar
-  if (resolvedGuide == null) {
-    return (
-      <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-        {children}
-      </div>
-    )
+  if (guide == null) {
+    return <NoListingNotice />
   }
 
   // ── Normal dashboard layout ───────────────────────────────────────────────
   return (
     <div className="min-h-screen lg:flex" style={{ background: '#F3EDE4' }}>
       <DashboardSidenav
-        guideName={resolvedGuide.full_name ?? ''}
-        avatarUrl={resolvedGuide.avatar_url ?? null}
+        guideName={guide.full_name ?? ''}
+        avatarUrl={guide.avatar_url ?? null}
       />
       <main className="flex-1 min-w-0">
         {children}
       </main>
       <TermsGate
-        termsAccepted={resolvedGuide.terms_accepted_at != null}
-        initialMarketingConsent={resolvedGuide.photo_marketing_consent ?? false}
+        termsAccepted={guide.terms_accepted_at != null}
+        initialMarketingConsent={guide.photo_marketing_consent ?? false}
       />
+    </div>
+  )
+}
+
+/** A guide account with no listing bound to it (e.g. a role set by hand, or a removed listing). */
+function NoListingNotice() {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#F3EDE4' }}>
+      <div className="max-w-md text-center">
+        <h1 className="f-display text-2xl font-bold" style={{ color: '#0A2E4D' }}>
+          Your account isn&apos;t linked to a guide listing yet
+        </h1>
+        <p className="f-body text-sm mt-3" style={{ color: 'rgba(10,46,77,0.6)' }}>
+          FjordAnglers links guide accounts through a personal invite link. If you expected to see
+          your assignments here, get in touch with us and we&apos;ll send you one.
+        </p>
+        <form action={signOut} className="mt-6">
+          <button type="submit" className="f-body text-sm font-semibold underline" style={{ color: '#0A2E4D' }}>
+            Log out
+          </button>
+        </form>
+      </div>
     </div>
   )
 }

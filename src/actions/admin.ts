@@ -59,7 +59,7 @@ export type BetaGuidePayload = {
   pricing_model: 'flat_fee' | 'commission'
   /** Gallery photos to save into guide_images table. */
   gallery_images?: GuideGalleryImage[]
-  /** Used by /auth/callback to auto-link the guide's auth account on registration. */
+  /** The guide's contact e-mail (assignment e-mails; prefills the invite link). Binds no account (FA-M.08). */
   invite_email?: string
   /** Public profile slug. Required: a beta listing is created `active`, and an active guide needs one. */
   slug: string
@@ -208,9 +208,8 @@ export type UpdateGuidePayload = {
   /** When set, replaces all existing guide_images rows. */
   gallery_images?: GuideGalleryImage[]
   /**
-   * Email address used to auto-link the guide's auth account on registration.
-   * When a guide registers with this exact email, /auth/callback pins them
-   * to this listing automatically. Pass null to clear.
+   * The guide's contact e-mail (assignment e-mails; prefills the invite link). It binds no
+   * account — since FA-M.08 only a redeemed invite link does. Pass null to clear.
    */
   invite_email?: string | null
   /**
@@ -315,81 +314,6 @@ export async function updateGuide(
   } catch (err) {
     console.error('[admin/updateGuide] Unexpected error:', err)
     return { error: 'Failed to update guide. Please try again.' }
-  }
-}
-
-// ─── Link Guide Account ───────────────────────────────────────────────────────
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-/**
- * Pins an existing Supabase Auth account to a guide listing.
- *
- * @param guideId  - guides.id to link to
- * @param input    - email address OR auth user UUID.
- *                   If omitted, falls back to guides.invite_email (auto-link).
- *
- * On success:
- *   - guides.user_id       = resolved auth user id
- *   - guides.is_beta_listing = false  (unlocks dashboard access)
- *   - profiles.role        = 'guide'  (ensures correct role for middleware)
- */
-export async function linkGuideAccount(
-  guideId: string,
-  input?: string,
-): Promise<AdminDeleteResult> {
-  await requireAdmin()
-  try {
-    const supabase = createServiceClient()
-
-    // 1. Fetch guide — must be unlinked
-    const { data: guide } = await supabase
-      .from('guides')
-      .select('id, user_id, invite_email')
-      .eq('id', guideId)
-      .single()
-
-    if (guide == null) return { error: 'Guide not found' }
-    if (guide.user_id != null) return { error: 'Guide already has a linked account' }
-
-    // 2. Resolve the lookup value: explicit input > stored invite_email
-    const lookup = input?.trim() || guide.invite_email
-    if (!lookup) return { error: 'No email or user ID provided' }
-
-    // 3. Find the auth user — by UUID directly, or by email scan
-    let authUserId: string
-
-    if (UUID_RE.test(lookup)) {
-      // Direct UUID — just verify it exists
-      const { data: { user }, error: userErr } = await supabase.auth.admin.getUserById(lookup)
-      if (userErr != null || user == null) return { error: `No auth account found for ID: ${lookup}` }
-      authUserId = user.id
-    } else {
-      // Email — scan auth users list (fine for MVP scale)
-      const { data: listData, error: listErr } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-      if (listErr != null) return { error: `Auth lookup failed: ${listErr.message}` }
-      const found = listData.users.find(u => u.email === lookup)
-      if (found == null) return { error: `No auth account found for: ${lookup}` }
-      authUserId = found.id
-    }
-
-    // 4. Link guide → auth user
-    const { error: updateErr } = await supabase
-      .from('guides')
-      .update({ user_id: authUserId, is_beta_listing: false })
-      .eq('id', guideId)
-
-    if (updateErr != null) return { error: updateErr.message }
-
-    // 5. Ensure profile.role = 'guide' (only sets role, preserves other columns)
-    await supabase
-      .from('profiles')
-      .upsert({ id: authUserId, role: 'guide' }, { onConflict: 'id' })
-
-    return { success: true }
-  } catch (err) {
-    console.error('[admin/linkGuideAccount]', err)
-    return { error: 'Failed to link account. Please try again.' }
   }
 }
 
