@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { acceptGuideTerms } from '@/actions/dashboard'
+import { acceptGuideTerms, setPhotoMarketingConsent } from '@/actions/dashboard'
 import { FileText, Shield, Cookie, Info, Check, Loader2 } from 'lucide-react'
 
 interface TermsGateProps {
@@ -34,9 +34,13 @@ export function TermsGate({ termsAccepted, initialMarketingConsent }: TermsGateP
     }
     setError(null)
     startTransition(async () => {
-      const result = await acceptGuideTerms({
-        marketingConsent: marketing ?? false,
-      })
+      // Two narrow writes (FA-M.08): the marketing choice, then the terms stamp.
+      const consent = await setPhotoMarketingConsent(marketing ?? false)
+      if (!consent.success) {
+        setError(consent.error)
+        return
+      }
+      const result = await acceptGuideTerms()
       if (!result.success) {
         setError(result.error)
         return

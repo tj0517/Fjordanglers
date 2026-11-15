@@ -355,7 +355,7 @@ describe('dashboard.ts', () => {
     it('throws UnauthorizedError when there is no session', async () => {
       mockNoSession()
       const { acceptGuideTerms } = await import('@/actions/dashboard')
-      await expect(acceptGuideTerms({ marketingConsent: false })).rejects.toBeInstanceOf(UnauthorizedError)
+      await expect(acceptGuideTerms()).rejects.toBeInstanceOf(UnauthorizedError)
     })
   })
 })

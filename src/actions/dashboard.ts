@@ -7,12 +7,12 @@
  * setPhotoMarketingConsent  → the marketing toggle on /dashboard/account
  *
  * Guides no longer edit their listing (FA-M.08): the wide profile-update action was removed
- * with the profile editor. The only listing field a guide sets is their photo marketing
- * consent, and only on their own row.
+ * with the profile editor. The only listing fields a guide sets are the terms stamp and their
+ * photo marketing consent — each through one of these actions, only on their own row.
  */
 
 import { revalidatePath } from 'next/cache'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { requireGuide } from '@/lib/auth/guards'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,38 +25,35 @@ export type ActionResult<T = undefined> =
 
 /**
  * Called from the TermsGate modal when the guide accepts Terms of Use + Privacy Policy.
- * Stamps `terms_accepted_at` with the current UTC time and saves marketing consent.
+ * Stamps `terms_accepted_at` (and nothing else) on the signed-in guide's own row — the one
+ * requireGuide() resolves from the session. It takes no arguments; a crafted call with any
+ * argument (e.g. another listing's id) is refused before anything is written. The modal saves
+ * the marketing choice separately through setPhotoMarketingConsent.
+ *
+ * Service-client write after the guard: since FA-M.08 `authenticated` holds no UPDATE on
+ * `guides` (migration 20261115000000), so no guide session can write the table directly.
  */
-export async function acceptGuideTerms({
-  marketingConsent,
-}: {
-  marketingConsent: boolean
-}): Promise<ActionResult> {
-  const { userId } = await requireGuide()
-  try {
-    const supabase = await createClient()
+export async function acceptGuideTerms(...extra: unknown[]): Promise<ActionResult> {
+  const { guide } = await requireGuide()
 
-    const { error } = await supabase
-      .from('guides')
-      .update({
-        terms_accepted_at:      new Date().toISOString(),
-        photo_marketing_consent: marketingConsent,
-      })
-      .eq('user_id', userId)
-
-    if (error != null) {
-      console.error('[acceptGuideTerms]', error.message)
-      return { success: false, error: error.message }
-    }
-
-    // Force the dashboard layout to re-fetch fresh guide data on next navigation
-    revalidatePath('/dashboard', 'layout')
-
-    return { success: true }
-  } catch (err) {
-    console.error('[acceptGuideTerms] Unexpected:', err)
-    return { success: false, error: 'An unexpected error occurred. Please try again.' }
+  if (extra.length > 0) {
+    return { success: false, error: 'Invalid value.' }
   }
+
+  const svc = createServiceClient()
+  const { error } = await svc
+    .from('guides')
+    .update({ terms_accepted_at: new Date().toISOString() })
+    .eq('id', guide.id)
+
+  if (error != null) {
+    console.error('[acceptGuideTerms]', error.message)
+    return { success: false, error: 'Could not save. Please try again.' }
+  }
+
+  // Force the dashboard layout to re-fetch fresh guide data on next navigation
+  revalidatePath('/dashboard', 'layout')
+  return { success: true }
 }
 
 // ─── Photo marketing consent ──────────────────────────────────────────────────
@@ -67,7 +64,8 @@ export async function acceptGuideTerms({
  * The row is the one requireGuide() resolves from the session; there is no guide id
  * parameter, so a caller cannot point it at another listing. Anything but a single boolean is
  * refused (a crafted call with an object carrying other fields changes nothing).
- * Written with the service client after the guard: the update touches exactly one column.
+ * Written with the service client after the guard (no guide session can UPDATE `guides`
+ * since FA-M.08); the update touches exactly one column.
  */
 export async function setPhotoMarketingConsent(consent: boolean, ...extra: unknown[]): Promise<ActionResult> {
   const { guide } = await requireGuide()

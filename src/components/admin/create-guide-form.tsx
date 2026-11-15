@@ -435,7 +435,7 @@ export default function CreateGuideForm({ defaultValues }: Props) {
               placeholder="guide@email.com"
             />
             <p className="mt-1.5 text-[11px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.38)' }}>
-              The guide's contact e-mail: assignment e-mails go here, and it prefills the invite link on the guide page. It does not link an account — guides get access only through an invite link.
+              The guide&apos;s contact e-mail: assignment e-mails go here, and it prefills the invite link on the guide page. It does not link an account — guides get access only through an invite link.
             </p>
           </div>
 

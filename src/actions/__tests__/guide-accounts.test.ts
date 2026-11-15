@@ -48,7 +48,7 @@ import {
 } from '@/actions/guide-invites'
 import { resetPassword, updatePassword } from '@/actions/auth'
 import { respondToAssignment } from '@/actions/inquiries'
-import { setPhotoMarketingConsent } from '@/actions/dashboard'
+import { acceptGuideTerms, setPhotoMarketingConsent } from '@/actions/dashboard'
 import { UnauthorizedError } from '@/lib/auth/guards'
 
 type Db = SupabaseClient<Database>
@@ -469,6 +469,64 @@ describe('setPhotoMarketingConsent', () => {
   it('RED: an account that is not a guide (angler) is refused', async () => {
     h.sessionClient = await signedIn(ANGLER.email, ANGLER.password)
     await expect(setPhotoMarketingConsent(true)).rejects.toThrow(UnauthorizedError)
+  })
+})
+
+// ─── Terms stamp — server only, own row only (tj decision 2026-11-15) ──────────
+
+describe('acceptGuideTerms', () => {
+  const COLS = 'bio, status, is_hidden, full_name, photo_marketing_consent, terms_accepted_at'
+  type Crafted = (...args: unknown[]) => ReturnType<typeof acceptGuideTerms>
+  const crafted = acceptGuideTerms as unknown as Crafted
+
+  it("stamps terms_accepted_at on the signed-in guide's own row, and nothing else changes", async () => {
+    const { aEmail } = await twoBoundGuides()
+    const before = await svc().from('guides').select(COLS).eq('id', GUIDE_A).single()
+    expect(before.data?.terms_accepted_at).toBeNull()
+
+    h.sessionClient = await signedIn(aEmail, PASSWORD)
+    expect(await acceptGuideTerms()).toEqual({ success: true })
+
+    const after = await svc().from('guides').select(COLS).eq('id', GUIDE_A).single()
+    expect(after.data?.terms_accepted_at).not.toBeNull()
+    expect({ ...after.data, terms_accepted_at: null }).toEqual(before.data)
+  })
+
+  it("RED: a crafted call aimed at another guide's row is refused and changes neither row", async () => {
+    const { aEmail } = await twoBoundGuides()
+    const beforeA = await svc().from('guides').select(COLS).eq('id', GUIDE_A).single()
+    const beforeB = await svc().from('guides').select(COLS).eq('id', GUIDE_B).single()
+
+    h.sessionClient = await signedIn(aEmail, PASSWORD)
+    expect(await crafted(GUIDE_B)).toEqual({ success: false, error: 'Invalid value.' })
+
+    expect((await svc().from('guides').select(COLS).eq('id', GUIDE_A).single()).data).toEqual(beforeA.data)
+    expect((await svc().from('guides').select(COLS).eq('id', GUIDE_B).single()).data).toEqual(beforeB.data)
+  })
+
+  it('RED: an account with no guide listing (angler) is refused', async () => {
+    h.sessionClient = await signedIn(ANGLER.email, ANGLER.password)
+    await expect(acceptGuideTerms()).rejects.toThrow(UnauthorizedError)
+  })
+})
+
+// ─── No guide session writes `guides` directly (migration 20261115000000) ──────
+
+describe('guides is closed to UPDATE from a signed-in session', () => {
+  it("RED: a guide's own session updating its own row through the REST client gets 42501 — bio, consent or terms", async () => {
+    const { aEmail } = await twoBoundGuides()
+    const before = await svc().from('guides').select('*').eq('id', GUIDE_A).single()
+    const session = await signedIn(aEmail, PASSWORD)
+
+    const bio = await session.from('guides').update({ bio: 'fam08 REST bio' }).eq('id', GUIDE_A).select('id')
+    expect({ error: bio.error?.code ?? null, rows: bio.data }).toEqual({ error: '42501', rows: null })
+    const consent = await session.from('guides').update({ photo_marketing_consent: true }).eq('id', GUIDE_A).select('id')
+    expect({ error: consent.error?.code ?? null, rows: consent.data }).toEqual({ error: '42501', rows: null })
+    const terms = await session.from('guides').update({ terms_accepted_at: new Date().toISOString() }).eq('id', GUIDE_A).select('id')
+    expect({ error: terms.error?.code ?? null, rows: terms.data }).toEqual({ error: '42501', rows: null })
+
+    const after = await svc().from('guides').select('*').eq('id', GUIDE_A).single()
+    expect(after.data).toEqual(before.data)
   })
 })
 
