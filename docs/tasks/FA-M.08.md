@@ -85,3 +85,8 @@ grep -n "invite_email" -r src
   - D7 A — wiersze `audit_log` dla wydania, cofnięcia i użycia zaproszenia, w tej samej transakcji.
   - D8 A — zgoda na push zostaje w FA-M.12; punkt usunięty z zakresu tego zadania.
   - Zaakceptowane ryzyko resztkowe: kto ma ważny link, może założyć konto na e-mail zaproszenia; ograniczone 7 dniami, jednorazowością i „Revoke”, a prawdziwy przewodnik odzyskuje konto resetem hasła. W raporcie w „Needs a decision” tylko jeśli okaże się gorsze.
+- **2026-11-14, tj (lista usunięć — zatwierdzona: 10 plików, 5 eksportów, żadna kolumna nie jest usuwana):**
+  - E1 B — `/dashboard` przekierowuje na `/dashboard/trips`; strona przeglądu (`src/app/dashboard/page.tsx`) usunięta i dopisana do listy usunięć. Każdy cel przekierowania po logowaniu, callbacku i zaproszeniu ma kończyć się na istniejącej stronie.
+  - E2 A — `updateGuideProfile` zastąpione wąską akcją, która ustawia tylko `photo_marketing_consent` we własnym wierszu zalogowanego przewodnika; szeroka akcja i `UpdateGuideProfileData` usunięte. Czerwony dowód: spreparowane wywołanie wąskiej akcji próbujące zmienić inne pole (bio, cena) albo cudzy wiersz niczego nie zmienia i jest odrzucone. Pokrycie z `authorization.test.ts` przeniesione na nową akcję.
+  - E3 A — usunięte pole ETA, `EtaField`, prop `guideOfferEta` i `saveGuideOfferEta`; kolumna `guide_offer_eta` zostaje.
+  - Też: `profiles-role.test.ts` wspomina `linkGuideAccount` — aktualizacja razem z resztą; `pnpm knip` czysty po usunięciach.
