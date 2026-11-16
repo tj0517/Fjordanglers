@@ -79,7 +79,7 @@ function inquiryRow(over: Record<string, unknown> = {}) {
 function experience(over: Partial<InquiryExperience> = {}): InquiryExperience {
   return {
     id: 'page-1', name: 'Salmon on the Laxá', slug: 's', country: 'Iceland',
-    guideId: null, priceFrom: 200, priceType: 'per_person', currency: 'EUR',
+    region: 'Test region', guideId: null, priceFrom: 200, priceType: 'per_person', currency: 'EUR',
     ...over,
   }
 }

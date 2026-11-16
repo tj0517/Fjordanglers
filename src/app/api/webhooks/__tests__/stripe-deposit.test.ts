@@ -576,7 +576,7 @@ describe('stripe-deposit webhook — trip title in the confirmation emails (FA-1
 
     vi.mocked(getInquiryExperience).mockResolvedValue({
       id: 'page-1', name: 'Salmon on the Laxá', slug: 's', country: 'Iceland',
-      guideId: null, priceFrom: 200, priceType: 'per_person', currency: 'EUR',
+      region: 'Test region', guideId: null, priceFrom: 200, priceType: 'per_person', currency: 'EUR',
     })
 
     const session: Partial<Stripe.Checkout.Session> = {

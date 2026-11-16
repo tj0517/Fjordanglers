@@ -21,6 +21,8 @@ export interface InquiryExperience {
   name:       string
   slug:       string
   country:    string
+  /** `experience_pages.region` — the area within the country (NOT NULL in the table). */
+  region:     string
   guideId:    string | null
   priceFrom:  number
   priceType:  string
@@ -40,7 +42,7 @@ export function tripTitleOf(exp: InquiryExperience | null): string {
 }
 
 const EXPERIENCE_COLUMNS =
-  'id, experience_name, slug, country, guide_id, price_from, price_type, currency, trip_id, created_at'
+  'id, experience_name, slug, country, region, guide_id, price_from, price_type, currency, trip_id, created_at'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -49,6 +51,7 @@ interface ExperiencePageRow {
   experience_name: string
   slug:            string
   country:         string
+  region:          string
   guide_id:        string | null
   price_from:      number
   price_type:      string
@@ -63,6 +66,7 @@ function toExperience(row: ExperiencePageRow): InquiryExperience {
     name:      row.experience_name,
     slug:      row.slug,
     country:   row.country,
+    region:    row.region,
     guideId:   row.guide_id,
     priceFrom: row.price_from,
     priceType: row.price_type,
