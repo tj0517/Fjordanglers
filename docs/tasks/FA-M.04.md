@@ -2,7 +2,7 @@
 id: FA-M.04
 title: Strona zlecenia `/r/[token]` — brief i daty, akceptuj / odrzuć / 1–3 inne daty, bez logowania, mobile-first
 stage: M
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -65,3 +65,4 @@ curl -s -o /dev/null -w '%{http_code}' localhost:3000/r/<token>
 
 ## Notatki z realizacji
 - **2026-11-10, tj (wf-plan):** „inny termin” = wybór 1–3 dat (decyzja w dokumencie MVP).
+- **2026-11-16, tj (wf-task):** D1 (a) „otwarcie” zapisywane dopiero po wyrenderowaniu strony w przeglądarce, nie przy GET (podgląd WhatsAppa się nie liczy); D2 (a) przejścia w przeglądarce blokują hosty tagów Google, przyczyna osobnym zadaniem; D3 (a) bez uwag FA na stronie — blok dla przewodnika w FA-M.07; dokument MVP w Claude Docs poza zasięgiem agenta — decyzja o 1–3 datach jest w notatce z 10.11; bramka STOP: `dev-preflight.sh` nie istnieje do merge FA-1.67 — ręcznie `docker ps` + URL 127.0.0.1.
