@@ -10,8 +10,8 @@ import { z } from 'zod'
 export const GUIDE_ANSWERS = ['accepted', 'declined', 'other_dates'] as const
 export type GuideAnswer = typeof GUIDE_ANSWERS[number]
 
-export const MAX_ALT_DATES = 3
-export const MAX_NOTE_LENGTH = 500
+const MAX_ALT_DATES = 3
+const MAX_NOTE_LENGTH = 500
 
 const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD').refine(
   s => {
@@ -43,4 +43,3 @@ export const GuideRequestAnswerSchema = z
     }
   })
 
-export type GuideRequestAnswerInput = z.infer<typeof GuideRequestAnswerSchema>

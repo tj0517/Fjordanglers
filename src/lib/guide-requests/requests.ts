@@ -26,11 +26,11 @@ import { GUIDE_ANSWERS, GuideRequestAnswerSchema, type GuideAnswer } from './sch
 
 type Client = SupabaseClient<Database>
 
-export const GUIDE_REQUEST_CHANNELS = ['whatsapp', 'email'] as const
+const GUIDE_REQUEST_CHANNELS = ['whatsapp', 'email'] as const
 export type GuideRequestChannel = typeof GUIDE_REQUEST_CHANNELS[number]
 
-export const GUIDE_REQUEST_REFUSALS = ['not_found', 'guide_removed', 'withdrawn', 'expired'] as const
-export type GuideRequestRefusal = typeof GUIDE_REQUEST_REFUSALS[number]
+const GUIDE_REQUEST_REFUSALS = ['not_found', 'guide_removed', 'withdrawn', 'expired'] as const
+type GuideRequestRefusal = typeof GUIDE_REQUEST_REFUSALS[number]
 
 function isRefusal(value: string): value is GuideRequestRefusal {
   return (GUIDE_REQUEST_REFUSALS as readonly string[]).includes(value)
@@ -40,7 +40,7 @@ function isAnswer(value: string | null): value is GuideAnswer {
   return value != null && (GUIDE_ANSWERS as readonly string[]).includes(value)
 }
 
-export class GuideRequestError extends Error {
+class GuideRequestError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'GuideRequestError'
@@ -79,7 +79,7 @@ export async function createGuideRequest(
 
 // ─── find ─────────────────────────────────────────────────────────────────────
 
-export interface GuideRequestView {
+interface GuideRequestView {
   requestId:     string
   inquiryId:     string
   guideId:       string
@@ -142,7 +142,7 @@ export async function recordGuideRequestOpened(client: Client, token: string): P
 
 // ─── answer ───────────────────────────────────────────────────────────────────
 
-export interface StoredAnswer {
+interface StoredAnswer {
   requestId:  string | null
   answer:     GuideAnswer
   altDates:   string[]
