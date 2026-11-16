@@ -51,6 +51,7 @@ import {
 } from '@/lib/inquiries/state'
 import { setQualified, QualifiedError, type QualifiedValue } from '@/lib/inquiries/qualified'
 import { emitEvent } from '@/lib/events/emit'
+import { answerGuideRequestFromDashboard, type AnswerResult } from '@/lib/guide-requests/requests'
 import { fetchEurRate } from '@/lib/fx'
 import { isDepositCurrency } from '@/lib/inquiries/deposit'
 
@@ -1221,8 +1222,14 @@ export async function assignGuideSilently(
 // ─── respondToAssignment ──────────────────────────────────────────────────────
 
 /**
- * Guide accepts or declines the assignment to an inquiry.
+ * Guide accepts or declines the assignment to an inquiry from the dashboard.
  * Verifies ownership: the inquiry must have assigned_guide_id = this guide.
+ *
+ * Since FA-M.03 (tj D2 b) the answer goes through the guide request record: the guide's latest
+ * request on the inquiry is answered once (not blocked by expiry, blocked when withdrawn), the
+ * `inquiries` summary follows and `guide.request_answered` is written in the same transaction.
+ * An assignment from before FA-M.03 has no request — the summary is written as before and the
+ * event carries no request_id.
  */
 export async function respondToAssignment(
   inquiryId: string,
@@ -1243,23 +1250,41 @@ export async function respondToAssignment(
 
   if (inquiry == null) throw new UnauthorizedError('Inquiry not found or not assigned to you')
 
-  const { error } = await svc
-    .from('inquiries')
-    .update({
-      guide_acceptance:     accepted ? 'accepted' : 'declined',
-      guide_decline_reason: accepted ? null : (declineReason?.trim() || null),
-      guide_responded_at:   new Date().toISOString(),
+  let result: AnswerResult
+  try {
+    result = await answerGuideRequestFromDashboard(svc, {
+      inquiryId,
+      guideId: guide.id,
+      answer:  accepted ? 'accepted' : 'declined',
+      note:    accepted ? null : declineReason,
     })
-    .eq('id', inquiryId)
+  } catch (err) {
+    console.error('[respondToAssignment] DB error:', err)
+    return { success: false, error: 'Could not save your answer — please try again.' }
+  }
 
-  if (error != null) {
-    console.error('[respondToAssignment] DB error:', error)
-    return { success: false, error: error.message }
+  switch (result.status) {
+    case 'answered':
+    case 'unchanged':
+      break
+    case 'already_answered':
+      return { success: false, error: 'You have already answered this request.' }
+    case 'invalid':
+      return { success: false, error: `Invalid answer — ${result.issues.join('; ')}` }
+    case 'refused':
+      return {
+        success: false,
+        error: result.reason === 'withdrawn'
+          ? 'FjordAnglers has withdrawn this request.'
+          : 'This request is no longer open.',
+      }
+    case 'date_not_in_future':
+      return { success: false, error: 'Dates must be in the future.' }
   }
 
   revalidatePath('/dashboard/trips/' + inquiryId)
   revalidatePath('/admin/inquiries/' + inquiryId)
-  console.log(`[respondToAssignment] Inquiry ${inquiryId} — ${accepted ? 'accepted' : 'declined'}`)
+  console.log(`[respondToAssignment] Inquiry ${inquiryId} — ${accepted ? 'accepted' : 'declined'} (${result.status})`)
   return { success: true }
 }
 

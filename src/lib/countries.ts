@@ -28,6 +28,29 @@ export const COUNTRY_REGION: Record<Country, RegionGroup> = {
   'New Zealand': 'New Zealand',
 }
 
+/**
+ * IANA time zone of each trip country — where "today" is for a guide answering a request
+ * (FA-M.03: proposed other dates must be after today there). Chile uses the Santiago zone;
+ * Magallanes (Punta Arenas) differs by an hour only outside the fishing season (tj 2026-11-16).
+ */
+export const COUNTRY_TIMEZONE: Record<Country, string> = {
+  Norway:        'Europe/Oslo',
+  Sweden:        'Europe/Stockholm',
+  Finland:       'Europe/Helsinki',
+  Iceland:       'Atlantic/Reykjavik',
+  Denmark:       'Europe/Copenhagen',
+  Argentina:     'America/Argentina/Buenos_Aires',
+  Chile:         'America/Santiago',
+  'New Zealand': 'Pacific/Auckland',
+}
+
+/** Time zone for an `inquiries.trip_country` value; 'UTC' for null, "Other" or anything unknown. */
+export function tripTimezone(country: string | null | undefined): string {
+  if (country == null) return 'UTC'
+  const match = COUNTRIES.find(c => c.toLowerCase() === country.toLowerCase().trim())
+  return match != null ? COUNTRY_TIMEZONE[match] : 'UTC'
+}
+
 /** Returns the region group for a country string, or null if it isn't a known `Country`. */
 export function getRegionGroup(country: string): RegionGroup | null {
   const match = COUNTRIES.find(c => c.toLowerCase() === country.toLowerCase().trim())
