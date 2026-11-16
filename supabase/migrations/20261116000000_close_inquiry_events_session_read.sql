@@ -1,4 +1,4 @@
--- FA-1.94 — inquiry_events is server-only: no session reads the event log.
+-- FA-1.95 — inquiry_events is server-only: no session reads the event log.
 --
 -- Why: the policy "authenticated reads events" (20260916201226_add_inquiry_events.sql) is
 -- SELECT … TO authenticated USING (true). Since FA-M.08 guides have accounts, so every signed-in

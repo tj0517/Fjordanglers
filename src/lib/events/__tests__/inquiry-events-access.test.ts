@@ -1,9 +1,9 @@
 /**
- * FA-1.94 — `inquiry_events` is server-only: no session (anon, angler, guide, admin) reads it;
+ * FA-1.95 — `inquiry_events` is server-only: no session (anon, angler, guide, admin) reads it;
  * the service key — which is how the admin inquiry timeline reads it — still does.
  *
  * Runs against the local stack (.env.test, 127.0.0.1 only — src/tests/setup.ts). One inquiry with
- * one event and one guide account under the `fa194-` prefix; swept in beforeAll / afterAll.
+ * one event and one guide account under the `fa195-` prefix; swept in beforeAll / afterAll.
  * The event row cannot be deleted by any API role (append-only), so the inquiry delete cascades it.
  */
 
@@ -14,9 +14,9 @@ import { emitEvent } from '@/lib/events/emit'
 
 type Db = SupabaseClient<Database>
 
-const INQUIRY     = 'f1940000-0000-4000-8000-000000000001'
-const GUIDE_EMAIL = 'fa194-guide@seed.test'
-const PASSWORD    = 'fa194-test-password-2026'
+const INQUIRY     = 'f1950000-0000-4000-8000-000000000001'
+const GUIDE_EMAIL = 'fa195-guide@seed.test'
+const PASSWORD    = 'fa195-test-password-2026'
 const ADMIN       = { email: 'admin@seed.test',  password: 'seed-admin-password-2026' }
 const ANGLER      = { email: 'angler@seed.test', password: 'seed-angler-password-2026' }
 
@@ -65,7 +65,7 @@ beforeAll(async () => {
   const s = svc()
 
   const ins = await s.from('inquiries').insert({
-    id: INQUIRY, angler_name: 'FA-1.94 Access Test', angler_email: ANGLER.email, status: 'qualifying',
+    id: INQUIRY, angler_name: 'FA-1.95 Access Test', angler_email: ANGLER.email, status: 'qualifying',
   })
   if (ins.error != null) throw new Error(`fixture inquiry: ${ins.error.message}`)
 
@@ -90,7 +90,7 @@ beforeAll(async () => {
 
 afterAll(sweep)
 
-describe('inquiry_events — no session reads the log (FA-1.94)', () => {
+describe('inquiry_events — no session reads the log (FA-1.95)', () => {
   it('anon client is refused', async () => {
     const { data, error } = await readEvents(anonClient())
     expect({ rows: data?.length ?? 0, code: error?.code }).toEqual({ rows: 0, code: PERMISSION_DENIED })
@@ -112,7 +112,7 @@ describe('inquiry_events — no session reads the log (FA-1.94)', () => {
   })
 })
 
-describe('inquiry_events — the service key still reads and writes (FA-1.94)', () => {
+describe('inquiry_events — the service key still reads and writes (FA-1.95)', () => {
   it('admin inquiry timeline query (service client, as in admin/inquiries/[id]/page.tsx) returns the event', async () => {
     // Same select as the timeline on the admin inquiry card.
     const { data, error } = await svc()

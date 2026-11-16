@@ -1,5 +1,5 @@
 ---
-id: FA-1.94
+id: FA-1.95
 title: Log zdarzeń tylko dla serwera — zamknięty odczyt `inquiry_events` sesją (`anon`, `authenticated`)
 stage: 1
 status: review
@@ -18,7 +18,7 @@ estimate_h: 2
 owner: tj
 ---
 
-# FA-1.94 — Log zdarzeń tylko dla serwera
+# FA-1.95 — Log zdarzeń tylko dla serwera
 
 ## Kontekst — przeczytaj przed startem
 - `CLAUDE.md`, `docs/03-conventions.md`, `docs/05-agent-operations.md` §3 (bramki), §5 (raport)
@@ -69,3 +69,4 @@ SELECT r.rolname, has_table_privilege(r.rolname, 'public.inquiry_events', 'SELEC
 
 ## Notatki z realizacji
 - **2026-11-16, tj:** zadanie wydzielone z FA-M.03. Zakres zmieniony względem pierwszej propozycji — bez polityki admina: odczyt sesją zamknięty całkowicie (drop polityki + `REVOKE SELECT` od `anon`, `authenticated`). Migracja `20261116000000`, merge przed FA-M.03.
+- **2026-11-16, tj:** przenumerowane z FA-1.94 na FA-1.95 — FA-1.94 zajęte przez stronę główną (gałąź lokalna, nigdy niewypchnięta).
