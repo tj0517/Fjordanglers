@@ -2,7 +2,7 @@
 id: FA-1.95
 title: Log zdarzeń tylko dla serwera — zamknięty odczyt `inquiry_events` sesją (`anon`, `authenticated`)
 stage: 1
-status: review
+status: done
 difficulty: S
 model: opus
 model_approved:
@@ -70,3 +70,4 @@ SELECT r.rolname, has_table_privilege(r.rolname, 'public.inquiry_events', 'SELEC
 ## Notatki z realizacji
 - **2026-11-16, tj:** zadanie wydzielone z FA-M.03. Zakres zmieniony względem pierwszej propozycji — bez polityki admina: odczyt sesją zamknięty całkowicie (drop polityki + `REVOKE SELECT` od `anon`, `authenticated`). Migracja `20261116000000`, merge przed FA-M.03.
 - **2026-11-16, tj:** przenumerowane z FA-1.94 na FA-1.95 — FA-1.94 zajęte przez stronę główną (gałąź lokalna, nigdy niewypchnięta).
+- **2026-11-16, tj (review PR #197):** przyjęte. Red proof przed migracją (sesje angler/guide/admin czytały log; anon 0 wierszy bez błędu), po migracji 42501 dla wszystkich sesji, serwer czyta i zapisuje; CI zielone na 4a42bd6; prod po deploy-db.yml: polityka usunięta, SELECT odebrany anon/authenticated.

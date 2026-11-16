@@ -6,7 +6,7 @@ import { respondToAssignment } from '@/actions/inquiries'
 
 interface Props {
   inquiryId:          string
-  guideAcceptance:    string | null  // 'accepted' | 'declined' | null
+  guideAcceptance:    string | null  // 'accepted' | 'declined' | 'other_dates' | null
   guideDeclineReason: string | null
   autoAccept?:        boolean
 }
@@ -77,6 +77,22 @@ export function TripAcceptancePanel({ inquiryId, guideAcceptance, guideDeclineRe
             <span className="font-normal ml-1">— {guideDeclineReason}</span>
           )}
         </span>
+      </div>
+    )
+  }
+
+  // ── Proposed other dates (answered through the request link, FA-M.03) ───────
+
+  if (guideAcceptance === 'other_dates') {
+    return (
+      <div className="rounded-[22px] px-5 py-4 mb-6"
+        style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.15)' }}>
+        <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+          You proposed other dates
+        </p>
+        <p className="text-sm f-body mt-1" style={{ color: 'rgba(10,46,77,0.6)' }}>
+          FjordAnglers will check them with the angler and get back to you.
+        </p>
       </div>
     )
   }

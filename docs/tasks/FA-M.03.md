@@ -2,13 +2,14 @@
 id: FA-M.03
 title: Zlecenie do przewodnika w bazie — rekord zlecenia z podpisanym tokenem, zdarzenia wysłano/otwarto/odpowiedział, skrót na `inquiries`
 stage: M
-status: todo
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-db
 branch: db/fa-m.03-guide-requests
+pr: 198
 depends_on: []
 blocked_by_questions: []
 touches_db: true
@@ -71,3 +72,6 @@ SELECT policyname, cmd, roles, qual, with_check FROM pg_policies WHERE tablename
 
 ## Notatki z realizacji
 - **2026-11-10, tj (wf-plan):** O-52 → (a) nowy rekord zlecenia; pola na `inquiries` zostają skrótem.
+- **2026-11-16, tj (STOP przed migracją):** D1 (a) — tylko `guide.request_answered`, typ odpowiedzi w payloadzie; bez `guide.accepted`/`guide.declined`. D2 (b) — `respondToAssignment` przez rekord: dashboard odpowiada na najnowsze zlecenie przewodnika w tym zapytaniu; blokują `withdrawn` i `guide_removed`, wygaśnięcie nie (zalogowany przewodnik to nie wyciekły link); przypisania sprzed zmiany bez zlecenia → skrót jak dziś + `guide.request_answered` bez `request_id` (wariant payloadu opisany w katalogu: `types.ts` + załącznik C, z testem). D3 (a) — zdarzenia pisane w funkcjach DB w tej samej transakcji; test zgodności katalogu SQL↔`types.ts` obowiązkowy, z czerwonym przebiegiem na przemianowanym typie. D4 (a) — `other_dates` dopuszczone w `inquiries.guide_acceptance`; przed zapisem lista wszystkich użyć `guide_acceptance` i ich zachowania przy nieznanej wartości w raporcie; badge na liście → FA-M.05 (deferred). D5 (b) — `withdrawn_at` + odmowa `withdrawn` + funkcja warstwy danych + zdarzenie `guide.request_withdrawn`; nic jej nie wywołuje do FA-M.05. D6 (a) — 7 dni od `sent_at`, jedna stała. D7 (b) — jedna kolumna `note` (≤500 znaków), dozwolona przy `declined` i `other_dates`, inaczej null; w zdarzeniu `has_note`. Dodatkowo: (1) „ta sama odpowiedź” = ta sama `answer` + te same `alt_dates` (jako zbiór) + ta sama `note`, wszystko inne na odpowiedzianym zleceniu = odmowa ze zwrotem zapisanej odpowiedzi; (2) „dziś” dla `alt_dates` w strefie kraju wyprawy, jeśli zapytanie go ma, inaczej UTC — jeśli niewyprowadzalne czysto ze schematu: STOP; (3) kolejność odmów stała i testowana: `not_found` > `guide_removed` > `withdrawn` > `expired` > `already_answered`; (4) token ≥32 bajty z CSPRNG, base64url, `token_hash` = sha256 hex, generowanie w jednej funkcji z testem długości/alfabetu; (5) deferred: ryzyko „otwarcie dopiero po renderze” (FA-M.04), badge `other_dates` (FA-M.05), wyświetlanie notatki `other_dates` (FA-M.05). Polityka odczytu `inquiry_events` nie idzie do deferred — osobne zadanie.
+- **2026-11-16, tj (STOP — wymaganie 2):** (a) — mapa kraj→strefa obok `COUNTRIES` w `src/lib/countries.ts`: Norway `Europe/Oslo`, Sweden `Europe/Stockholm`, Finland `Europe/Helsinki`, Iceland `Atlantic/Reykjavik`, Denmark `Europe/Copenhagen`, Argentina `America/Argentina/Buenos_Aires`, Chile `America/Santiago`, New Zealand `Pacific/Auckland`; „Other”/null/nieznany → UTC; test wymaga strefy dla każdego wpisu `COUNTRIES`. Serwer przekazuje nazwę strefy, funkcja DB liczy „dziś” w niej w transakcji i odrzuca nieznaną strefę. Red proofy: „jutro” w Pacific/Auckland przyjęte, gdy w UTC to jeszcze „dziś”; przeszła data lokalna odrzucona; zła nazwa strefy odrzucona. D4: tabela użyć `guide_acceptance` zaakceptowana — stan „You proposed other dates” w `TripAcceptancePanel` w tym PR; badge i filtry admina → deferred FA-M.05. Wyciek odczytu `inquiry_events` → osobne zadanie (gałąź `db/inquiry-events-admin-read`, migracja `20261116000000`, merge przed FA-M.03); FA-M.03 bierze `20261117000000`.
+- **2026-11-16, tj:** wycofanie zlecenia a skrót na `inquiries` (czy wycofanie ostatniego zlecenia czyści przypisanego przewodnika) — decided later — FA-M.05 (zadanie z przyciskiem „Wycofaj”). W tym PR `withdraw_guide_request` zostawia skrót bez zmian.

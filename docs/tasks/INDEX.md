@@ -125,7 +125,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.91 | Strony techniczne poza indeksem — `noindex`/404 dla tokenów, `alt` pinów, bez `SearchAction` | S | sonnet | review (PR #182) | — |
 | FA-1.92 | Lżejsze obrazy i szybszy LCP — kompresja `public/`, priorytet LCP, mniej JS na ofercie | M | sonnet | done (PR #194) | FA-1.80 |
 | FA-1.93 | Rolę nadaje tylko serwer — użytkownik nie zmieni swojej roli (`profiles`), `handle_new_user` i `auth/callback` nie przyjmą `admin` z danych konta (pilne, przed SEO) | M | opus | done (PR #175) | — |
-| FA-1.95 | Log zdarzeń tylko dla serwera — zamknięty odczyt `inquiry_events` sesją (`anon`, `authenticated`) | S | opus | review (PR #197) | — |
+| FA-1.95 | Log zdarzeń tylko dla serwera — zamknięty odczyt `inquiry_events` sesją (`anon`, `authenticated`) | S | opus | done (PR #197) | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | Migracje przez GitHub Actions — `deploy-db.yml`: dev auto po merge do `main`, prod `workflow_dispatch` za bramką Environment `production-db` (wzór DCS) | M | sonnet | done | FA-1.18 |
@@ -139,12 +139,12 @@ Zakres: dokument „Aplikacja dla przewodników — zakres MVP” (Claude Docs) 
 |---|---|---|---|---|---|
 | FA-M.01 | Baseline przed startem — czas zapytanie → oferta i close rate z prod | S | — (Claude w app) | done | — |
 | FA-M.02 | Audyt panelu i kont przewodnika — co z `/dashboard`, logowania, resetu i zaproszeń działa; raport, bez kodu | M | sonnet | done | — |
-| FA-M.03 | Zlecenie do przewodnika w bazie — rekord z podpisanym tokenem, zdarzenia wysłano/otwarto/odpowiedział, skrót na `inquiries` | L | opus | todo | — |
+| FA-M.03 | Zlecenie do przewodnika w bazie — rekord z podpisanym tokenem, zdarzenia wysłano/otwarto/odpowiedział, skrót na `inquiries` | L | opus | review (PR #198) | — |
 | FA-M.04 | Strona zlecenia `/r/[token]` — akceptuj / odrzuć / 1–3 inne daty, bez logowania, mobile-first | M | sonnet | todo | FA-M.03 |
 | FA-M.05 | Wysyłka zlecenia z karty zapytania — WhatsApp szablonem z linkiem + oś czasu zlecenia | M | sonnet | todo | FA-M.03, FA-M.04, FA-M.11 |
 | FA-M.06 | Ponaglenie po 12 h (sezon) / 24 h — jedno WhatsApp do przewodnika + flaga dla admina | M | sonnet | todo (O-55) | FA-M.05 |
 | FA-M.07 | Brief dla przewodnika — nocleg, licencje/permity, edycja na karcie zapytania | M | sonnet | todo | — |
-| FA-M.08 | Konta przewodników — zaproszenie, logowanie, reset, sesje (zakres wg audytu) | L | opus | review (PR #196) | FA-M.02 |
+| FA-M.08 | Konta przewodników — zaproszenie, logowanie, reset, sesje (zakres wg audytu) | L | opus | done (PR #196) | FA-M.02 |
 | FA-M.09 | Kalendarz 1 — synchronizacja zajętości, Apple (link udostępniania), strona „Connect” przez podpisany link | L | opus | todo (O-55) | — |
 | FA-M.10 | Kalendarz 2 — „Connect with Google” (OAuth, odczyt zajętości, tokeny) | L | opus | todo | FA-M.09, FA-M.11 |
 | FA-M.11 | Zgłoszenia zewnętrzne — szablon WA w Meta, OAuth Google + weryfikacja, klucze push; robi tj | S | — (człowiek) | todo | — |
