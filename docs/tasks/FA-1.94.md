@@ -2,13 +2,14 @@
 id: FA-1.94
 title: Log zdarzeń tylko dla serwera — zamknięty odczyt `inquiry_events` sesją (`anon`, `authenticated`)
 stage: 1
-status: in_progress
+status: review
 difficulty: S
 model: opus
 model_approved:
 effort: high
 agent: fa-db
 branch: db/inquiry-events-admin-read
+pr: 197
 depends_on: []
 blocked_by_questions: []
 touches_db: true

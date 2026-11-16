@@ -125,7 +125,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.91 | Strony techniczne poza indeksem — `noindex`/404 dla tokenów, `alt` pinów, bez `SearchAction` | S | sonnet | review (PR #182) | — |
 | FA-1.92 | Lżejsze obrazy i szybszy LCP — kompresja `public/`, priorytet LCP, mniej JS na ofercie | M | sonnet | done (PR #194) | FA-1.80 |
 | FA-1.93 | Rolę nadaje tylko serwer — użytkownik nie zmieni swojej roli (`profiles`), `handle_new_user` i `auth/callback` nie przyjmą `admin` z danych konta (pilne, przed SEO) | M | opus | done (PR #175) | — |
-| FA-1.94 | Log zdarzeń tylko dla serwera — zamknięty odczyt `inquiry_events` sesją (`anon`, `authenticated`) | S | opus | in_progress | — |
+| FA-1.94 | Log zdarzeń tylko dla serwera — zamknięty odczyt `inquiry_events` sesją (`anon`, `authenticated`) | S | opus | review (PR #197) | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | Migracje przez GitHub Actions — `deploy-db.yml`: dev auto po merge do `main`, prod `workflow_dispatch` za bramką Environment `production-db` (wzór DCS) | M | sonnet | done | FA-1.18 |
