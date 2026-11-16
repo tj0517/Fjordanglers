@@ -1505,6 +1505,91 @@ export type Database = {
           },
         ]
       }
+      guide_requests: {
+        Row: {
+          alt_dates: string[]
+          answer: string | null
+          answered_at: string | null
+          channel: string
+          created_at: string
+          created_by: string
+          first_opened_at: string | null
+          guide_id: string | null
+          id: string
+          inquiry_id: string
+          note: string | null
+          reminded_at: string | null
+          sent_at: string
+          token_expires_at: string
+          token_hash: string
+          updated_at: string
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        Insert: {
+          alt_dates?: string[]
+          answer?: string | null
+          answered_at?: string | null
+          channel: string
+          created_at?: string
+          created_by: string
+          first_opened_at?: string | null
+          guide_id?: string | null
+          id?: string
+          inquiry_id: string
+          note?: string | null
+          reminded_at?: string | null
+          sent_at?: string
+          token_expires_at: string
+          token_hash: string
+          updated_at?: string
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Update: {
+          alt_dates?: string[]
+          answer?: string | null
+          answered_at?: string | null
+          channel?: string
+          created_at?: string
+          created_by?: string
+          first_opened_at?: string | null
+          guide_id?: string | null
+          id?: string
+          inquiry_id?: string
+          note?: string | null
+          reminded_at?: string | null
+          sent_at?: string
+          token_expires_at?: string
+          token_hash?: string
+          updated_at?: string
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_requests_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_requests_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_requests_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiry_acquisition_channel"
+            referencedColumns: ["inquiry_id"]
+          },
+        ]
+      }
       guide_submissions: {
         Row: {
           country: string
@@ -3292,12 +3377,61 @@ export type Database = {
             }
             Returns: string
           }
+      answer_guide_request: {
+        Args: {
+          p_alt_dates: string[]
+          p_answer: string
+          p_note: string
+          p_timezone: string
+          p_token_hash: string
+        }
+        Returns: {
+          alt_dates: string[]
+          answer: string
+          answered_at: string
+          note: string
+          outcome: string
+          request_id: string
+          summary_updated: boolean
+        }[]
+      }
+      answer_guide_request_for_guide: {
+        Args: {
+          p_answer: string
+          p_guide_id: string
+          p_inquiry_id: string
+          p_note: string
+        }
+        Returns: {
+          alt_dates: string[]
+          answer: string
+          answered_at: string
+          note: string
+          outcome: string
+          request_id: string
+          summary_updated: boolean
+        }[]
+      }
       column_fill: {
         Args: { p_schema: string; p_table: string }
         Returns: {
           col: string
           filled: number
           pct: number
+        }[]
+      }
+      create_guide_request: {
+        Args: {
+          p_admin_id: string
+          p_channel: string
+          p_guide_id: string
+          p_inquiry_id: string
+          p_token_hash: string
+        }
+        Returns: {
+          request_id: string
+          sent_at: string
+          token_expires_at: string
         }[]
       }
       create_offer_with_options: {
@@ -3343,6 +3477,22 @@ export type Database = {
         | { Args: { table_name: string }; Returns: string }
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      find_guide_request: {
+        Args: { p_token_hash: string }
+        Returns: {
+          alt_dates: string[]
+          answer: string
+          answered_at: string
+          first_opened_at: string
+          guide_id: string
+          inquiry_id: string
+          note: string
+          outcome: string
+          request_id: string
+          sent_at: string
+          token_expires_at: string
+        }[]
+      }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -3458,6 +3608,31 @@ export type Database = {
         }[]
       }
       gettransactionid: { Args: never; Returns: unknown }
+      guide_request_apply_answer: {
+        Args: {
+          p_alt_dates: string[]
+          p_answer: string
+          p_note: string
+          p_req: Database["public"]["Tables"]["guide_requests"]["Row"]
+          p_timezone: string
+        }
+        Returns: {
+          alt_dates: string[]
+          answer: string
+          answered_at: string
+          note: string
+          outcome: string
+          request_id: string
+          summary_updated: boolean
+        }[]
+      }
+      guide_request_refusal: {
+        Args: {
+          p_check_expiry: boolean
+          p_req: Database["public"]["Tables"]["guide_requests"]["Row"]
+        }
+        Returns: string
+      }
       import_license_zone: {
         Args: {
           p_country: string
@@ -3479,6 +3654,14 @@ export type Database = {
         Returns: string
       }
       longtransactionsenabled: { Args: never; Returns: boolean }
+      open_guide_request: {
+        Args: { p_token_hash: string }
+        Returns: {
+          first_open: boolean
+          outcome: string
+          request_id: string
+        }[]
+      }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -4142,6 +4325,10 @@ export type Database = {
           schema_name: string
           table_name: string
         }
+        Returns: string
+      }
+      withdraw_guide_request: {
+        Args: { p_admin_id: string; p_request_id: string }
         Returns: string
       }
     }
