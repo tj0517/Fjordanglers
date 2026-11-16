@@ -2,13 +2,14 @@
 id: FA-M.03
 title: Zlecenie do przewodnika w bazie — rekord zlecenia z podpisanym tokenem, zdarzenia wysłano/otwarto/odpowiedział, skrót na `inquiries`
 stage: M
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-db
 branch: db/fa-m.03-guide-requests
+pr: 198
 depends_on: []
 blocked_by_questions: []
 touches_db: true
