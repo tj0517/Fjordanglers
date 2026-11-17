@@ -45,6 +45,15 @@ const VIEW = {
   brief: ['When: 12 Jun 2027 – 14 Jun 2027 (3 day(s) fishing)', 'Party: 3 angler(s)'],
   earliestAltDate: '2026-11-17',
   answered: null,
+  accommodation: null,
+  licence: null,
+  faNote: null,
+}
+
+const TRIP_BRIEF = {
+  accommodation: 'Client books — Tūrangi',
+  licence:       'Client buys — Taupō licence',
+  faNote:        'They land in Taupō the evening before.\nPick-up from Tūrangi if possible.',
 }
 
 beforeEach(() => {
@@ -109,6 +118,56 @@ describe('/r/[token] — a valid link', () => {
   it('is noindex, nofollow, no-referrer', () => {
     expect(metadata.robots).toEqual({ index: false, follow: false })
     expect(metadata.referrer).toBe('no-referrer')
+  })
+})
+
+describe('/r/[token] — the Trip Brief (FA-M.07)', () => {
+  it('an inquiry without a form brief shows the Accommodation and Licence rows and the note from FA', async () => {
+    getGuideRequestPage.mockResolvedValue({ ok: true, view: { ...VIEW, brief: null, ...TRIP_BRIEF } })
+    const html = await renderPage()
+    expect(html).not.toContain('From the client')
+    expect(html).toContain('About the client')
+    expect(html).toMatch(/<dt[^>]*>Accommodation<\/dt><dd[^>]*>Client books — Tūrangi<\/dd>/)
+    expect(html).toMatch(/<dt[^>]*>Licence<\/dt><dd[^>]*>Client buys — Taupō licence<\/dd>/)
+    expect(html).toContain('Note from FjordAnglers')
+    expect(html).toContain('They land in Taupō the evening before.')
+  })
+
+  it('with a form brief, both show', async () => {
+    getGuideRequestPage.mockResolvedValue({ ok: true, view: { ...VIEW, ...TRIP_BRIEF } })
+    const html = await renderPage()
+    expect(html).toContain('Party: 3 angler(s)')
+    expect(html).toContain('Client buys — Taupō licence')
+  })
+
+  it('an empty Trip Brief renders no empty rows and no note block', async () => {
+    getGuideRequestPage.mockResolvedValue({ ok: true, view: VIEW })
+    const html = await renderPage()
+    for (const text of ['About the client', 'Accommodation', 'Licence', 'Note from FjordAnglers', 'request-trip-brief', 'request-fa-note']) {
+      expect(html, text).not.toContain(text)
+    }
+  })
+
+  it('only one row when only one value is set', async () => {
+    getGuideRequestPage.mockResolvedValue({ ok: true, view: { ...VIEW, licence: 'No licence needed' } })
+    const html = await renderPage()
+    expect(html).toContain('No licence needed')
+    expect(html).not.toContain('Accommodation')
+    expect(html).not.toContain('Note from FjordAnglers')
+  })
+
+  it('renders the FA note, accommodation and licence as text, never as HTML', async () => {
+    const x = '<img src=x onerror=alert(1)>'
+    getGuideRequestPage.mockResolvedValue({ ok: true, view: { ...VIEW, accommodation: x, licence: x, faNote: x } })
+    const html = await renderPage()
+    expect(html).not.toContain('<img src=x')
+    expect(html.split('&lt;img src=x').length - 1).toBe(3)
+  })
+
+  it('no budget and no price on the page', async () => {
+    getGuideRequestPage.mockResolvedValue({ ok: true, view: { ...VIEW, ...TRIP_BRIEF } })
+    const html = await renderPage()
+    expect(html).not.toMatch(/budget|price|€|EUR|ISK|NZD/i)
   })
 })
 
