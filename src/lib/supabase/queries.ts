@@ -168,37 +168,6 @@ export async function getPlatformStats(): Promise<PlatformStats> {
   )()
 }
 
-// ─── Species counts ───────────────────────────────────────────────────────────
-
-/**
- * Returns a map of { [speciesName]: pageCount } across all active experience pages.
- * Used to display live counts on the home page species picker.
- */
-export async function getSpeciesCounts(): Promise<Record<string, number>> {
-  return unstable_cache(
-    async () => {
-      const db = createPublicClient()
-
-      const { data, error } = await db
-        .from('experience_pages')
-        .select('target_species')
-        .eq('status', 'active')
-
-      if (error) return {}
-
-      const counts: Record<string, number> = {}
-      for (const row of data ?? []) {
-        for (const species of row.target_species ?? []) {
-          counts[species] = (counts[species] ?? 0) + 1
-        }
-      }
-      return counts
-    },
-    ['species-counts'],
-    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
-  )()
-}
-
 // ─── Guides ───────────────────────────────────────────────────────────────────
 
 export type GuideRow = Database['public']['Tables']['guides']['Row']
@@ -345,7 +314,7 @@ export async function getGuideExperiencePages(guideId: string): Promise<GuideExp
   )()
 }
 
-// ─── Featured experience pages (home slider) ──────────────────────────────────
+// ─── Featured experience pages ────────────────────────────────────────────────
 
 export type FeaturedExperiencePage = {
   id: string
@@ -358,40 +327,6 @@ export type FeaturedExperiencePage = {
   currency: string
   hero_image_url: string | null
   guide: { id: string; full_name: string } | null
-}
-
-/**
- * Random active experience pages — used in the home page "Trips you can book" slider.
- */
-export async function getFeaturedExperiencePages(limit = 8): Promise<FeaturedExperiencePage[]> {
-  return unstable_cache(
-    async () => {
-      const db = createPublicClient()
-
-      const { data, error } = await db
-        .from('experience_pages')
-        .select('id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, guide:guides!guide_id ( id, full_name )')
-        .eq('status', 'active')
-        .limit(40)
-
-      if (error) {
-        console.error('[getFeaturedExperiencePages]', error.message)
-        return []
-      }
-
-      const all = (data ?? []) as unknown as FeaturedExperiencePage[]
-
-      // Fisher-Yates shuffle
-      for (let i = all.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [all[i], all[j]] = [all[j], all[i]]
-      }
-
-      return all.slice(0, limit)
-    },
-    ['featured-experience-pages', String(limit)],
-    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
-  )()
 }
 
 // ─── Related experience pages (offer page, "More trips") ─────────────────────

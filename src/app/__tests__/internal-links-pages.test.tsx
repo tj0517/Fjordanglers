@@ -38,17 +38,12 @@ vi.mock('@/lib/supabase/queries', () => ({
   getDestinationHub:        async () => hubData(),
   getPrerenderableHubSlugs: async () => [],
   getLatestBlogPosts:       async () => [summary('a', 'Norway'), summary('b', null), summary('c', 'Sweden')],
-  getFeaturedExperiencePages: async () => [],
-  getSpeciesCounts:         async () => ({}),
   getFeaturedGuides:        async () => [],
 }))
 vi.mock('@/lib/supabase/testimonials', () => ({ getTestimonial: async () => null }))
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND') } }))
 vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null, PLAN_YOUR_TRIP_HREF: '/trips' }))
 vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
-vi.mock('@/components/home/species-slider', () => ({ SpeciesSlider: () => null }))
-vi.mock('@/components/home/experiences-slider', () => ({ ExperiencesSlider: () => null }))
-vi.mock('@/components/home/bg-video', () => ({ BgVideo: () => null }))
 vi.mock('@/components/ui/contact-expert-button', () => ({ ContactExpertButton: () => null }))
 vi.mock('@/components/analytics/WebEventTracker', () => ({ WebEventTracker: () => null }))
 

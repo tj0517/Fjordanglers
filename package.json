@@ -33,6 +33,7 @@
     "leaflet-draw": "^1.0.4",
     "libphonenumber-js": "^1.13.13",
     "lucide-react": "^1.7.0",
+    "mapbox-gl": "3.34.2",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

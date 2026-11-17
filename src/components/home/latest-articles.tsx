@@ -1,54 +1,48 @@
 /**
- * Home page: the three newest published articles (FA-1.90). Not rendered when there are none —
- * including when the blog could not be read (`getLatestBlogPosts` answers empty and logs).
+ * Home page: the three newest published articles (FA-1.90), in the 2026-11 redesign's "Journal"
+ * section. Not rendered when there are none — including when the blog could not be read
+ * (`getLatestBlogPosts` answers empty and logs). Each card is one link (photo, title, description).
  */
 
 import Link from 'next/link'
 import { BlogImage } from '@/components/blog/article-blocks'
 import { formatPostDate, type BlogPostSummary } from '@/lib/blog/post'
+import { CREAM, MUTED, NAVY, SecondaryButton, Tag } from '@/components/site/ui'
+import s from './home.module.css'
 
 export function LatestArticles({ posts }: { posts: BlogPostSummary[] }) {
   if (posts.length === 0) return null
 
   return (
-    <section data-block="latest-articles" className="px-4 md:px-8 lg:px-14 pb-16 md:pb-24" style={{ background: '#F3EDE4' }}>
-      <div className="max-w-[1360px] mx-auto">
-        <div className="mb-8 md:mb-11 pt-12 md:pt-20 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4" style={{ borderTop: '1px solid rgba(10,46,77,0.09)' }}>
-          <div>
-            <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-3 f-body" style={{ color: '#E67E50' }}>From the journal</p>
-            <h2 className="text-[#0A2E4D] font-bold f-display" style={{ fontSize: 'clamp(28px, 3.5vw, 48px)' }}>
-              Read before you go.
-            </h2>
+    <section data-block="latest-articles" style={{ paddingTop: 160 }}>
+      <div className={`${s.wrap} flex flex-col gap-9`}>
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="flex flex-col items-start gap-[14px]">
+            <span className={`${s.pill} f-body`}>Journal</span>
+            <h2 className={`${s.h2} f-display m-0 max-w-[720px]`} style={{ color: NAVY }}>Read before you go.</h2>
           </div>
-          <Link href="/blog" className="text-sm font-medium f-body hover:text-[#E67E50] transition-colors" style={{ color: 'rgba(10,46,77,0.38)' }}>
-            All articles →
-          </Link>
+          <SecondaryButton href="/blog">All articles →</SecondaryButton>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className={s.arts}>
           {posts.map(post => (
-            <Link key={post.slug} href={`/blog/${post.slug}`} className="group block">
-              <article
-                className="overflow-hidden flex flex-col h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_48px_rgba(10,46,77,0.11)]"
-                style={{ borderRadius: '20px', background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
-              >
-                <div className="relative overflow-hidden flex-shrink-0" style={{ height: '200px' }}>
-                  <BlogImage src={post.imageUrl} alt={post.imageAlt} className="object-cover transition-transform duration-500 group-hover:scale-[1.06]" />
-                </div>
-                <div className="p-5 flex flex-col flex-1">
-                  <h3 className="font-semibold f-display mb-2 line-clamp-2" style={{ fontSize: '17px', color: '#0A2E4D', lineHeight: 1.35 }}>
-                    {post.title}
-                  </h3>
-                  <p className="text-sm f-body line-clamp-2 mb-auto" style={{ color: 'rgba(10,46,77,0.5)', lineHeight: 1.65 }}>
-                    {post.description}
-                  </p>
-                  <p className="text-xs f-body mt-4" style={{ color: 'rgba(10,46,77,0.38)' }}>
+            <article key={post.slug}>
+              <Link href={`/blog/${post.slug}`} className="flex flex-col gap-[14px]" style={{ textDecoration: 'none' }}>
+                <span className="relative block overflow-hidden" style={{ borderRadius: 16, aspectRatio: '4 / 3', background: CREAM }}>
+                  <BlogImage src={post.imageUrl} alt={post.imageAlt} className="object-cover" />
+                  <span className="absolute bottom-3 left-3 flex gap-1.5">
+                    {post.category.trim() !== '' && <Tag tone="sand">{post.category}</Tag>}
+                    {post.country != null && <Tag>{post.country}</Tag>}
+                  </span>
+                </span>
+                <span className="flex flex-col gap-2">
+                  <h3 className="f-display m-0" style={{ fontWeight: 700, fontSize: 22, lineHeight: 1.2, color: NAVY }}>{post.title}</h3>
+                  <span className="f-body text-[15px]" style={{ lineHeight: 1.55, color: MUTED }}>{post.description}</span>
+                  <span className="f-body text-[13.5px]" style={{ color: MUTED }}>
                     {formatPostDate(post.publishedAt)} · {post.readMinutes} min read
-                  </p>
-                </div>
-              </article>
-            </Link>
+                  </span>
+                </span>
+              </Link>
+            </article>
           ))}
         </div>
       </div>

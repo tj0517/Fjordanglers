@@ -48,10 +48,17 @@ const buttonBase: CSSProperties = {
   borderRadius: 10, fontSize: '14.5px', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap',
 }
 
+/** The large size: the home hero's and the closing block's CTA. */
+const buttonLarge: CSSProperties = { minHeight: 54, padding: '0 28px', fontSize: '16.5px' }
+
 /** Salmon fill, beige text, navy outline — the main CTA on every page (README "Wspólne zasady"). */
-export function PrimaryButton({ href, children }: { href: string; children: ReactNode }) {
+export function PrimaryButton({ href, children, size = 'md' }: { href: string; children: ReactNode; size?: 'md' | 'lg' }) {
   return (
-    <Link href={href} className="f-body" style={{ ...buttonBase, fontWeight: 700, background: SALMON, color: PAGE_BG, border: `1.5px solid ${NAVY}` }}>
+    <Link
+      href={href}
+      className="f-body"
+      style={{ ...buttonBase, ...(size === 'lg' ? buttonLarge : {}), fontWeight: 700, background: SALMON, color: PAGE_BG, border: `1.5px solid ${NAVY}` }}
+    >
       {children}
     </Link>
   )
