@@ -20,7 +20,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import OfferSection from './offer-section'
 import { languageNames } from '@/lib/experience-v2-content'
-import { NAVY, ON_DARK_SOFT, SALMON_ON_DARK } from '@/components/site/ui'
+import { NAVY, ON_DARK_SOFT, SALMON_ON_DARK, initials } from '@/components/site/ui'
 
 type OfferGuide = {
   id:                string
@@ -55,10 +55,6 @@ function shorten(value: string, max: number): string {
   const cut   = text.slice(0, max)
   const space = cut.lastIndexOf(' ')
   return `${(space > max * 0.6 ? cut.slice(0, space) : cut).trimEnd()}…`
-}
-
-function initials(fullName: string): string {
-  return fullName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase() ?? '').join('')
 }
 
 export default function OfferGuides({ guides, photoUrls, responseSlaHours }: OfferGuidesProps) {

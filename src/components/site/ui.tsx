@@ -121,6 +121,11 @@ export function HeadingLink({ href, children, dark = false }: { href: string; ch
   )
 }
 
+/** "Kristina Placko & Daryl Paskell" → "KP": the stand-in for a missing avatar. */
+export function initials(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('')
+}
+
 const TAG_BACKGROUND = { cream: CREAM, sand: SAND, salmon: SALMON } as const
 
 /** The small uppercase label on a card photo. `salmon` is the offer page's "Gear included". */

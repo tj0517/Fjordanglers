@@ -34,7 +34,7 @@ import { SiteFooter } from '@/components/layout/footer'
 import { FaqList } from '@/components/site/faq'
 import {
   CREAM, DEEP_NAVY, Eyebrow, GhostButton, HeadingLink, MUTED, NAVY, ON_DARK, PrimaryButton,
-  SALMON_ON_DARK, SectionHeading, Tag,
+  SALMON_ON_DARK, SectionHeading, Tag, initials,
 } from '@/components/site/ui'
 import s from '@/components/site/grain.module.css'
 
@@ -94,10 +94,6 @@ export function monthRange(months: readonly number[]): string | null {
 function speciesSentence(species: readonly string[]): string {
   if (species.length === 1) return `${species[0]}.`
   return `${species.slice(0, -1).join(', ')} and ${species[species.length - 1]}.`
-}
-
-function initials(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('')
 }
 
 /** The hub's short name ("Iceland", "Patagonia") — the same one its breadcrumb uses. */
