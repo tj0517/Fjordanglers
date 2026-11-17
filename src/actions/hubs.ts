@@ -24,7 +24,8 @@ import { requireAdmin } from '@/lib/auth/guards'
 import { DESTINATION_HUBS, getHubForSlug } from '@/lib/destinations'
 import { CACHE_TAG_HUBS } from '@/lib/supabase/queries'
 import { hubAuditDiff } from '@/lib/hubs/audit'
-import { HubContentPayloadSchema, hubConstraintMessage, type HubContentPayload, type HubContentValues } from '@/lib/hubs/editor'
+import { env } from '@/lib/env'
+import { HubContentPayloadSchema, hubConstraintMessage, isHubImageUrl, type HubContentPayload, type HubContentValues } from '@/lib/hubs/editor'
 
 export type HubActionResult =
   | { success: true; slug: string; changed: boolean }
@@ -51,6 +52,7 @@ function toColumns(v: HubContentValues) {
     contact_name: v.contactName,
     contact_email: v.contactEmail,
     contact_whatsapp: v.contactWhatsapp,
+    hero_image_url: v.heroImageUrl,
   }
 }
 
@@ -69,6 +71,9 @@ export async function saveHubContent(slug: string, payload: HubContentPayload): 
 
   const parsed = HubContentPayloadSchema.safeParse(payload)
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? 'Validation error')
+  if (parsed.data.heroImageUrl != null && !isHubImageUrl(parsed.data.heroImageUrl, env.NEXT_PUBLIC_SUPABASE_URL)) {
+    return fail('The hero image must be uploaded with the image field, or be a site path starting with "/".')
+  }
   const columns = toColumns(parsed.data)
 
   const supabase = createServiceClient()

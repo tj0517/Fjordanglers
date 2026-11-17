@@ -46,6 +46,7 @@ export default async function EditHubPage({ params }: { params: Promise<{ slug: 
           contactName: row.contact_name ?? '',
           contactEmail: row.contact_email ?? '',
           contactWhatsapp: row.contact_whatsapp ?? '',
+          heroImageUrl: row.hero_image_url,
         }}
       />
     </div>

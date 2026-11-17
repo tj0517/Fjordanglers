@@ -298,6 +298,7 @@ export type Database = {
           created_at: string
           faq: Json
           h1: string
+          hero_image_url: string | null
           hero_quote_author: string | null
           hero_quote_country: string | null
           hero_quote_text: string | null
@@ -320,6 +321,7 @@ export type Database = {
           created_at?: string
           faq?: Json
           h1: string
+          hero_image_url?: string | null
           hero_quote_author?: string | null
           hero_quote_country?: string | null
           hero_quote_text?: string | null
@@ -342,6 +344,7 @@ export type Database = {
           created_at?: string
           faq?: Json
           h1?: string
+          hero_image_url?: string | null
           hero_quote_author?: string | null
           hero_quote_country?: string | null
           hero_quote_text?: string | null

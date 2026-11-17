@@ -33,6 +33,8 @@ export type HubContent = {
   proofNote?: string
   /** `whatsapp` is the number in international format, digits only (as `wa.me` takes it). */
   contact?: { name: string; email: string; whatsapp: string }
+  /** The hero photo set in /admin/hubs. Absent = the newest offer's photo, then the default. */
+  heroImageUrl?: string
 }
 
 /**
@@ -58,5 +60,6 @@ export function hubContentFromRow(row: HubContentRow): HubContent {
     ...(row.contact_name != null && row.contact_email != null && row.contact_whatsapp != null && {
       contact: { name: row.contact_name, email: row.contact_email, whatsapp: row.contact_whatsapp },
     }),
+    ...(row.hero_image_url != null && { heroImageUrl: row.hero_image_url }),
   }
 }

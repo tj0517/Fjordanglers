@@ -27,6 +27,7 @@ export const QUOTE_AUTHOR_MAX = 80
 export const QUOTE_COUNTRY_MAX = 60
 export const CONTACT_NAME_MAX = 80
 export const CONTACT_EMAIL_MAX = 254
+export const HERO_IMAGE_URL_MAX = 2048
 
 export const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
 
@@ -83,6 +84,8 @@ export const HubContentPayloadSchema = z.object({
   contactWhatsapp: z.string().trim().nullable()
     .transform(v => (v == null ? null : v.replace(/[\s+\-().]/g, '')))
     .transform(v => (v == null || v === '' ? null : v)),
+  // Checked against the project's Storage URL by the action (`isHubImageUrl`), not here.
+  heroImageUrl: optionalText(HERO_IMAGE_URL_MAX, 'Image address is too long'),
 }).superRefine((v, ctx) => {
   const peakOutside = v.peakMonths.filter(m => !v.seasonMonths.includes(m))
   if (peakOutside.length > 0) {
@@ -139,6 +142,7 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
   destination_hubs_faq_shape: `The FAQ must be a list of at most ${FAQ_MAX} questions.`,
   destination_hubs_hero_quote_complete: 'The hero quote needs the quote, the author and the country — or none of them.',
   destination_hubs_contact_complete: 'The contact needs a name, a valid e-mail and a WhatsApp number — or none of them.',
+  destination_hubs_hero_image_url_shape: 'The hero image must be uploaded here or be a site path starting with "/".',
 }
 
 export function hubConstraintMessage(dbMessage: string): string | null {
@@ -146,4 +150,23 @@ export function hubConstraintMessage(dbMessage: string): string | null {
     if (dbMessage.includes(constraint)) return human
   }
   return null
+}
+
+// ─── Hero image URL ───────────────────────────────────────────────────────────
+
+/**
+ * The hub's hero photo: a file uploaded in the editor to `guide-photos/hubs/`, or a site path such
+ * as `/hub/canyon.jpg`. Anything else (another host, `data:`, `javascript:`, `//host`) is refused;
+ * the table's `destination_hubs_hero_image_url_shape` is the second line. Same rule as the blog's
+ * `isBlogImageUrl`, another folder.
+ */
+export function isHubImageUrl(value: string, supabaseUrl: string): boolean {
+  if (/^\/(?!\/)/.test(value)) return !value.includes('..') && !value.includes('\\')
+  try {
+    const prefix = new URL('/storage/v1/object/public/guide-photos/hubs/', supabaseUrl).href
+    const href = new URL(value).href
+    return href === value && href.startsWith(prefix) && href.length > prefix.length
+  } catch {
+    return false
+  }
 }

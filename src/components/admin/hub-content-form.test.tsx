@@ -31,7 +31,7 @@ const values: HubContentFormValues = {
   ],
   heroQuoteText: '', heroQuoteAuthor: '', heroQuoteCountry: '',
   proofNote: '',
-  contactName: '', contactEmail: '', contactWhatsapp: '',
+  contactName: '', contactEmail: '', contactWhatsapp: '', heroImageUrl: null,
 }
 
 const renderForm = (over: Partial<HubContentFormValues> = {}) =>
