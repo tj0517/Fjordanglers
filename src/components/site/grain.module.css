@@ -1,6 +1,7 @@
 /*
- * The hub redesign's surfaces (docs/design/blog-hubs-2026-11): the "grain" block — a blurred
- * photo under a dark gradient with a noise tile on top — and the frosted FAQ / hero-fact block.
+ * The redesign's shared surfaces (docs/design/blog-hubs-2026-11, docs/design/site-2026-11): the
+ * "grain" block — a blurred photo under a dark gradient with a noise tile on top — and the frosted
+ * FAQ / hero-fact block.
  */
 
 .blur {

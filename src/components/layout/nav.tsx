@@ -21,8 +21,8 @@ import { useEffect, useId, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Arrow, CREAM, LINE, NAVY } from '@/components/destination-hub/hub-ui'
-import s from '@/components/destination-hub/hub.module.css'
+import { Arrow, CREAM, LINE, NAVY } from '@/components/site/ui'
+import s from '@/components/site/grain.module.css'
 
 const LINKS = [
   ['/trips', 'Trips'],

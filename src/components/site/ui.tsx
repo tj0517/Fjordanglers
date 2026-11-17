@@ -1,6 +1,7 @@
 /**
- * The small pieces the hub redesign repeats (docs/design/blog-hubs-2026-11/hub.dc.html):
- * eyebrow + heading, the two button styles, the arrow and the uppercase tag.
+ * The small pieces every page of the 2026-11 redesign repeats (docs/design/blog-hubs-2026-11 and
+ * docs/design/site-2026-11, "Wspólne zasady"): eyebrow + heading, the button styles, the arrow and
+ * the uppercase tag.
  */
 
 import Link from 'next/link'
@@ -47,10 +48,19 @@ const buttonBase: CSSProperties = {
   borderRadius: 10, fontSize: '14.5px', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap',
 }
 
-/** Salmon fill, navy text — the page's one accent button. */
+/** Salmon fill, beige text, navy outline — the main CTA on every page (README "Wspólne zasady"). */
 export function PrimaryButton({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="f-body" style={{ ...buttonBase, background: SALMON, color: NAVY, border: `1.5px solid ${SALMON}` }}>
+    <Link href={href} className="f-body" style={{ ...buttonBase, fontWeight: 700, background: SALMON, color: PAGE_BG, border: `1.5px solid ${NAVY}` }}>
+      {children}
+    </Link>
+  )
+}
+
+/** Cream fill, navy outline — the second button on a light surface ("All guides →"). */
+export function SecondaryButton({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link href={href} className="f-body" style={{ ...buttonBase, background: CREAM, color: NAVY, border: `1.5px solid ${NAVY}` }}>
       {children}
     </Link>
   )

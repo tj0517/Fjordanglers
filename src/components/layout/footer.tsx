@@ -13,8 +13,8 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { DESTINATION_HUBS } from '@/lib/destinations'
 import { hubCrumbName } from '@/lib/seo/hub-jsonld'
-import { Eyebrow, ON_DARK, PrimaryButton } from '@/components/destination-hub/hub-ui'
-import s from '@/components/destination-hub/hub.module.css'
+import { Eyebrow, ON_DARK, PrimaryButton } from '@/components/site/ui'
+import s from '@/components/site/grain.module.css'
 import { PLAN_YOUR_TRIP_HREF } from './nav'
 
 const JOURNAL = ['Regulations', 'Seasons', 'Species', 'Planning'] as const

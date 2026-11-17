@@ -31,11 +31,12 @@ import type { DestinationHubData } from '@/lib/supabase/queries'
 import HubTrips from './hub-trips'
 import { SiteNav, PLAN_YOUR_TRIP_HREF } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
+import { FaqList } from '@/components/site/faq'
 import {
   CREAM, DEEP_NAVY, Eyebrow, GhostButton, HeadingLink, MUTED, NAVY, ON_DARK, PrimaryButton,
-  SALMON, SALMON_ON_DARK, SectionHeading, Tag,
-} from './hub-ui'
-import s from './hub.module.css'
+  SALMON_ON_DARK, SectionHeading, Tag,
+} from '@/components/site/ui'
+import s from '@/components/site/grain.module.css'
 
 /** Where every "Plan your trip" button leads — the site-wide one (tj, 2026-11-17). */
 const PLAN_HREF = PLAN_YOUR_TRIP_HREF
@@ -425,24 +426,7 @@ function Faq({ data, place }: { data: DestinationHubData; place: string }) {
           <div><GhostButton href={`mailto:${contact.email}`} external>Ask us directly</GhostButton></div>
         )}
       </div>
-      <div className="flex min-w-0 flex-[999_1_420px] flex-col gap-3">
-        {faq.map((entry, i) => (
-          <details key={entry.question} className={s.fq} open={i === 0}>
-            <summary className="flex min-h-[76px] items-center gap-[18px]" style={{ padding: '14px 18px 14px 24px' }}>
-              <span aria-hidden="true" className="f-display w-[34px] flex-none" style={{ fontWeight: 600, fontSize: 20, color: SALMON }}>
-                {String(i + 1).padStart(2, '0')}
-              </span>
-              <span className="f-display flex-[1_1_auto]" style={{ fontWeight: 600, fontSize: 20, lineHeight: 1.25 }}>{entry.question}</span>
-              <span aria-hidden="true" className={`${s.fqIcon} flex h-[42px] w-[42px] flex-none items-center justify-center rounded-full`}>
-                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M12 5v14" /><path d="M5 12h14" />
-                </svg>
-              </span>
-            </summary>
-            <p className={`${s.fqAnswer} f-body m-0 text-[16.5px]`} style={{ padding: '0 76px 24px 76px', lineHeight: 1.65 }}>{entry.answer}</p>
-          </details>
-        ))}
-      </div>
+      <FaqList entries={faq} />
     </section>
   )
 }
