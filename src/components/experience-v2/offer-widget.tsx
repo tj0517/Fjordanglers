@@ -146,6 +146,9 @@ export default function OfferWidget({
   // underneath a visitor who leaves the page open across midnight.
   const months = useMemo(() => nextTwelveMonths(new Date()), [])
   const [flexMonth, setFlexMonth] = useState(() => months[2]?.value ?? '')
+  // The "When" picker starts as one summary row and opens on a click: open, it is ~130 px, and
+  // with it the sticky card no longer fits a 768 px laptop screen (tj, 2026-11-17).
+  const [whenOpen, setWhenOpen] = useState(false)
 
   // Null when the widget is rendered outside a v2 page's provider: the CTA is then just the
   // anchor it has always been.
@@ -258,41 +261,63 @@ export default function OfferWidget({
 
         {/* ── when / anglers / days ── */}
         <div className="flex flex-col gap-3">
-          <div className="rounded-xl border p-2.5" style={fieldStyle}>
-            <p className={`${labelClass} mb-2`} style={mutedStyle}>When</p>
-            <SegmentedControl
-              name="widget-when"
-              compact
-              options={[{ value: 'exact', label: 'Exact dates' }, { value: 'flexible', label: 'Flexible' }]}
-              value={whenMode}
-              onChange={value => { touched(); setWhenMode(value === 'exact' ? 'exact' : 'flexible') }}
-            />
+          {whenOpen ? (
+            <div className="rounded-xl border p-2.5" style={fieldStyle}>
+              <p className={`${labelClass} mb-2`} style={mutedStyle}>When</p>
+              <SegmentedControl
+                name="widget-when"
+                compact
+                options={[{ value: 'exact', label: 'Exact dates' }, { value: 'flexible', label: 'Flexible' }]}
+                value={whenMode}
+                onChange={value => { touched(); setWhenMode(value === 'exact' ? 'exact' : 'flexible') }}
+              />
 
-            {whenMode === 'exact' ? (
-              <div className="mt-2.5">
-                <DateRangeCalendar
-                  compact
-                  dateFrom={exactDate}
-                  days={days}
-                  minDays={minDays}
-                  maxDays={MAX_BRIEF_DAYS}
-                  onChange={(from, n) => { touched(); setExactDate(from); setDays(n) }}
-                />
-              </div>
-            ) : (
-              <label className="mt-2 block">
-                <span className="sr-only">Month</span>
-                <select
-                  value={flexMonth}
-                  onChange={e => { touched(); setFlexMonth(e.target.value) }}
-                  className="w-full rounded-lg border bg-white px-2.5 text-sm"
-                  style={{ ...fieldStyle, minHeight: 40 }}
-                >
-                  {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
-              </label>
-            )}
-          </div>
+              {whenMode === 'exact' ? (
+                <div className="mt-2.5">
+                  <DateRangeCalendar
+                    compact
+                    dateFrom={exactDate}
+                    days={days}
+                    minDays={minDays}
+                    maxDays={MAX_BRIEF_DAYS}
+                    onChange={(from, n) => { touched(); setExactDate(from); setDays(n) }}
+                  />
+                </div>
+              ) : (
+                <label className="mt-2 block">
+                  <span className="sr-only">Month</span>
+                  <select
+                    value={flexMonth}
+                    onChange={e => { touched(); setFlexMonth(e.target.value) }}
+                    className="w-full rounded-lg border bg-white px-2.5 text-sm"
+                    style={{ ...fieldStyle, minHeight: 40 }}
+                  >
+                    {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setWhenOpen(true)}
+              aria-expanded={false}
+              className="flex min-h-[44px] items-center justify-between gap-3 rounded-xl border px-3 text-left"
+              style={fieldStyle}
+              data-testid="widget-when-summary"
+            >
+              <span className="flex min-w-0 flex-col">
+                <span className={labelClass} style={mutedStyle}>When</span>
+                {/* Closed means untouched, so it is always the default: flexible, the preselected month. */}
+                <span className="truncate text-[14.5px] font-semibold">
+                  Flexible · {months.find(m => m.value === flexMonth)?.label}
+                </span>
+              </span>
+              <span className="flex flex-none items-center gap-1 text-[13px] font-semibold underline underline-offset-[3px]" style={{ textDecorationColor: 'var(--fa-salmon)' }}>
+                Change <ChevronDown aria-hidden size={14} strokeWidth={2.25} />
+              </span>
+            </button>
+          )}
 
           <Stepper
             label="Anglers"
