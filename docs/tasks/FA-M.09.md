@@ -2,7 +2,7 @@
 id: FA-M.09
 title: Kalendarz przewodnika, część 1 — synchronizacja zajętości z linku kalendarza (Apple) do zajętych dni, strona „Connect with your calendar” przez podpisany link
 stage: M
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
@@ -94,3 +94,4 @@ SELECT policyname, cmd, roles FROM pg_policies WHERE tablename IN ('<tabela pod�
   - Kolejność wdrożenia: migracja przed kodem to bezpieczna kolejność; tj potwierdza na STOP przed merge.
   - Testy strony „Connect” i crona bez klucza („odmawia, nic nie zapisuje”) są dowodem w PR. Brak lokalnego `CALENDAR_LINK_KEY` przy przejściu w przeglądarce → zgłosić, nie obchodzić.
 - **2026-11-17, tj:** oba lokalne stacki (fjordanglers i Seaclouds) zostają włączone obok siebie na czas przejścia w przeglądarce — jak w FA-M.07; nadpisuje linię §9 „tylko stack fjordanglers” dla FA-M.09. Jedna ciężka rzecz naraz (bez buildu i pełnego suite w trakcie przejścia).
+- **2026-11-17, tj (STOP cron):** plan Vercel Pro potwierdzony; wpis `{ "path": "/api/cron/calendar-sync", "schedule": "0 */3 * * *" }` (co 3 h) — dodać. Po commicie: CI na nowym HEAD, potwierdzić, że route czyta ten sam `CRON_SECRET`, który wysyła Vercel, i opisać jeden przebieg na prod przy zerze połączeń i bez klucza.
