@@ -193,6 +193,10 @@
 .cal-day                          { background: transparent; color: rgba(10,46,77,0.65); }
 .cal-day[data-state="past"]       { color: rgba(10,46,77,0.18); }
 .cal-day[data-state="blocked"]    { background: rgba(10,46,77,0.06); color: rgba(10,46,77,0.28); text-decoration: line-through; }
+/* FA-M.09: busy in the guide's connected calendar (mock-up Calendar.dc.html grey); both = grey + struck */
+.cal-day[data-state="blocked"][data-source="calendar"] { background: #D5DEE6; color: #0A2E4D; text-decoration: none; }
+.cal-day[data-state="blocked"][data-source="both"]     { background: #D5DEE6; color: rgba(10,46,77,0.55); text-decoration: line-through; }
+.cal-legend-calendar { background: #D5DEE6; }
 .cal-day[data-state="requested"]  { background: rgba(230,126,80,0.15); color: #C05C28; border: 1.5px solid rgba(230,126,80,0.4); font-weight: 700; }
 .cal-day[data-state="conflict"]   { background: rgba(239,68,68,0.15); color: #DC2626; border: 1.5px solid rgba(239,68,68,0.4); font-weight: 700; }
 

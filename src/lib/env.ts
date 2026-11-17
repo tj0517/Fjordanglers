@@ -26,6 +26,7 @@
  *  UPSTASH_REDIS_REST_URL             https://<name>.upstash.io (optional — rate limit on POST /api/inquiries)
  *  UPSTASH_REDIS_REST_TOKEN           server-only secret (optional — rate limit)
  *  RATE_LIMIT_SALT                    random secret salting the rate-limit counter keys (optional — rate limit)
+ *  CALENDAR_LINK_KEY                  32 random bytes, base64 (optional — calendar connect + sync, FA-M.09)
  *
  * The three rate-limit variables are all-or-nothing: with any of them missing the
  * limiter is off and the inquiries route behaves as if it had no limit (O-29 a).
@@ -130,6 +131,13 @@ export const envSchema = z.object({
   CRON_SECRET: z.string().optional(),
   // Recipient for daily SLA digest email (ops inbox). If not set, cron runs but does not mail.
   OWNER_EMAIL: z.string().email().optional(),
+
+  // ── Calendar (FA-M.09) ─────────────────────────────────────────────────────
+  // Encrypts guides' calendar links at rest (AES-256-GCM): 32 random bytes, base64
+  // (`openssl rand -base64 32`). Optional and NOT format-checked here, on purpose (tj 2026-11-17):
+  // a missing or malformed key disables calendar connect and sync with a clear error
+  // (src/lib/calendar/link-crypto.ts) — it must never stop the site from starting.
+  CALENDAR_LINK_KEY: z.string().optional(),
 
   // ── Google Ads API ─────────────────────────────────────────────────────────
   // All optional — cron silently skips sync if not configured.

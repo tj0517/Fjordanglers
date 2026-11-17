@@ -147,6 +147,8 @@ export function AvailabilityCalendar({ initialDates }: Props) {
         setRangeError(res.error)
         setRangeState('error')
       } else {
+        // The server's busy days, not the guess above: calendar-busy days inside the season stay (FA-M.09).
+        setBlocked(new Set(res.blockedDates))
         setRangeState('done')
         setTimeout(() => { setRangeState('idle'); setRangeFrom(''); setRangeTo('') }, 2000)
       }

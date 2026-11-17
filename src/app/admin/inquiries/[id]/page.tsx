@@ -37,6 +37,7 @@ import { RequestedDatesEditor } from './RequestedDatesEditor'
 import { DeleteInquiryButton } from './DeleteInquiryButton'
 import type { TripDetails } from '@/actions/inquiries'
 import { availabilityWindow } from '@/lib/availability-window'
+import { busyDaysByGuide, calendarStatusByGuide } from '@/lib/calendar/connections'
 import { depositSetFromOldPrice } from '@/lib/inquiries/deposit'
 import { ExternalOfferToggle } from '../ExternalOfferToggle'
 import { EventTimeline } from '@/components/admin/inquiry/EventTimeline'
@@ -212,24 +213,25 @@ export default async function AdminInquiryDetailPage({
     const guideIds = (guideRows ?? []).map(g => g.id)
 
     if (guideIds.length > 0) {
-      const { data: blockedRows } = await svc
-        .from('guide_unavailable_dates')
-        .select('guide_id, date')
-        .in('guide_id', guideIds)
-        .gte('date', today)
-        .lte('date', yearAhead)
+      // FA-M.09: busy days carry their source (manual / calendar), plus each guide's calendar status.
+      const [busyByGuide, calendarByGuide] = await Promise.all([
+        busyDaysByGuide(svc, guideIds, today, yearAhead),
+        calendarStatusByGuide(svc, guideIds),
+      ])
 
-      type BlockedRow = { guide_id: string; date: string }
-
-      countryGuides = (guideRows ?? []).map(g => ({
-        id:           g.id,
-        full_name:    g.full_name ?? '',
-        avatar_url:   g.avatar_url ?? null,
-        country:      (g as typeof g & { country?: string }).country ?? null,
-        blockedDates: (blockedRows ?? [] as BlockedRow[])
-          .filter((r: BlockedRow) => r.guide_id === g.id)
-          .map((r: BlockedRow) => r.date),
-      }))
+      countryGuides = (guideRows ?? []).map(g => {
+        const busy = busyByGuide.get(g.id) ?? []
+        return {
+          id:           g.id,
+          full_name:    g.full_name ?? '',
+          avatar_url:   g.avatar_url ?? null,
+          country:      g.country ?? null,
+          blockedDates: busy.map(d => d.date),
+          calendarDates: busy.filter(d => d.sources.includes('calendar')).map(d => d.date),
+          manualDates:  busy.filter(d => d.sources.includes('manual')).map(d => d.date),
+          calendar:     calendarByGuide.get(g.id) ?? null,
+        }
+      })
     }
   } catch {
     // Non-fatal — guide attachment tab will show empty state

@@ -11,7 +11,8 @@
  * matches that exact path only (the query string and `#` part are ignored).
  * `/r/` — guide request (FA-M.04); `/offers/` — deposit offer, `/reviews/` — review form,
  * `/invite/` — guide account invite, `/guide-intake/` — guide intake form (FA-1.96);
- * `/login` — exact path: an invited guide is sent to `/login?next=/invite/<code>` (FA-1.96, tj (b)).
+ * `/login` — exact path: an invited guide is sent to `/login?next=/invite/<code>` (FA-1.96, tj (b));
+ * `/connect-calendar/` — guide calendar connect link (FA-M.09).
  */
 export const THIRD_PARTY_FREE_ROUTES: readonly string[] = [
   '/r/',
@@ -20,6 +21,7 @@ export const THIRD_PARTY_FREE_ROUTES: readonly string[] = [
   '/invite/',
   '/guide-intake/',
   '/login',
+  '/connect-calendar/',
 ]
 
 /** False on a route whose URL must not reach a third party; true everywhere else. */

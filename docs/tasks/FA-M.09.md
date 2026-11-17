@@ -2,15 +2,16 @@
 id: FA-M.09
 title: Kalendarz przewodnika, część 1 — synchronizacja zajętości z linku kalendarza (Apple) do zajętych dni, strona „Connect with your calendar” przez podpisany link
 stage: M
-status: todo
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-m.09-calendar-sync
+pr: 205
 depends_on: []
-blocked_by_questions: [O-55]
+blocked_by_questions: []
 touches_db: true
 touches_prod: true
 estimate_h: 8
@@ -36,7 +37,7 @@ Kalendarz zostaje u przewodnika, FA tylko odczytuje zajętość. To zadanie budu
 ## Zakres
 - [ ] Odczyt stanu: `guide_unavailable_dates`, kto i gdzie je zapisuje/czyta, polityki; `guide_private`; crony (O-55).
 - [ ] Migracja: podłączenie kalendarza per przewodnik (dostawca, link kalendarza — **prywatny, dostęp tylko serwer**, status, ostatnia synchronizacja, ostatni błąd); źródło blokady na zajętych dniach (`manual` / `calendar`) tak, by synchronizacja nie kasowała ręcznych blokad; RLS w tej samej migracji.
-- [ ] Synchronizacja: pobranie i parsowanie ICS (wydarzenia całodniowe i godzinowe → zajęty dzień w strefie czasowej przewodnika; wydarzenia oznaczone jako „wolny” pomijane), horyzont 12 miesięcy, zastąpienie tylko blokad ze źródła `calendar`; błąd pobrania zapisuje status, nie usuwa starych blokad.
+- [ ] Synchronizacja: pobranie i parsowanie ICS (wydarzenia całodniowe i godzinowe → zajęty dzień w strefie czasowej przewodnika; wydarzenie całodniowe zawsze = zajęty dzień, także oznaczone jako „wolny”; wydarzenia godzinowe oznaczone jako „wolny” pomijane — tj 2026-11-17, opcja b), horyzont 12 miesięcy, zastąpienie tylko blokad ze źródła `calendar`; błąd pobrania zapisuje status, nie usuwa starych blokad.
 - [ ] Zadanie cykliczne co kilka godzin (mechanizm wg O-55), z sekretem crona.
 - [ ] Podpisany link „connect calendar” (jednorazowy, z terminem) generowany w adminie do skopiowania / wysłania na WhatsApp; strona z dwoma przyciskami: **Apple** (instrukcja iPhone/Mac + pole na link, walidacja i próbne pobranie) i **Google** (wyłączony z dopiskiem „soon” do FA-M.10).
 - [ ] Karta zapytania w adminie: zajęte dni z kalendarza odróżnione od ręcznych + data ostatniej synchronizacji.
@@ -73,3 +74,24 @@ SELECT policyname, cmd, roles FROM pg_policies WHERE tablename IN ('<tabela pod�
 ## Notatki z realizacji
 - **2026-11-10, tj (wf-plan):** „Connect with your calendar” z dwoma przyciskami; Apple = link udostępniania; przyciski w koncie + jednorazowy podpisany link; w MVP tylko Google i Apple, FishingBooker ręcznie.
 - **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
+- **2026-11-17, tj:** O-55 → (a) crony Vercela (sub-daily wymaga planu Pro — tj potwierdza plan przed zmianą `vercel.json`); `blocked_by_questions` wyczyszczone.
+- **2026-11-17, tj (STOP 1, schemat):**
+  - D1 (b) — link kalendarza szyfrowany w aplikacji kluczem z env; STOP przed użyciem: agent podaje nazwę zmiennej i sposób wygenerowania, tj ustawia wartość w Vercel i lokalnie (agent nigdy jej nie widzi ani nie zapisuje). Testy i CI — stały, jawnie testowy klucz. Podpowiedź w adminie = sam host, zero znaków z tajnej części linku.
+  - D2 (a) — źródło w kluczu (`guide_id, date, source`), istniejące wiersze = `manual`. Przyjęte skutki: „open season” czyści tylko ręczne przyszłe blokady; odblokowanie dnia zajętego w kalendarzu zostawia go zajętym. Przed migracją: co dziś widzi przewodnik na kalendarzu w dashboardzie dla dnia z kalendarza + najmniejsza poprawka jako opcje (bez budowania bez zgody).
+  - D3 (a) — strefa z kraju przewodnika, potem strefa kalendarza, potem UTC.
+  - D4 (a) — wiersze `audit_log` w tej samej transakcji, payload bez linku; deferred: tabela zdarzeń na poziomie przewodnika.
+  - D5 — pakiet: link ważny 7 dni, zużyty dopiero przy udanym połączeniu, nowy link unieważnia stary niewykorzystany. **Jeden kalendarz na przewodnika — świadomy wybór MVP; oznacza, że Google z FA-M.10 zastąpi Apple.** Deferred: kilka kalendarzy na przewodnika.
+  - D6 (b) — przewodnik tylko czyta swoje zajęte dni, zapis wyłącznie przez serwer; red proof: zalogowany przewodnik wstawia i kasuje wiersz bezpośrednio.
+  - Różnice z makietą: wygrywa zadanie — Google wyłączony „soon”, dodane kroki dla Maca.
+- **2026-11-17, tj (STOP 1b):**
+  - Migracja: OK na lokalnie. Przed dalszą pracą na piśmie: (a) okno wdrożenia — co pęka na prod przy migracji przed kodem i odwrotnie (kolejność tj ustala na STOP przed merge); (b) `CALENDAR_LINK_KEY` nie jest wymagany przy starcie aplikacji — brak klucza wyłącza połączenie i synchronizację z czytelnym błędem, strona działa; test; (c) wiersze `audit_log` z nazewnictwem operacji jak w FA-M.08 + czy coś czyta `audit_log` zakładając tylko INSERT / UPDATE / DELETE. Ciała funkcji tj ocenia w diffie PR z red proofs.
+  - D2 follow-up → (b): serwer odmawia odblokowania dnia zajętego w kalendarzu, strona wyjaśnia. Koszt ponownego odczytu dat po „Set open season” — tylko wycena, bez budowania.
+  - `CALENDAR_LINK_KEY`: lokalnie ustawiony przez tj (wartość jednorazowa, inna niż prod). Wartość prod tj ustawia w Vercel przed merge — przypomnieć na STOP przed merge; prod nie jest gotowy bez potwierdzenia tj.
+  - Klucz testowy w kodzie testów. Check `secrets` w CI musi przejść bez allowlisty i zmian CI; jeśli go oflaguje — STOP i pokazać.
+- **2026-11-17, tj (parser, okno wdrożenia):**
+  - Wydarzenia całodniowe → (b): zawsze zajęty dzień, także oznaczone jako „wolny”; godzinowe oznaczone jako „wolny” pomijane. Zakres zaktualizowany; fixtures dla obu przypadków; deferred: sprawdzić flagę na pierwszym prawdziwym kalendarzu iCloud i policzyć, jak często (b) blokuje dzień, w którym przewodnik był wolny.
+  - „Set open season”: budujemy ponowny odczyt — akcja zwraca aktualne zajęte dni przewodnika, kalendarz zastępuje lokalną kopię; jeden test.
+  - Kolejność wdrożenia: migracja przed kodem to bezpieczna kolejność; tj potwierdza na STOP przed merge.
+  - Testy strony „Connect” i crona bez klucza („odmawia, nic nie zapisuje”) są dowodem w PR. Brak lokalnego `CALENDAR_LINK_KEY` przy przejściu w przeglądarce → zgłosić, nie obchodzić.
+- **2026-11-17, tj:** oba lokalne stacki (fjordanglers i Seaclouds) zostają włączone obok siebie na czas przejścia w przeglądarce — jak w FA-M.07; nadpisuje linię §9 „tylko stack fjordanglers” dla FA-M.09. Jedna ciężka rzecz naraz (bez buildu i pełnego suite w trakcie przejścia).
+- **2026-11-17, tj (STOP cron):** plan Vercel Pro potwierdzony; wpis `{ "path": "/api/cron/calendar-sync", "schedule": "0 */3 * * *" }` (co 3 h) — dodać. Po commicie: CI na nowym HEAD, potwierdzić, że route czyta ten sam `CRON_SECRET`, który wysyła Vercel, i opisać jeden przebieg na prod przy zerze połączeń i bez klucza.

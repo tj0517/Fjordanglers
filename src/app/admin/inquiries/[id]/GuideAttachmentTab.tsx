@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { assignGuideToInquiry, assignGuideSilently, setExternalOffer, unassignGuide } from '@/actions/inquiries'
+import type { CalendarStatus } from '@/lib/calendar/connections'
+import { CalendarConnectStatus } from './CalendarConnectStatus'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -13,7 +15,10 @@ export interface GuideWithCalendar {
   full_name:    string
   avatar_url:   string | null
   country:      string | null
-  blockedDates: string[]  // ISO dates from guide_unavailable_dates
+  blockedDates: string[]  // ISO dates from guide_unavailable_dates, any source
+  calendarDates: string[] // FA-M.09: of those, busy in the guide's connected calendar
+  manualDates:  string[]  // FA-M.09: of those, blocked by hand
+  calendar:     CalendarStatus | null
 }
 
 interface Props {
@@ -31,12 +36,18 @@ interface Props {
 
 function MiniCalendar({
   blockedDates,
+  calendarDates,
+  manualDates,
   requestedDates,
 }: {
   blockedDates:   string[]
+  calendarDates:  string[]
+  manualDates:    string[]
   requestedDates: string[]
 }) {
   const blockedSet   = useMemo(() => new Set(blockedDates),   [blockedDates])
+  const calendarSet  = useMemo(() => new Set(calendarDates),  [calendarDates])
+  const manualSet    = useMemo(() => new Set(manualDates),    [manualDates])
   const requestedSet = useMemo(() => new Set(requestedDates), [requestedDates])
 
   // Start on the month of the first requested date, or current month
@@ -109,6 +120,15 @@ function MiniCalendar({
           const isRequested = requestedSet.has(iso)
           const isConflict  = isBlocked && isRequested
           const isPast      = iso < today
+          // FA-M.09: where a busy day comes from — the guide's calendar, a manual block, or both.
+          const source = calendarSet.has(iso) && manualSet.has(iso) ? 'both'
+            : calendarSet.has(iso) ? 'calendar'
+            : manualSet.has(iso)   ? 'manual'
+            : undefined
+          const sourceLabel = source === 'both' ? 'Busy in calendar and blocked by guide'
+            : source === 'calendar' ? 'Busy in calendar'
+            : source === 'manual'   ? 'Blocked by guide'
+            : undefined
 
           const state = isConflict ? 'conflict'
             : isRequested          ? 'requested'
@@ -120,6 +140,9 @@ function MiniCalendar({
             <div
               key={iso}
               data-state={state}
+              data-source={isBlocked ? source : undefined}
+              title={isBlocked ? sourceLabel : undefined}
+              aria-label={isBlocked && sourceLabel != null ? `${iso}: ${sourceLabel}` : undefined}
               className="cal-day h-7 flex items-center justify-center rounded-lg text-[11px] f-body border border-transparent"
             >
               {day}
@@ -138,8 +161,14 @@ function MiniCalendar({
         )}
         <div className="flex items-center gap-1 pt-2">
           <div className="w-2 h-2 rounded-sm bg-primary/[6%]" />
-          <span className="text-[9px] f-body text-primary/45">Guide blocked</span>
+          <span className="text-[9px] f-body text-primary/45">Blocked by guide</span>
         </div>
+        {calendarDates.length > 0 && (
+          <div className="flex items-center gap-1 pt-2">
+            <div className="w-2 h-2 rounded-sm cal-legend-calendar" />
+            <span className="text-[9px] f-body text-primary/45">Busy in calendar</span>
+          </div>
+        )}
         {hasConflicts && (
           <div className="flex items-center gap-1 pt-2">
             <div className="w-2 h-2 rounded-sm bg-red-500/15 border border-red-500/40" />
@@ -259,6 +288,7 @@ function GuideCard({
           {guide.country && (
             <p className="text-[11px] f-body mt-0.5 text-primary/45">{guide.country}</p>
           )}
+          <CalendarConnectStatus guideId={guide.id} calendar={guide.calendar} />
           {isAssigned && (
             <div className="mt-1">
               {guideAcceptance === 'accepted' && (
@@ -353,6 +383,8 @@ function GuideCard({
           <div className="px-4 pb-4">
             <MiniCalendar
               blockedDates={guide.blockedDates}
+              calendarDates={guide.calendarDates}
+              manualDates={guide.manualDates}
               requestedDates={requestedDates}
             />
           </div>
