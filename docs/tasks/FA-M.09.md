@@ -82,3 +82,8 @@ SELECT policyname, cmd, roles FROM pg_policies WHERE tablename IN ('<tabela pod�
   - D5 — pakiet: link ważny 7 dni, zużyty dopiero przy udanym połączeniu, nowy link unieważnia stary niewykorzystany. **Jeden kalendarz na przewodnika — świadomy wybór MVP; oznacza, że Google z FA-M.10 zastąpi Apple.** Deferred: kilka kalendarzy na przewodnika.
   - D6 (b) — przewodnik tylko czyta swoje zajęte dni, zapis wyłącznie przez serwer; red proof: zalogowany przewodnik wstawia i kasuje wiersz bezpośrednio.
   - Różnice z makietą: wygrywa zadanie — Google wyłączony „soon”, dodane kroki dla Maca.
+- **2026-11-17, tj (STOP 1b):**
+  - Migracja: OK na lokalnie. Przed dalszą pracą na piśmie: (a) okno wdrożenia — co pęka na prod przy migracji przed kodem i odwrotnie (kolejność tj ustala na STOP przed merge); (b) `CALENDAR_LINK_KEY` nie jest wymagany przy starcie aplikacji — brak klucza wyłącza połączenie i synchronizację z czytelnym błędem, strona działa; test; (c) wiersze `audit_log` z nazewnictwem operacji jak w FA-M.08 + czy coś czyta `audit_log` zakładając tylko INSERT / UPDATE / DELETE. Ciała funkcji tj ocenia w diffie PR z red proofs.
+  - D2 follow-up → (b): serwer odmawia odblokowania dnia zajętego w kalendarzu, strona wyjaśnia. Koszt ponownego odczytu dat po „Set open season” — tylko wycena, bez budowania.
+  - `CALENDAR_LINK_KEY`: lokalnie ustawiony przez tj (wartość jednorazowa, inna niż prod). Wartość prod tj ustawia w Vercel przed merge — przypomnieć na STOP przed merge; prod nie jest gotowy bez potwierdzenia tj.
+  - Klucz testowy w kodzie testów. Check `secrets` w CI musi przejść bez allowlisty i zmian CI; jeśli go oflaguje — STOP i pokazać.
