@@ -26,6 +26,7 @@ owner: tj
 - `guide_private` — prywatne dane przewodnika (tylko serwer)
 - `docs/04-open-questions.md` O-54, O-55
 - Dokument „Aplikacja dla przewodników — zakres MVP” — funkcja 1, decyzje 10.11
+- `docs/design/fa-m-guide-app/README.md` — makieta (tj 17.11): `Connect.dc.html` (kroki Apple, ręczne blokady jako fallback), `Calendar.dc.html` (status synchronizacji, źródło zajętego dnia), `OtherDates.dc.html` (zajęte dni wyłączone)
 
 Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
 
@@ -71,3 +72,4 @@ SELECT policyname, cmd, roles FROM pg_policies WHERE tablename IN ('<tabela pod�
 
 ## Notatki z realizacji
 - **2026-11-10, tj (wf-plan):** „Connect with your calendar” z dwoma przyciskami; Apple = link udostępniania; przyciski w koncie + jednorazowy podpisany link; w MVP tylko Google i Apple, FishingBooker ręcznie.
+- **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.

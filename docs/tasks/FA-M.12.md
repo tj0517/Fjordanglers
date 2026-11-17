@@ -26,6 +26,7 @@ owner: tj
 - `docs/tasks/FA-M.06.md` — ponaglenie (push może korzystać z tej samej reguły — poza zakresem tutaj)
 - `src/app/layout.tsx`, `public/` — manifest i ikony
 - Dokumentacja Next.js (context7): PWA / service worker w App Router; Web Push na iOS (16.4+, tylko po dodaniu do ekranu)
+- `docs/design/fa-m-guide-app/README.md` — makieta (tj 17.11): `Push.dc.html` (treść push), `Done.dc.html` (zachęta „dodaj do ekranu”), `Settings.dc.html` (przełącznik push, instrukcja iOS/Android)
 
 Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
 
@@ -68,3 +69,4 @@ grep -n "addEventListener('fetch'" -r public src
 
 ## Notatki z realizacji
 - **2026-11-10, tj:** forma aplikacji = PWA (bez sklepu).
+- **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
