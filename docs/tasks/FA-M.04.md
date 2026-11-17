@@ -2,13 +2,14 @@
 id: FA-M.04
 title: Strona zlecenia `/r/[token]` — brief i daty, akceptuj / odrzuć / 1–3 inne daty, bez logowania, mobile-first
 stage: M
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-m.04-request-page
+pr: 200
 depends_on: [FA-M.03]
 blocked_by_questions: []
 touches_db: false
