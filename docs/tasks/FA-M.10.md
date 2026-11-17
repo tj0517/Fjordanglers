@@ -25,6 +25,7 @@ owner: tj
 - Dokumentacja Google Calendar API (context7): free/busy, zakresy OAuth, tokeny odświeżania
 - [Google — weryfikacja wrażliwych zakresów](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification)
 - `docs/tasks/FA-M.11.md` — klient OAuth i ekran zgody konfiguruje tj
+- `docs/design/fa-m-guide-app/README.md` — makieta (tj 17.11): `Connect.dc.html` — przycisk Google
 
 Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
 
@@ -68,3 +69,4 @@ grep -rn "refresh_token" src | grep -v test
 
 ## Notatki z realizacji
 - **2026-11-10, Claude (wf-plan):** Google traktuje odczyt kalendarza jako zakres wrażliwy — do weryfikacji (do ~10 dni) ekran ostrzegawczy i limit kont; dla ~15 przewodników wystarczy, wniosek składa tj w FA-M.11.
+- **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
