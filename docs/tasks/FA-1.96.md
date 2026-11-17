@@ -2,13 +2,14 @@
 id: FA-1.96
 title: Strony z tokenem bez skryptów zewnętrznych — `/offers/`, `/reviews/`, `/invite/`, `/guide-intake/` + przegląd parametrów zapytania
 stage: 1
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
 effort: low
 agent: fa-web
 branch: fix/fa-1.96-token-pages-third-party
+pr: 202
 depends_on: [FA-M.04]
 blocked_by_questions: []
 touches_db: false
