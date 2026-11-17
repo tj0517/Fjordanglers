@@ -9,6 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-m.09-calendar-sync
+pr: 205
 depends_on: []
 blocked_by_questions: []
 touches_db: true
