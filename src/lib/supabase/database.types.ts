@@ -2243,6 +2243,8 @@ export type Database = {
           guide_notes: string | null
           guide_options: Json
           inquiry_id: string
+          licence_buyer: string | null
+          licence_note: string | null
           price_range: string | null
           target_species: string | null
           updated_at: string | null
@@ -2256,6 +2258,8 @@ export type Database = {
           guide_notes?: string | null
           guide_options?: Json
           inquiry_id: string
+          licence_buyer?: string | null
+          licence_note?: string | null
           price_range?: string | null
           target_species?: string | null
           updated_at?: string | null
@@ -2269,6 +2273,8 @@ export type Database = {
           guide_notes?: string | null
           guide_options?: Json
           inquiry_id?: string
+          licence_buyer?: string | null
+          licence_note?: string | null
           price_range?: string | null
           target_species?: string | null
           updated_at?: string | null

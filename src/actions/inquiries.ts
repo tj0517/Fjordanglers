@@ -54,6 +54,12 @@ import { emitEvent } from '@/lib/events/emit'
 import { answerGuideRequestFromDashboard, type AnswerResult } from '@/lib/guide-requests/requests'
 import { fetchEurRate } from '@/lib/fx'
 import { isDepositCurrency } from '@/lib/inquiries/deposit'
+import {
+  TRIP_BRIEF_COLUMNS,
+  changedTripBriefFields,
+  tripBriefInputSchema,
+  type TripBriefInput,
+} from '@/lib/inquiries/trip-brief'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1030,7 +1036,9 @@ export interface TripDetails {
   date_flexibility:  string | null  // 'fixed' | 'flexible_1_2' | 'flexible_week' | 'very_flexible'
   target_species:    string | null
   accommodation:     string | null
-  guide_notes:       string | null
+  guide_notes:       string | null  // "Note for guide" on the card = "Note from FjordAnglers" on /r/[token]
+  licence_buyer:     string | null  // 'client' | 'guide' | 'not_needed' (FA-M.07, LICENCE_BUYERS)
+  licence_note:      string | null
   // Guide fills (shown to FA as their offer response):
   guide_final_dates: string | null   // guide's confirmed/adjusted dates (free text)
   guide_options:     GuideOption[]
@@ -1291,28 +1299,67 @@ export async function respondToAssignment(
 // ─── saveTripDetails ──────────────────────────────────────────────────────────
 
 /**
- * Admin: upsert the trip brief for an inquiry.
+ * Admin: save the Trip Brief for an inquiry (FA-M.07).
+ *
+ * The input is the whole brief from the Brief tab, validated by `tripBriefInputSchema` (bounded
+ * lengths, allowed values, no other keys) — an emptied field is stored as NULL (tj decision 3).
+ * `guide_options` is the guide's offer and is never written here: sending it as null broke every
+ * save on its NOT NULL since FA-1.12 (tj decision 2).
+ *
+ * Update, then emit (as `setQualified`): one `inquiry.brief_updated` whose payload names the
+ * changed fields, never their text. Nothing changed → nothing written, no event.
  */
 export async function saveTripDetails(
   inquiryId: string,
-  data: Partial<Omit<TripDetails, never>>,
+  input: TripBriefInput,
 ): Promise<ActionResult> {
-  await requireAdmin()
+  const { userId } = await requireAdmin()
+
+  const parsed = tripBriefInputSchema.safeParse(input)
+  if (!parsed.success) {
+    const fields = [...new Set(parsed.error.issues.map(i => String(i.path[0] ?? 'brief')))]
+    return { success: false, error: `Invalid trip brief: ${fields.join(', ')}` }
+  }
+  const brief = parsed.data
+
   const svc = createServiceClient()
+  const { data: before, error: readErr } = await svc
+    .from('inquiry_trip_details')
+    .select(TRIP_BRIEF_COLUMNS)
+    .eq('inquiry_id', inquiryId)
+    .maybeSingle()
+  if (readErr != null) {
+    console.error('[saveTripDetails] read error:', readErr.message)
+    return { success: false, error: readErr.message }
+  }
+
+  const changed = changedTripBriefFields(before, brief)
+  if (changed.length === 0) return { success: true }
+
   const { error } = await svc
     .from('inquiry_trip_details')
-    .upsert(
-      { inquiry_id: inquiryId, ...data, guide_options: (data.guide_options ?? null) as unknown as Json, updated_at: new Date().toISOString() },
-      { onConflict: 'inquiry_id' },
-    )
-
+    .upsert({ inquiry_id: inquiryId, ...brief, updated_at: new Date().toISOString() }, { onConflict: 'inquiry_id' })
   if (error != null) {
-    console.error('[saveTripDetails] DB error:', error)
+    console.error('[saveTripDetails] DB error:', error.message)
     return { success: false, error: error.message }
   }
 
+  try {
+    await emitEvent(svc, {
+      inquiryId,
+      type:    'inquiry.brief_updated',
+      actor:   { kind: 'admin', id: userId },
+      source:  'app',
+      channel: 'app',
+      payload: { fields: changed },
+    })
+  } catch (err) {
+    console.error('[saveTripDetails] emitEvent error:', err instanceof Error ? err.message : err)
+    return { success: false, error: 'Trip brief saved, but the change was not recorded on the timeline' }
+  }
+
   revalidatePath('/admin/inquiries/' + inquiryId)
-  console.log(`[saveTripDetails] Saved trip details for inquiry ${inquiryId}`)
+  console.log(`[saveTripDetails] Saved trip details for inquiry ${inquiryId} (${changed.join(', ')})`)
   return { success: true }
 }
 
