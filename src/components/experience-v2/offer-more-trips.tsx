@@ -5,7 +5,8 @@
  * never a lie and "More places we guide" is never a dead end.
  *
  * Cards are the site's one trip card (src/components/site/trip-card.tsx, 2026-11 mockup): photo
- * with the region tag, name and the "from" price, as on the hub and the home page.
+ * with the region tag, name, the guide and the "from" price — the hub and the home page use the
+ * same card without the guide line.
  */
 
 import { formatPrice } from '@/lib/format-price'
@@ -53,6 +54,7 @@ export default function OfferMoreTrips({ related, country, region }: OfferMoreTr
                 region:    page.region,
                 cover:     page.hero_image_url,
                 species:   [],
+                guideName: page.guide?.full_name ?? null,
                 priceText: formatPrice({ priceFrom: page.price_from, priceType: page.price_type, currency: page.currency }),
               }}
             />

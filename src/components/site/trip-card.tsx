@@ -1,7 +1,8 @@
 /**
  * The trip card — one component for the hub, the home page, the offer page's "More trips" and the
  * guide profile (docs/design/site-2026-11/README.md). Photo with the region tag, name, species, the
- * price exactly as the offer page prints it, and "View trip".
+ * guide when the caller passes one (the offer page's "More trips", tj 2026-11-17), the price
+ * exactly as the offer page prints it, and "View trip".
  *
  * `onClick` is for the caller's analytics (the hub counts `hub_card_click`); a server page leaves it out.
  */
@@ -9,7 +10,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { HubOffer } from '@/lib/supabase/queries'
-import { CREAM, NAVY, PAGE_BG, SALMON, Tag } from './ui'
+import { CREAM, MUTED, NAVY, PAGE_BG, SALMON, Tag } from './ui'
 
 export type TripCardData = {
   slug:      string
@@ -18,6 +19,8 @@ export type TripCardData = {
   cover:     string | null
   species:   readonly string[]
   priceText: string
+  /** Optional: a card without it draws no guide line. */
+  guideName?: string | null
 }
 
 export function TripCard({ trip, priority = false, onClick }: { trip: TripCardData; priority?: boolean; onClick?: () => void }) {
@@ -51,6 +54,11 @@ export function TripCard({ trip, priority = false, onClick }: { trip: TripCardDa
       {trip.species.length > 0 && (
         <p className="f-body m-0 text-[14.5px] font-semibold" style={{ color: NAVY }}>
           {trip.species.join(', ')}
+        </p>
+      )}
+      {trip.guideName != null && trip.guideName.trim() !== '' && (
+        <p className="f-body m-0 -mt-2 text-[14.5px]" style={{ color: MUTED }} data-testid="trip-card-guide">
+          Guide: {trip.guideName}
         </p>
       )}
       <div className="mt-auto flex items-center justify-between gap-3">
