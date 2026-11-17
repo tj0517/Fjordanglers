@@ -47,6 +47,9 @@ importers:
       google-ads-api:
         specifier: ^24.1.0
         version: 24.1.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
+      ical.js:
+        specifier: 2.2.1
+        version: 2.2.1
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
@@ -3391,6 +3394,9 @@ packages:
   https-proxy-agent@7.0.6:
     resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
     engines: {node: '>= 14'}
+
+  ical.js@2.2.1:
+    resolution: {integrity: sha512-yK/UlPbEs316igb/tjRgbFA8ZV75rCsBJp/hWOatpyaPNlgw0dGDmU+FoicOcwX4xXkeXOkYiOmCqNPFpNPkQg==}
 
   iceberg-js@0.8.1:
     resolution: {integrity: sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==}
@@ -8427,6 +8433,8 @@ snapshots:
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
+
+  ical.js@2.2.1: {}
 
   iceberg-js@0.8.1: {}
 
