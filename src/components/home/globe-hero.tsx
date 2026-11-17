@@ -110,8 +110,9 @@ export function GlobeHero({
 
       map.on('style.load', () => {
         map.setFog({
-          color:            'rgba(176, 215, 245, 0.75)',
-          'high-color':     'rgba(176, 215, 245, 0.35)',
+          color:            'rgba(0, 0, 0, 0)',
+          // Transparent: any colour here fills the whole canvas square behind the sphere (tj, 2026-11-17).
+          'high-color':     'rgba(0, 0, 0, 0)',
           'horizon-blend':  0.04,
           'space-color':    'rgba(0, 0, 0, 0)',
           'star-intensity': 0,
