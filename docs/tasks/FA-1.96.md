@@ -2,7 +2,7 @@
 id: FA-1.96
 title: Strony z tokenem bez skryptów zewnętrznych — `/offers/`, `/reviews/`, `/invite/`, `/guide-intake/` + przegląd parametrów zapytania
 stage: 1
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -68,3 +68,4 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 - **2026-11-17, tj (wf-plan):** D1 (a) — wszystkie cztery trasy z tokenem w jednym PR + przegląd parametrów zapytania; D2 (a) — tokenów, które mogły wyciec, nie unieważniamy (prod 17.11: 0 aktywnych linków ofert, 3 aktywne linki opinii, 0 zaproszeń, 1 publiczny link intake). Konwersja Ads strzela tylko przy formularzu zapytania, nie na stronach z tokenem.
 - **2026-11-17, tj (STOP 1, parametry zapytania):** (b) — `/login` na `THIRD_PARTY_FREE_ROUTES`, dopasowanie dokładne (ścieżka, bez query string), nie prefiks; pozostałe wpisy zostają prefiksami; testy: `/login` i `/login?next=…` wykluczone, `/loginx` i `/` nie, `/offers/x` dalej wykluczone; red proof jak dla tras z tokenem; `/login?next=/invite/<code>` w przejściu przeglądarką (0 prób). (c) — kod zaproszenia poza adresem `/login` → deferred. Do deferred także: brak `referrer: 'no-referrer'` na `/offers/`, `/reviews/`, `/guide-intake/`; nieaktualny komentarz w `reset-password-form.tsx`. Pozostałe trasy z tabeli (`/auth/reset`, `/auth/callback`, `/reset-password`, `/inquiry/[id]/confirmed`) — „nie dotyczy” przyjęte; tabela zostaje w opisie PR. Bez ładowania prawdziwych skryptów Mety/Clarity.
 - **2026-11-17, tj (STOP 2):** przejście w przeglądarce zatwierdzone (blokada w każdym przebiegu, zgoda `accepted` przed skryptami strony, `about:blank` przed zwrotem); stack Seaclouds nie ruszać. Komenda weryfikacji: `pnpm exec vitest run third-party` zamiast `pnpm test -- third-party`.
+- **2026-11-17, tj (wf-review):** accepted (PR #202). `THIRD_PARTY_FREE_ROUTES` now covers `/r/`, `/offers/`, `/reviews/`, `/invite/`, `/guide-intake/` (prefixes) and `/login` (exact path, query and `#` ignored). Tests: each route renders no Google tag, GTM, banner, Pixel or Clarity with consent `accepted`; `/loginx`, `/login/x`, `/offersx` and `/` keep their tags; lead-form Ads conversion unchanged (`experience-funnel` 8/8). Red proofs: route removed → its tests fail; prefix-only matching → `/loginx` check fails. Walk: 0 third-party attempts on the five routes, 4 on `/`. Query-string / `#` review: `/auth/reset`, `/auth/callback` are server redirects; `/reset-password` and `/inquiry/[id]/confirmed` carry no credential.
