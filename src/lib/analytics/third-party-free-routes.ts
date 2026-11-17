@@ -7,13 +7,26 @@
  * `PageView` carries the URL, and Clarity records the session with it. A page whose URL carries a
  * secret — a link token — would therefore leak it to Google, Meta and Microsoft.
  *
- * EVERY TOKEN PAGE MUST BE ON THIS LIST. Entries are path prefixes ending in "/".
- * (`/offers/` is not here yet — deferred row FA-M.04, separate task.)
+ * EVERY TOKEN PAGE MUST BE ON THIS LIST. An entry ending in "/" is a path prefix; any other entry
+ * matches that exact path only (the query string and `#` part are ignored).
+ * `/r/` — guide request (FA-M.04); `/offers/` — deposit offer, `/reviews/` — review form,
+ * `/invite/` — guide account invite, `/guide-intake/` — guide intake form (FA-1.96);
+ * `/login` — exact path: an invited guide is sent to `/login?next=/invite/<code>` (FA-1.96, tj (b)).
  */
-export const THIRD_PARTY_FREE_ROUTES: readonly string[] = ['/r/']
+export const THIRD_PARTY_FREE_ROUTES: readonly string[] = [
+  '/r/',
+  '/offers/',
+  '/reviews/',
+  '/invite/',
+  '/guide-intake/',
+  '/login',
+]
 
 /** False on a route whose URL must not reach a third party; true everywhere else. */
 export function thirdPartyScriptsAllowed(pathname: string | null): boolean {
   if (pathname == null) return true
-  return !THIRD_PARTY_FREE_ROUTES.some(prefix => pathname.startsWith(prefix))
+  const path = pathname.split(/[?#]/, 1)[0] ?? pathname
+  return !THIRD_PARTY_FREE_ROUTES.some(entry =>
+    entry.endsWith('/') ? path.startsWith(entry) : path === entry,
+  )
 }
