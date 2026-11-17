@@ -30,12 +30,11 @@ vi.mock('@/components/home/species-slider', () => ({ SpeciesSlider: () => null }
 vi.mock('@/components/home/experiences-slider', () => ({ ExperiencesSlider: () => null }))
 vi.mock('@/components/home/bg-video', () => ({ BgVideo: () => null }))
 vi.mock('@/components/ui/contact-expert-button', () => ({ ContactExpertButton: () => null }))
-vi.mock('@/components/destination-hub/hub-map-view', () => ({ default: () => null }))
 vi.mock('@/components/analytics/WebEventTracker', () => ({ WebEventTracker: () => null }))
 
 import { getArticleRelated, getDestinationHub, getLatestBlogPosts } from './queries'
 import HomePage from '@/app/page'
-import DestinationHubPage from '@/app/(public)/[destination]/page'
+import DestinationHubPage from '@/app/(hub)/[destination]/page'
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -174,7 +173,7 @@ describe('hub articles (tj D2: from blog_posts, by the hub\'s countries)', () =>
   it('/norway lists the published Norway posts, newest first — not Sweden\'s, not a general post, not a draft', async () => {
     h.db.tables.experience_pages = []
     const data = await getDestinationHub('norway')
-    expect(data?.articles).toEqual([
+    expect(data?.articles.map(a => ({ slug: a.slug, title: a.title }))).toEqual([
       { slug: 'fa190-norway-new', title: 'Title fa190-norway-new' },
       { slug: 'fa190-norway-old', title: 'Title fa190-norway-old' },
     ])

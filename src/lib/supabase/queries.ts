@@ -1106,7 +1106,7 @@ export type DestinationHubData = {
   ogImage:    string | null
   otherHubs:  { slug: string; h1: string }[]
   /** Published articles about the hub's countries, newest first (FA-1.90); empty hides the section. */
-  articles:   ArticleLink[]
+  articles:   BlogPostSummary[]
 }
 
 type RawHubGuideRow = {
@@ -1153,11 +1153,10 @@ function hubPriceFrom(
  * list in `DESTINATION_HUBS` (FA-1.90, tj D2) — a title can no longer drift from its post. A failed
  * read hides the section, not the hub (`publishedPostsOrNone`).
  */
-async function hubArticles(hub: DestinationHubSkeleton): Promise<ArticleLink[]> {
+async function hubArticles(hub: DestinationHubSkeleton): Promise<BlogPostSummary[]> {
   const countries: string[] = getHubCountries(hub)
   return (await publishedPostsOrNone('getDestinationHub'))
     .filter(p => p.country != null && countries.includes(p.country))
-    .map(p => ({ slug: p.slug, title: p.title }))
 }
 
 /**
@@ -1676,9 +1675,6 @@ export async function getBlogPost(slug: string): Promise<BlogPost | null> {
 }
 
 // ─── Internal links around the blog (FA-1.90) ─────────────────────────────────
-
-/** An article as a link: what the hub's "Read before you go" list needs. */
-type ArticleLink = { slug: string; title: string }
 
 /**
  * `getBlogPosts` for a block on someone else's page: a failed read is logged and answered with no

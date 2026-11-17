@@ -31,9 +31,9 @@ describe('species filter', () => {
     fireEvent.click(chip(container, 'Brown Trout'))
     expect(cardNames(container)).toEqual(['Trip a'])
 
-    fireEvent.click(chip(container, 'All'))
+    fireEvent.click(chip(container, 'All species'))
     expect(cardNames(container)).toEqual(['Trip a', 'Trip b', 'Trip c'])
-    expect(chip(container, 'All').getAttribute('aria-pressed')).toBe('true')
+    expect(chip(container, 'All species').getAttribute('aria-pressed')).toBe('true')
   })
 
   it('FA-1.65: matching ignores case and spacing — "Rainbow Trout" keeps the card that says "rainbow trout"', () => {
@@ -75,6 +75,6 @@ describe('hubSpecies — which chips', () => {
     const species = hubSpecies(['Chinook Salmon'], offers.map(o => o.targetSpecies))
     const { container } = render(<HubTrips offers={offers} species={species} />)
     const labels = [...container.querySelectorAll('[data-testid="hub-species-chips"] button')].map(b => b.textContent)
-    expect(labels).toEqual(['All', 'Chinook Salmon'])
+    expect(labels).toEqual(['All species', 'Chinook Salmon'])
   })
 })
