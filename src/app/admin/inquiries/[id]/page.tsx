@@ -253,7 +253,7 @@ export default async function AdminInquiryDetailPage({
   try {
     const { data: tdData } = await svc
       .from('inquiry_trip_details')
-      .select('confirmed_date,confirmed_party_size,price_range,date_flexibility,target_species,accommodation,guide_notes,guide_final_dates,guide_options')
+      .select('confirmed_date,confirmed_party_size,price_range,date_flexibility,target_species,accommodation,guide_notes,licence_buyer,licence_note,guide_final_dates,guide_options')
       .eq('inquiry_id', id)
       .maybeSingle()
     if (tdData != null) tripDetails = tdData as unknown as TripDetails

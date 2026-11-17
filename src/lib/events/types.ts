@@ -54,6 +54,7 @@ const EMITTED_EVENT_TYPES = [
   'inquiry.history_corrected', // admin corrects a past fact by hand (FA-1.38, correctReceivedDate); payload: field, from, to
   'review.requested',         // admin generates a review link (FA-1.59); payload: experience_id
   'review.submitted',         // angler submits the review (FA-1.59); payload: publish_consent
+  'inquiry.brief_updated',    // admin saves the Trip Brief on the inquiry card (FA-M.07, saveTripDetails); payload: fields (names of the changed fields, never their text)
   // Guide requests (FA-M.03) — written by the DB functions in 20261117000000_add_guide_requests.sql,
   // in the same transaction as the change (tj D3 a). No token or link in any payload; the guide's
   // note never leaves guide_requests (only has_note).
