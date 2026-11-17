@@ -137,6 +137,6 @@ describe('blog_posts — what the browser key can do (RLS, through supabase-js)'
 describe('hub article links (FA-1.90: from the table, by country)', () => {
   it('a hub lists the published posts of its countries — not a draft, not another country\'s post', async () => {
     const data = await getDestinationHub('fa183-test-hub')
-    expect(data?.articles).toEqual([{ slug: 'fa183-denmark', title: 'Fishing in Denmark' }])
+    expect(data?.articles.map(a => ({ slug: a.slug, title: a.title }))).toEqual([{ slug: 'fa183-denmark', title: 'Fishing in Denmark' }])
   })
 })

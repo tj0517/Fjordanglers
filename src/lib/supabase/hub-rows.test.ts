@@ -43,6 +43,7 @@ describe('destination_hubs rows', () => {
       heroQuoteText: c.heroQuote?.text ?? null, heroQuoteAuthor: c.heroQuote?.author ?? null, heroQuoteCountry: c.heroQuote?.country ?? null,
       proofNote: c.proofNote ?? null,
       contactName: c.contact?.name ?? null, contactEmail: c.contact?.email ?? null, contactWhatsapp: c.contact?.whatsapp ?? null,
+      heroImageUrl: c.heroImageUrl ?? null,
     })
     expect(parsed.success, parsed.success ? '' : parsed.error.issues[0]?.message).toBe(true)
     expect((c.faq ?? []).length).toBeGreaterThanOrEqual(3)
