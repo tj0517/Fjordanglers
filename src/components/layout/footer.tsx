@@ -1,132 +1,85 @@
+/**
+ * The public site's footer (2026-11 redesign, docs/design/blog-hubs-2026-11): full width, on a
+ * darker grain block.
+ *
+ * The blog has no category pages yet, so the Journal column links to the blog itself; links the
+ * mockup has with no page behind them ("About", "Become a guide") are left out. Kept from the old
+ * footer although the mockup does not have them (tj, 2026-11-17): guide sign-in, and the Cookie
+ * Policy and Legal Notice next to Terms and Privacy.
+ */
+
 import Image from 'next/image'
 import Link from 'next/link'
-import { CountryFlag } from '@/components/ui/country-flag'
-import { getActiveDestinationCountries } from '@/lib/supabase/queries'
-import { getHubSlugForCountry } from '@/lib/destinations'
+import type { ReactNode } from 'react'
+import { DESTINATION_HUBS } from '@/lib/destinations'
+import { hubCrumbName } from '@/lib/seo/hub-jsonld'
+import { Eyebrow, ON_DARK, PrimaryButton } from '@/components/destination-hub/hub-ui'
+import s from '@/components/destination-hub/hub.module.css'
+import { PLAN_YOUR_TRIP_HREF } from './nav'
 
-export async function SiteFooter() {
-  const destinations = await getActiveDestinationCountries()
+const JOURNAL = ['Regulations', 'Seasons', 'Species', 'Planning'] as const
 
+function Column({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <footer style={{ background: '#070D1A' }}>
-      <div className="mx-auto px-4 sm:px-6 lg:px-10" style={{ maxWidth: '1280px', paddingTop: '64px', paddingBottom: '32px' }}>
+    <div className="flex min-w-[130px] flex-col gap-1">
+      <div className="mb-2"><Eyebrow dark>{title}</Eyebrow></div>
+      {children}
+    </div>
+  )
+}
 
-        {/* Main grid: 1 col → 2 col → 4 col */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10 lg:gap-12" style={{ marginBottom: '56px' }}>
+function FooterLink({ href, children }: { href: string; children: ReactNode }) {
+  const style = { color: ON_DARK, textDecoration: 'none' } as const
+  const className = 'f-body inline-flex min-h-[32px] items-center text-[15px] hover:opacity-80'
+  if (href.startsWith('http')) {
+    return <a href={href} target="_blank" rel="noopener noreferrer" className={className} style={style}>{children}</a>
+  }
+  return <Link href={href} className={className} style={style}>{children}</Link>
+}
 
-          {/* Brand */}
-          <div className="sm:col-span-2 lg:col-span-1">
-            <Link href="/" className="inline-flex items-center gap-2 no-underline mb-4" style={{ textDecoration: 'none' }}>
-              <Image src="/brand/sygnet.png" alt="" width={28} height={28} style={{ objectFit: 'contain' }} />
-              <span className="f-display text-[18px]" style={{ color: '#fff' }}>
-                <span style={{ fontWeight: 700 }}>Fjord</span>
-                <span style={{ fontWeight: 400 }}>Anglers</span>
-              </span>
-            </Link>
-            <p className="f-body text-[14px] leading-relaxed mt-4 mb-6" style={{ color: 'rgba(255,255,255,0.4)', maxWidth: '220px' }}>
-              Independent fishing guides in Iceland, Scandinavia, Patagonia and New Zealand.
-            </p>
-            <a
-              href="https://instagram.com/fjordanglers"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="f-body text-[13px] inline-flex items-center gap-2 hover:opacity-70 transition-opacity"
-              style={{ color: 'rgba(255,255,255,0.45)', textDecoration: 'none' }}
+export function SiteFooter() {
+  return (
+    <footer className={`${s.blur} ${s.foot} mt-24`}>
+      <div className="mx-auto flex flex-col gap-14 px-6" style={{ maxWidth: 1200, paddingTop: 'clamp(44px, 6vw, 80px)', paddingBottom: 36 }}>
+        <div className="flex flex-wrap justify-between gap-x-16 gap-y-10">
+          <div className="flex max-w-[460px] flex-[1_1_320px] flex-col gap-[22px]">
+            <p
+              className="f-display"
+              style={{ margin: 0, fontWeight: 600, fontSize: 'clamp(30px, 3.6vw, 44px)', lineHeight: 1.08, letterSpacing: '-.015em', color: '#FFFFFF' }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-                <circle cx="12" cy="12" r="4"/>
-                <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
-              </svg>
-              @fjordanglers
-            </a>
-          </div>
-
-          {/* Explore */}
-          <div>
-            <p className="f-body text-[11px] font-semibold uppercase mb-5" style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: '0.15em' }}>
-              Explore
+              You talk to the guide who takes you out.
             </p>
-            <div className="flex flex-col gap-3">
-              {[
-                ['/trips', 'All Trips'],
-                ['/guides', 'Find Guides'],
-                ['/trips?species=atlantic-salmon', 'Atlantic Salmon'],
-                ['/trips?species=trout', 'Trout Fishing'],
-              ].map(([href, label]) => (
-                <Link key={href} href={href} className="f-body text-[14px] hover:opacity-70 transition-opacity" style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>
-                  {label}
-                </Link>
+            <div className="flex flex-wrap gap-3">
+              <PrimaryButton href={PLAN_YOUR_TRIP_HREF}>Plan your trip</PrimaryButton>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-x-14 gap-y-9">
+            <Column title="Destinations">
+              {DESTINATION_HUBS.map(hub => (
+                <FooterLink key={hub.slug} href={`/${hub.slug}`}>{hubCrumbName(hub)}</FooterLink>
               ))}
-            </div>
-          </div>
-
-          {/* Destinations */}
-          <div>
-            <p className="f-body text-[11px] font-semibold uppercase mb-5" style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: '0.15em' }}>
-              Destinations
-            </p>
-            <div className="flex flex-col gap-3">
-              {destinations.map(country => {
-                const hubSlug = getHubSlugForCountry(country)
-                const href = hubSlug != null
-                  ? `/${hubSlug}`
-                  : `/trips?country=${encodeURIComponent(country)}`
-                return (
-                  <Link
-                    key={country}
-                    href={href}
-                    className="f-body text-[14px] inline-flex items-center gap-2 hover:opacity-70 transition-opacity"
-                    style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}
-                  >
-                    <CountryFlag country={country} size={16} />
-                    <span>{country}</span>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* For Guides */}
-          <div>
-            <p className="f-body text-[11px] font-semibold uppercase mb-5" style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: '0.15em' }}>
-              For Guides
-            </p>
-            <div className="flex flex-col gap-3">
-              {[
-                ['/dashboard',    'Guide Dashboard'],
-                ['/login',        'Sign in'],
-              ].map(([href, label]) => (
-                <Link key={href} href={href} className="f-body text-[14px] hover:opacity-70 transition-opacity" style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>
-                  {label}
-                </Link>
-              ))}
-            </div>
+            </Column>
+            <Column title="Journal">
+              {JOURNAL.map(label => <FooterLink key={label} href="/blog">{label}</FooterLink>)}
+            </Column>
+            <Column title="FjordAnglers">
+              <FooterLink href="/trips">Trips</FooterLink>
+              <FooterLink href="/guides">Guides</FooterLink>
+              <FooterLink href="https://instagram.com/fjordanglers">Instagram</FooterLink>
+              <FooterLink href="/login">Guide sign-in</FooterLink>
+            </Column>
           </div>
         </div>
-
-        {/* Bottom bar */}
-        <div
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '28px' }}
-        >
-          <p className="f-body text-[13px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
-            © 2026 FjordAnglers. All rights reserved.
+        <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4 pt-6" style={{ borderTop: '1px solid rgba(255,255,255,.22)' }}>
+          <Image src="/brand/white-logo.png" alt="FjordAnglers" width={143} height={28} style={{ height: 28, width: 'auto' }} />
+          <p className="f-body m-0 flex flex-wrap gap-x-6 gap-y-1.5 text-[14px]" style={{ color: '#E3EAF0' }}>
+            <span>© 2026 FjordAnglers</span>
+            <Link href="/legal/terms-of-service" style={{ color: '#E3EAF0', textDecoration: 'none' }}>Terms</Link>
+            <Link href="/legal/privacy-policy" style={{ color: '#E3EAF0', textDecoration: 'none' }}>Privacy</Link>
+            <Link href="/legal/cookie-policy" style={{ color: '#E3EAF0', textDecoration: 'none' }}>Cookie Policy</Link>
+            <Link href="/legal/legal-notice" style={{ color: '#E3EAF0', textDecoration: 'none' }}>Legal Notice</Link>
           </p>
-          <div className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-2">
-            {[
-              ['/legal/terms-of-service', 'Terms of Service'],
-              ['/legal/privacy-policy',   'Privacy Policy'],
-              ['/legal/cookie-policy',    'Cookie Policy'],
-              ['/legal/legal-notice',     'Legal Notice'],
-            ].map(([href, label]) => (
-              <Link key={href} href={href} className="f-body text-[13px] hover:opacity-70 transition-opacity" style={{ color: 'rgba(255,255,255,0.25)', textDecoration: 'none' }}>
-                {label}
-              </Link>
-            ))}
-          </div>
         </div>
-
       </div>
     </footer>
   )

@@ -43,7 +43,7 @@ vi.mock('@/lib/fx', () => ({ fetchIndicativeRates: async () => ({}) }))
 vi.mock('@/lib/supabase/testimonials', () => ({ getTestimonial: async () => null }))
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND') } }))
 vi.mock('../_v1/ExperienceV1', () => ({ default: () => null, generateMetadata: vi.fn() }))
-vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null }))
+vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null, PLAN_YOUR_TRIP_HREF: '/trips' }))
 vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
 
 import ExperienceV2, { generateMetadata } from '../_v2/ExperienceV2'

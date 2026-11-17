@@ -24,7 +24,7 @@ vi.mock('next/cache', () => ({
 }))
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND') } }))
 // Client islands that need a browser or are irrelevant to links — the pages around them are real.
-vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null }))
+vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null, PLAN_YOUR_TRIP_HREF: '/trips' }))
 vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
 vi.mock('@/components/home/species-slider', () => ({ SpeciesSlider: () => null }))
 vi.mock('@/components/home/experiences-slider', () => ({ ExperiencesSlider: () => null }))

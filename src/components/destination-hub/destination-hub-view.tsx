@@ -5,8 +5,8 @@
  * Layout: the hub redesign accepted by tj on 2026-11-17 (docs/design/blog-hubs-2026-11/README.md
  * and hub.dc.html — the source of truth for layout, colours, type and spacing). Order: hero →
  * trips (species filter above the grid, no map) → season → guides → how it works → angler quote →
- * articles → FAQ → more destinations → plan-your-trip block. The hub has its own navigation and
- * footer for now; every other page keeps `SiteNav` / `SiteFooter`.
+ * articles → FAQ → more destinations → plan-your-trip block. The site's nav sits on the hero photo
+ * here (`SiteNav overlay`), which is why the hub renders it itself rather than under the (public) layout.
  *
  * A section with no data is not rendered at all — no empty heading. The sections the hub funnel
  * measures (`HUB_SECTIONS`: season, trips, faq, reviews) carry `data-section`; the rest carry
@@ -29,16 +29,16 @@ import { formatCents } from '@/lib/format-price'
 import { hubCrumbName } from '@/lib/seo/hub-jsonld'
 import type { DestinationHubData } from '@/lib/supabase/queries'
 import HubTrips from './hub-trips'
-import { HubNav } from './hub-nav'
-import { HubFooter } from './hub-footer'
+import { SiteNav, PLAN_YOUR_TRIP_HREF } from '@/components/layout/nav'
+import { SiteFooter } from '@/components/layout/footer'
 import {
   CREAM, DEEP_NAVY, Eyebrow, GhostButton, HeadingLink, MUTED, NAVY, ON_DARK, PrimaryButton,
   SALMON, SALMON_ON_DARK, SectionHeading, Tag,
 } from './hub-ui'
 import s from './hub.module.css'
 
-/** Where every "Plan your trip" button leads: the trip cards — the offer page is where one asks. */
-const PLAN_HREF = '#trips'
+/** Where every "Plan your trip" button leads — the site-wide one (tj, 2026-11-17). */
+const PLAN_HREF = PLAN_YOUR_TRIP_HREF
 
 /**
  * The three steps of "How it works". The booking answer every hub's FAQ ends with ("How do I book a
@@ -62,6 +62,7 @@ const HUB_TILE_PHOTOS: Partial<Record<string, string>> = {
   'new-zealand': '/hub/nzriver.jpg',
 }
 
+/** The hero photo when the hub has none set in /admin/hubs and no offer has a photo. */
 const HERO_FALLBACK = '/hub/canyon.jpg'
 
 const MONTHS      = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
@@ -114,7 +115,7 @@ function Hero({ data, place }: { data: DestinationHubData; place: string }) {
   if (data.species.length > 0) facts.push({ label: 'Species', value: data.species.join(', ') })
   if (data.guideCount > 0) facts.push({ label: 'Guides', value: String(data.guideCount) })
   if (data.priceFrom != null) {
-    facts.push({ label: 'Guided days', value: `from ${formatCents(data.priceFrom.cents, data.priceFrom.currency)}`, big: true })
+    facts.push({ label: 'Trips from', value: formatCents(data.priceFrom.cents, data.priceFrom.currency), big: true })
   }
 
   return (
@@ -123,7 +124,7 @@ function Hero({ data, place }: { data: DestinationHubData; place: string }) {
       className="relative mx-auto mt-3 flex flex-col justify-end overflow-hidden pt-[220px] sm:pt-[120px]"
       style={{ width: 'calc(100% - 24px)', maxWidth: 1560, minHeight: 640, borderRadius: 28, paddingBottom: 'clamp(28px, 4vw, 48px)', background: NAVY }}
     >
-      <Image src={data.ogImage ?? HERO_FALLBACK} alt="" fill priority sizes="(min-width: 1584px) 1560px, 100vw" className="object-cover" />
+      <Image src={hub.heroImageUrl ?? data.ogImage ?? HERO_FALLBACK} alt="" fill priority sizes="(min-width: 1584px) 1560px, 100vw" className="object-cover" />
       <span
         aria-hidden="true"
         className="absolute inset-0"
@@ -510,7 +511,7 @@ export default function DestinationHubView({ data }: { data: DestinationHubData 
   return (
     <HubFunnelProvider slug={data.hub.slug}>
       <div className="f-body relative min-h-screen" style={{ background: '#F3EDE4', color: NAVY }}>
-        <HubNav ctaHref={PLAN_HREF} />
+        <SiteNav overlay />
         <Hero data={data} place={place} />
         <main className="mx-auto flex flex-col gap-20 px-6 pt-[72px]" style={{ maxWidth: 1200 }}>
           <HubTrips offers={data.offers} species={data.species} place={place} />
@@ -523,7 +524,7 @@ export default function DestinationHubView({ data }: { data: DestinationHubData 
           <MoreDestinations data={data} />
           <PlanYourTrip data={data} place={place} />
         </main>
-        <HubFooter ctaHref={PLAN_HREF} />
+        <SiteFooter />
       </div>
     </HubFunnelProvider>
   )

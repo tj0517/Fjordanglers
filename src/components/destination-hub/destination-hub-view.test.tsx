@@ -54,7 +54,7 @@ describe('DestinationHubView — complete hub', () => {
       'Best monthsDecember to February',
       'SpeciesRainbow Trout, Brown Trout, Kingfish',
       'Guides3',
-      'Guided daysfrom NZ$1,320',
+      'Trips fromNZ$1,320',
     ])
   })
 
@@ -84,7 +84,20 @@ describe('DestinationHubView — complete hub', () => {
   it('the closing block offers WhatsApp built from the digits only', () => {
     const { container } = render(<DestinationHubView data={completeHub()} />)
     const hrefs = [...container.querySelectorAll('[data-block="plan"] a')].map(a => a.getAttribute('href'))
-    expect(hrefs).toEqual(['#trips', 'https://wa.me/48000000000'])
+    expect(hrefs).toEqual(['/trips', 'https://wa.me/48000000000'])
+  })
+
+  it('the hero photo is the one set in /admin/hubs, then the newest offer photo, then the default', () => {
+    const src = (data: DestinationHubData) => {
+      const { container } = render(<DestinationHubView data={data} />)
+      const img = container.querySelector('[data-block="hero"] img')?.getAttribute('src') ?? ''
+      cleanup()
+      return decodeURIComponent(img)
+    }
+    const hub = completeHub()
+    expect(src({ ...hub, hub: { ...hub.hub, heroImageUrl: '/hub/norway.jpg' }, ogImage: '/hub/sweden.jpg' })).toContain('/hub/norway.jpg')
+    expect(src({ ...hub, ogImage: '/hub/sweden.jpg' })).toContain('/hub/sweden.jpg')
+    expect(src(hub)).toContain('/hub/canyon.jpg')
   })
 
   it('FA-1.65: there is no inquiry form on the hub', () => {

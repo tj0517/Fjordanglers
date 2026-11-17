@@ -21,7 +21,7 @@ import { V1_FULL, V1_REQUEST, type V1Fixture } from './v1-offer-jsonld-fixtures'
 const h = vi.hoisted(() => ({ fixture: null as unknown as V1Fixture }))
 
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND') } }))
-vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null }))
+vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null, PLAN_YOUR_TRIP_HREF: '/trips' }))
 vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
 vi.mock('@/app/trips/exp-page-map-wrapper', () => ({ default: () => null }))
 
