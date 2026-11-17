@@ -362,6 +362,9 @@ function Stars({ rating }: { rating: number }) {
 
 function Review({ testimonial }: { testimonial: Testimonial | null }) {
   if (testimonial == null) return null
+  // The photo as the admin set it up (FA-1.71): `vertical` beside the quote, `horizontal` above it.
+  const photo    = testimonial.photoUrl
+  const vertical = photo != null && testimonial.photoLayout === 'vertical'
   const from  = anglerCountryName(testimonial.authorCountry)
   const where = [from, testimonial.tripCountry != null ? `fished in ${testimonial.tripCountry}` : null]
     .filter((p): p is string => p != null).join(' · ')
@@ -374,24 +377,35 @@ function Review({ testimonial }: { testimonial: Testimonial | null }) {
           <H2 style={{ maxWidth: 720 }}>What anglers said.</H2>
         </div>
         <figure
-          className={`${grain.blur} ${s.nzriver} m-0 flex flex-col justify-between gap-7`}
-          style={{ borderRadius: 28, padding: 36, minHeight: 380 }}
+          data-photo-layout={photo != null ? testimonial.photoLayout : undefined}
+          className={`${grain.blur} ${s.nzriver} m-0 flex gap-7 ${vertical ? 'flex-col md:flex-row md:items-stretch' : 'flex-col'}`}
+          style={{ borderRadius: 28, padding: 'clamp(20px, 3vw, 36px)', minHeight: 380 }}
         >
-          <div className="flex flex-col gap-[18px]">
-            {testimonial.rating != null && <Stars rating={testimonial.rating} />}
-            <blockquote className="f-display m-0" style={{ fontWeight: 500, fontSize: 'clamp(24px, 3vw, 30px)', lineHeight: 1.28, color: '#FFFFFF' }}>
-              {testimonial.quote}
-            </blockquote>
+          {photo != null && (
+            <span
+              className={`relative block flex-none overflow-hidden ${vertical ? 'h-[320px] md:order-2 md:h-auto md:w-[38%] md:max-w-[360px]' : 'h-[220px]'}`}
+              style={{ borderRadius: 20 }}
+            >
+              <Image src={photo} alt="" fill sizes={vertical ? '(min-width: 768px) 360px, 100vw' : '(min-width: 1280px) 1232px, 100vw'} className="object-cover" />
+            </span>
+          )}
+          <div className="flex min-w-0 flex-1 flex-col justify-between gap-7">
+            <div className="flex flex-col gap-[18px]">
+              {testimonial.rating != null && <Stars rating={testimonial.rating} />}
+              <blockquote className="f-display m-0" style={{ fontWeight: 500, fontSize: 'clamp(24px, 3vw, 30px)', lineHeight: 1.28, color: '#FFFFFF' }}>
+                {testimonial.quote}
+              </blockquote>
+            </div>
+            <figcaption className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+              <span className="flex flex-col gap-0.5">
+                <span className="f-body text-[16px] font-bold" style={{ color: '#FFFFFF' }}>{testimonial.authorName}</span>
+                {where !== '' && <span className="f-body text-[14px]" style={{ color: '#E3EAF0' }}>{where}</span>}
+              </span>
+              <span className="f-body" style={{ fontSize: '11.5px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#E3EAF0' }}>
+                {testimonial.source === 'trustpilot' ? 'Trustpilot' : 'Direct'}
+              </span>
+            </figcaption>
           </div>
-          <figcaption className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-            <span className="flex flex-col gap-0.5">
-              <span className="f-body text-[16px] font-bold" style={{ color: '#FFFFFF' }}>{testimonial.authorName}</span>
-              {where !== '' && <span className="f-body text-[14px]" style={{ color: '#E3EAF0' }}>{where}</span>}
-            </span>
-            <span className="f-body" style={{ fontSize: '11.5px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#E3EAF0' }}>
-              {testimonial.source === 'trustpilot' ? 'Trustpilot' : 'Direct'}
-            </span>
-          </figcaption>
         </figure>
       </div>
     </section>

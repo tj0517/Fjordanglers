@@ -1,5 +1,6 @@
 import { getDestinationHub, getFeaturedGuides, getLatestBlogPosts, type DestinationHubData } from '@/lib/supabase/queries'
 import { getTestimonial } from '@/lib/supabase/testimonials'
+import { COUNTRIES } from '@/lib/countries'
 import { DESTINATION_HUBS } from '@/lib/destinations'
 import { env } from '@/lib/env'
 import { SITE_URL } from '@/lib/site'
@@ -28,7 +29,8 @@ export default async function HomePage() {
   const [hubs, guides, testimonial, posts] = await Promise.all([
     Promise.all(DESTINATION_HUBS.map(h => hubOrNone(h.slug))),
     getFeaturedGuides(6),
-    getTestimonial([]),   // no country: the first general testimonial (tj FA-1.69 1A)
+    // Every country we guide in: the first active testimonial whatever its trip, else a general one (tj, 2026-11-17).
+    getTestimonial(COUNTRIES),
     getLatestBlogPosts(3),
   ])
 
