@@ -26,6 +26,7 @@ owner: tj
 - `src/app/admin/inquiries/[id]/page.tsx` — karta zapytania
 - `src/lib/ai/*` — gdzie agent czyta kontekst zapytania
 - `claude/ankieta-przewodnicy-wyniki-2026-11-02.md` (Projekt) — brief to problem nr 1 przewodników (2× 4–5, 2× 3); u Islandczyków licencje/permity
+- `docs/design/fa-m-guide-app/README.md` — makieta (tj 17.11): `Main.dc.html` — wiersze briefu Accommodation i Licence oraz blok „Note from FjordAnglers” na stronie zlecenia
 
 Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
 
@@ -62,3 +63,4 @@ grep -n "briefSummaryLines" -r src | head
 ```
 
 ## Notatki z realizacji
+- **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.

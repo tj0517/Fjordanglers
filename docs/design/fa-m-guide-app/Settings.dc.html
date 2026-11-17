@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Account and notifications</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A2E4D}a:hover{color:#B4532A}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 900px; box-sizing: border-box; background: #F8FAFB; font-family: Poppins, system-ui, sans-serif; color: #0A2E4D; display: flex; flex-direction: column; position: relative">
+  <header style="padding: 20px 20px 4px">
+    <h1 style="margin: 0; font-size: 26px; font-weight: 600">Account</h1>
+  </header>
+
+  <main style="flex: 1; padding: 14px 20px 100px; display: flex; flex-direction: column; gap: 20px">
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #4A5F73; text-transform: uppercase; letter-spacing: 0.06em">Notifications</h2>
+      <div style="background: #FFFFFF; border: 1px solid #E3E9EE; border-radius: 16px; padding: 4px 16px; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF2F5">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 15px; font-weight: 600">Push notifications</span>
+            <span style="font-size: 13px; color: #4A5F73">{{ pushHint }}</span>
+          </span>
+          <button type="button" onClick="{{ togglePush }}" aria-pressed="{{ push }}" aria-label="Push notifications" style="{{ trackStyle }}">
+            <span style="{{ knobStyle }}"></span>
+          </button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 15px; font-weight: 600">WhatsApp</span>
+            <span style="font-size: 13px; color: #4A5F73">Every request, always · +64 ••• ••• 412</span>
+          </span>
+          <span style="font-size: 13px; font-weight: 600; color: #4A5F73">Always on</span>
+        </div>
+      </div>
+    </section>
+
+    <section style="background: #0A2E4D; color: #F8FAFB; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+      <span style="font-size: 16px; font-weight: 600">Add FjordAnglers to your home screen</span>
+      <span style="font-size: 13px; line-height: 1.5; color: #C7D4E0">On iPhone, notifications only work after this step.</span>
+      <ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45">
+        <li>Open this page in Safari.</li>
+        <li>Tap <strong style="font-weight: 600">Share</strong>, then <strong style="font-weight: 600">Add to Home Screen</strong>.</li>
+        <li>Open FjordAnglers from the home screen and turn on notifications.</li>
+      </ol>
+      <span style="font-size: 13px; color: #C7D4E0">Android: tap <strong style="font-weight: 600; color: #F8FAFB">Install app</strong> when your browser offers it.</span>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #4A5F73; text-transform: uppercase; letter-spacing: 0.06em">You</h2>
+      <div style="background: #FFFFFF; border: 1px solid #E3E9EE; border-radius: 16px; padding: 4px 16px; display: flex; flex-direction: column">
+        <div style="display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF2F5; font-size: 14px">
+          <span style="color: #4A5F73">Name</span><span>Josh Hart</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF2F5; font-size: 14px">
+          <span style="color: #4A5F73">Email</span><span>josh@example.com</span>
+        </div>
+        <a href="#" style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; border-bottom: 1px solid #EEF2F5; font-size: 14px; font-weight: 600; text-decoration: none">Change password
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+        </a>
+        <a href="SignIn.dc.html" style="display: flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; text-decoration: none; color: #4A5F73">Sign out</a>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #4A5F73">To change your profile or prices, message us on WhatsApp.</p>
+    </section>
+  </main>
+
+  <nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; height: 76px; background: #FFFFFF; border-top: 1px solid #E3E9EE; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-bottom: 8px; box-sizing: border-box">
+    <a href="Requests.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #4A5F73; font-size: 12px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H5.2L4 17.2z"></path><path d="M8 9h8M8 12h5"></path></svg>Requests
+    </a>
+    <a href="Calendar.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #4A5F73; font-size: 12px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M8 2v4M16 2v4M3 10h18"></path></svg>Calendar
+    </a>
+    <a href="Settings.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #0A2E4D; font-size: 12px; font-weight: 600">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg>Account
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { push: true };
+  }
+  renderVals() {
+    const on = this.state.push;
+    return {
+      push: on,
+      pushHint: on ? 'On for this phone' : 'Off — you will only get WhatsApp',
+      togglePush: () => this.setState({ push: !on }),
+      trackStyle: 'flex: none; width: 52px; height: 32px; border-radius: 999px; border: none; padding: 3px; display: flex; box-sizing: border-box; justify-content: ' + (on ? 'flex-end' : 'flex-start') + '; background: ' + (on ? '#0A2E4D' : '#C9D3DC') + ';',
+      knobStyle: 'width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF; display: block;'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -24,6 +24,7 @@ owner: tj
 - `docs/audit/guide-accounts-audit-2026-11.md` (FA-M.02) — co zostaje z obecnego `/dashboard`
 - `docs/tasks/FA-M.03.md`, `FA-M.08.md`, `FA-M.09.md`, `FA-M.10.md`
 - `src/app/dashboard/**` — obecny panel
+- `docs/design/fa-m-guide-app/README.md` — makieta (tj 17.11): `Requests.dc.html`, `Calendar.dc.html`, `Connect.dc.html`, `Settings.dc.html`; nawigacja Requests / Calendar / Account
 
 Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
 
@@ -60,3 +61,4 @@ find src/app/dashboard -name page.tsx | sort
 ```
 
 ## Notatki z realizacji
+- **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.

@@ -26,6 +26,7 @@ owner: tj
 - `experience_pages.season_months`, `src/lib/season-months.ts` — miesiące sezonu
 - `src/app/admin/inquiries/InquiriesClient.tsx` — filtry listy zapytań
 - `docs/04-open-questions.md` O-53, O-55
+- `docs/design/fa-m-guide-app/README.md` — makieta (tj 17.11): `Push.dc.html` — treść ponaglenia; WhatsApp tym samym tonem
 
 Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
 
@@ -64,3 +65,4 @@ grep -n "path" vercel.json
 
 ## Notatki z realizacji
 - **2026-11-10, tj (wf-plan):** 12 h w sezonie / 24 h poza; ponaglenie do przewodnika i flaga dla admina (O-53 → c).
+- **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
