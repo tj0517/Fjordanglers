@@ -1,26 +1,77 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getGuides, getPlatformStats } from '@/lib/supabase/queries'
-import { GuidesFilters } from './guides-filters'
-import { CountryFlag } from '@/components/ui/country-flag'
+import type { CSSProperties } from 'react'
+import { getGuides, getPlatformStats, type GuideRow } from '@/lib/supabase/queries'
+import { COUNTRIES } from '@/lib/countries'
 import { SITE_URL } from '@/lib/site'
 import { GuideLink } from '@/components/guides/guide-link'
 import { guideProfilePath } from '@/lib/guide-url'
 import { listingCanonicalUrl } from '@/lib/listing-canonical'
+import { PhotoHero } from '@/components/site/photo-hero'
+import {
+  Arrow, CREAM, Eyebrow, LINE, MUTED, NAVY, ON_DARK, SALMON_ON_DARK, SecondaryButton, Tag,
+  initials, primaryButtonStyle,
+} from '@/components/site/ui'
+import s from '@/components/site/grain.module.css'
 
+/**
+ * /guides — the guides list, built from docs/design/site-2026-11/guides.dc.html: photo hero with
+ * the live counts, the country and language filters as rows of buttons, the guide cards, the
+ * pagination and the "For guides" block. Fields, filters and paging are the ones the page had
+ * before the redesign.
+ */
 
 const PAGE_SIZE = 12
 
-function Pagination({
-  page,
-  totalPages,
-  baseParams,
-}: {
-  page: number
-  totalPages: number
-  baseParams: string
+const LANGUAGES = ['English', 'Norwegian', 'Swedish', 'Finnish', 'Icelandic', 'German'] as const
+
+export const revalidate = 300
+
+type SearchParams = {
+  country?: string
+  language?: string
+  page?: string
+}
+
+/** `/guides` with the given filters; a filter change always goes back to page 1. */
+function guidesHref(country: string | undefined, language: string | undefined): string {
+  const sp = new URLSearchParams()
+  if (country)  sp.set('country',  country)
+  if (language) sp.set('language', language)
+  return `/guides${sp.toString() ? `?${sp.toString()}` : ''}`
+}
+
+const chipBase: CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, padding: '0 16px',
+  borderRadius: 9, fontSize: '14.5px', fontWeight: 600, textDecoration: 'none',
+}
+const chipOn: CSSProperties  = { ...chipBase, background: NAVY, color: '#FFFFFF', border: `1.5px solid ${NAVY}` }
+const chipOff: CSSProperties = { ...chipBase, background: CREAM, color: NAVY, border: `1.5px solid ${LINE}` }
+
+function FilterRow({ label, all, options, value, href }: {
+  label: string
+  all: string
+  options: readonly string[]
+  value: string | undefined
+  href: (option: string | undefined) => string
 }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-[14px] gap-y-2">
+      <span className="f-body min-w-[84px] text-[12.5px] font-bold uppercase" style={{ letterSpacing: '.12em', color: MUTED }}>{label}</span>
+      <div role="group" aria-label={`Filter by ${label.toLowerCase()}`} className="flex flex-wrap gap-2">
+        <Link href={href(undefined)} className="f-body" style={value ? chipOff : chipOn} aria-current={value ? undefined : 'true'}>{all}</Link>
+        {options.map(option => (
+          <Link key={option} href={href(option)} className="f-body" style={value === option ? chipOn : chipOff} aria-current={value === option ? 'true' : undefined}>
+            {option}
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Pagination({ page, totalPages, baseParams }: { page: number; totalPages: number; baseParams: string }) {
   function pageHref(p: number) {
     const sp = new URLSearchParams(baseParams)
     sp.set('page', p.toString())
@@ -40,72 +91,83 @@ function Pagination({
     items.push(totalPages)
   }
 
-  const pill = 'min-w-[32px] h-8 sm:min-w-[36px] sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium f-body transition-all px-2 sm:px-3'
+  const box: CSSProperties = { ...chipBase, minWidth: 44, padding: '0 12px' }
+  const off: CSSProperties = { ...box, background: CREAM, color: NAVY, border: `1.5px solid ${LINE}` }
+  const disabled: CSSProperties = { ...off, opacity: 0.4 }
 
   return (
-    <nav aria-label="Pagination" className="flex flex-wrap items-center justify-center gap-1.5 mt-10 pb-2">
-      {page > 1 ? (
-        <Link href={pageHref(page - 1)} className={pill} style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
-          ← Prev
-        </Link>
-      ) : (
-        <span className={pill} style={{ border: '1px solid rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.2)' }}>← Prev</span>
-      )}
-
+    <nav aria-label="Pagination" className="f-body flex flex-wrap justify-center gap-2">
+      {page > 1 ? <Link href={pageHref(page - 1)} style={off}>← Prev</Link> : <span style={disabled}>← Prev</span>}
       {items.map((item, idx) =>
         item === '…' ? (
-          <span key={`e-${idx}`} className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-xs sm:text-sm f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>…</span>
+          <span key={`e-${idx}`} style={{ ...box, color: MUTED }}>…</span>
         ) : item === page ? (
-          <span key={item} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold f-body" style={{ background: '#0A2E4D', color: '#fff' }}>
-            {item}
-          </span>
+          <span key={item} aria-current="page" style={{ ...box, background: NAVY, color: '#FFFFFF' }}>{item}</span>
         ) : (
-          <Link key={item} href={pageHref(item)} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium f-body transition-colors" style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
-            {item}
-          </Link>
-        )
+          <Link key={item} href={pageHref(item)} style={off}>{item}</Link>
+        ),
       )}
-
-      {page < totalPages ? (
-        <Link href={pageHref(page + 1)} className={pill} style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
-          Next →
-        </Link>
-      ) : (
-        <span className={pill} style={{ border: '1px solid rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.2)' }}>Next →</span>
-      )}
+      {page < totalPages ? <Link href={pageHref(page + 1)} style={off}>Next →</Link> : <span style={disabled}>Next →</span>}
     </nav>
   )
 }
 
-export const revalidate = 300
+function GuideCard({ guide }: { guide: GuideRow }) {
+  const place = [guide.city, guide.country].filter(p => p != null && p.trim() !== '').join(', ')
+  const fish  = guide.fish_expertise.slice(0, 3)
+  const more  = guide.fish_expertise.length - fish.length
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
-
-const GRAIN_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
-
-// ─── TYPES ────────────────────────────────────────────────────────────────────
-
-type SearchParams = {
-  country?: string
-  language?: string
-  page?: string
+  return (
+    <GuideLink
+      slug={guide.slug}
+      className="flex flex-col overflow-hidden transition-[transform,box-shadow] duration-300 hover:-translate-y-[3px] hover:shadow-[0_18px_40px_rgba(10,46,77,.12)]"
+      style={{ borderRadius: 20, background: CREAM, border: `1px solid ${LINE}`, textDecoration: 'none' }}
+    >
+      <span className="relative block h-[170px]" style={{ background: NAVY }}>
+        {guide.cover_url != null && (
+          <Image src={guide.cover_url} alt={`${guide.full_name} — ${guide.country}`} fill sizes="(min-width: 1080px) 384px, (min-width: 720px) 50vw, 100vw" className="object-cover" />
+        )}
+        {(guide.years_experience != null || guide.average_rating != null) && (
+          <span className="absolute right-3 top-3 flex flex-wrap justify-end gap-1.5">
+            {guide.average_rating != null && <Tag>★ {guide.average_rating.toFixed(1)}</Tag>}
+            {guide.years_experience != null && <Tag tone="salmon">{guide.years_experience} yrs exp</Tag>}
+          </span>
+        )}
+      </span>
+      <span className="flex flex-[1_1_auto] flex-col gap-3 px-5 pb-5">
+        <span
+          aria-hidden="true"
+          className="f-display relative -mt-[34px] flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-full"
+          style={{ background: NAVY, border: `4px solid ${CREAM}`, color: SALMON_ON_DARK, fontWeight: 700, fontSize: 22 }}
+        >
+          {guide.avatar_url != null
+            ? <Image src={guide.avatar_url} alt="" fill sizes="68px" className="object-cover" />
+            : initials(guide.full_name)}
+        </span>
+        <span className="flex flex-col gap-[3px]">
+          <span className="f-display" style={{ fontWeight: 700, fontSize: 22, lineHeight: 1.15, color: NAVY }}>{guide.full_name}</span>
+          {place !== '' && <span className="f-body text-[14px]" style={{ color: MUTED }}>{place}</span>}
+        </span>
+        {fish.length > 0 && (
+          <span className="flex flex-wrap gap-1.5">
+            {fish.map(f => <Tag key={f} tone="sand">{f}</Tag>)}
+            {more > 0 && <Tag>+{more} more</Tag>}
+          </span>
+        )}
+        {guide.tagline != null && guide.tagline.trim() !== '' && (
+          <span className="f-body text-[14.5px]" style={{ lineHeight: 1.5, color: MUTED }}>{guide.tagline}</span>
+        )}
+        <span className="mt-auto flex items-center justify-between gap-3 pt-[14px]" style={{ borderTop: `1px solid ${LINE}` }}>
+          <span className="f-body text-[13.5px]" style={{ color: MUTED }}>
+            {guide.languages.slice(0, 2).join(', ')}
+            {guide.languages.length > 2 && ` +${guide.languages.length - 2}`}
+          </span>
+          <span className="f-body inline-flex items-center gap-2 text-[14.5px] font-bold" style={{ color: NAVY }}>View profile<Arrow /></span>
+        </span>
+      </span>
+    </GuideLink>
+  )
 }
-
-// ─── MICRO-COMPONENTS ─────────────────────────────────────────────────────────
-
-const GrainOverlay = () => (
-  <div
-    aria-hidden="true"
-    className="absolute inset-0 pointer-events-none"
-    style={{
-      backgroundImage: GRAIN_BG,
-      backgroundSize: '200px 200px',
-      opacity: 0.06,
-      mixBlendMode: 'screen',
-      zIndex: 2,
-    }}
-  />
-)
 
 // ─── METADATA ─────────────────────────────────────────────────────────────────
 
@@ -179,242 +241,89 @@ export default async function GuidesPage({
     }),
   }
 
+  const stat = [
+    { label: 'Guides',    n: stats.guideCount },
+    { label: 'Countries', n: stats.countryCount },
+    { label: 'Languages', n: stats.languageCount },
+  ]
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
       />
-    <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      {/* ─── PHOTO HERO ──────────────────────────────────────────── */}
-      <header className="relative overflow-hidden" style={{ minHeight: '380px', height: 'clamp(380px, 55vw, 580px)' }}>
-
-        {/* Background photo */}
-        <Image
-          src="/hero.jpg"
-          alt="Fishing guide"
-          fill
-          priority
-          className="object-cover object-center"
-        />
-
-        {/* Dark overlay — gradient darker at top so nav links stay readable */}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(5,10,20,0.65) 0%, rgba(5,10,20,0.48) 40%, rgba(5,10,20,0.48) 100%)' }} />
-
-        <GrainOverlay />
-
-        {/* Content — pinned to bottom */}
-        <div
-          className="relative max-w-7xl mx-auto px-4 md:px-8 flex flex-col justify-end h-full pb-10 md:pb-16"
-          style={{ zIndex: 3 }}
-        >
-          <div className="flex items-end justify-between gap-8">
-            <div>
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-6 h-px" style={{ background: '#E67E50' }} />
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] f-body" style={{ color: '#E67E50' }}>
-                  Our Guides
-                </p>
-              </div>
-              <h1 className="text-white font-bold f-display" style={{ fontSize: 'clamp(28px, 5vw, 54px)', lineHeight: 1.06 }}>
-                The guides
-                <br />
-                <span style={{ fontStyle: 'italic', color: '#E67E50' }}>who know every fish.</span>
+      <div className="min-h-screen pb-[120px]" style={{ background: '#F3EDE4' }}>
+        <PhotoHero image="/hub/nzriver.jpg" minHeight={560}>
+          <div className="flex flex-wrap items-end justify-between gap-8">
+            <div className="flex max-w-[640px] flex-[1_1_420px] flex-col gap-5">
+              <Eyebrow dark>Our guides</Eyebrow>
+              <h1
+                className="f-display"
+                style={{ margin: 0, fontWeight: 700, fontSize: 'clamp(42px, 5.6vw, 72px)', lineHeight: 1, letterSpacing: '-.02em', color: '#FFFFFF' }}
+              >
+                The guides <span style={{ fontStyle: 'italic', color: SALMON_ON_DARK }}>who know every fish.</span>
               </h1>
-              <p className="mt-5 text-sm leading-relaxed f-body" style={{ color: 'rgba(255,255,255,0.55)', maxWidth: '420px' }}>
-                Owner-operators only. The person who replies to your enquiry is the person who will be standing next to you on the water. Iceland, Norway, Sweden, Finland, Argentina, Chile, New Zealand.
+              <p className="f-body m-0 text-[18px]" style={{ lineHeight: 1.55, color: '#F4F7F9' }}>
+                Owner-operators only. The person who replies to your enquiry is the person who will be standing next to you on the water.
               </p>
             </div>
-
-            {/* Live stats */}
-            <div className="hidden md:flex items-stretch gap-0 pb-1 flex-shrink-0">
-              {[
-                { n: stats.guideCount.toString(), label: 'Guides' },
-                { n: stats.countryCount.toString(), label: 'Countries' },
-                { n: stats.languageCount.toString(), label: 'Languages' },
-              ].map((stat, i) => (
-                <div key={stat.label} className="flex items-stretch">
-                  {i > 0 && (
-                    <div className="w-px mx-6 self-stretch" style={{ background: 'rgba(255,255,255,0.15)' }} />
-                  )}
-                  <div className="flex flex-col items-center" style={{ width: '64px' }}>
-                    <p className="text-white text-3xl font-bold tracking-tight f-display">{stat.n}</p>
-                    <p className="text-white/40 text-[10px] uppercase tracking-[0.18em] mt-3 f-body text-center">{stat.label}</p>
-                  </div>
+            <dl className="m-0 grid w-full grid-cols-3 gap-[10px] sm:flex sm:w-auto sm:flex-[0_1_220px] sm:flex-col" data-testid="guides-stats">
+              {stat.map(item => (
+                <div key={item.label} className={`${s.fq} flex flex-col gap-1`} style={{ padding: '13px 18px' }}>
+                  <dt className="f-body text-[11.5px] font-bold uppercase" style={{ letterSpacing: '.1em', color: SALMON_ON_DARK }}>{item.label}</dt>
+                  <dd className="f-display" style={{ margin: 0, fontWeight: 700, fontSize: 30, lineHeight: 1, color: '#FFFFFF' }}>{item.n}</dd>
                 </div>
               ))}
+            </dl>
+          </div>
+        </PhotoHero>
+
+        <main className="mx-auto flex flex-col gap-10 px-6 pt-12" style={{ maxWidth: 1200 }}>
+          <section className="flex flex-col gap-[14px]" data-testid="guides-filters">
+            <FilterRow label="Country" all="All countries" options={COUNTRIES} value={params.country} href={c => guidesHref(c, params.language)} />
+            <FilterRow label="Language" all="All languages" options={LANGUAGES} value={params.language} href={l => guidesHref(params.country, l)} />
+            <p className="f-body m-0 mt-1.5 text-[14px]" style={{ color: MUTED }}>
+              {total} guide{total !== 1 ? 's' : ''}
+            </p>
+          </section>
+
+          {guides.length === 0 ? (
+            <div className="flex flex-col items-center gap-4 py-24 text-center">
+              <p className="f-display m-0" style={{ fontWeight: 700, fontSize: 'clamp(30px, 4vw, 44px)', color: NAVY }}>No guides found</p>
+              <p className="f-body m-0 text-[16px]" style={{ color: MUTED }}>Try broadening your filters to find available guides.</p>
+              <SecondaryButton href="/guides">Clear all filters</SecondaryButton>
             </div>
-          </div>
-        </div>
-      </header>
+          ) : (
+            <section className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))' }} data-testid="guides-grid">
+              {guides.map(guide => <GuideCard key={guide.id} guide={guide} />)}
+            </section>
+          )}
 
-      {/* ─── FILTER BAR ──────────────────────────────────────────── */}
-      <div className="px-4 md:px-8 pt-8 md:pt-10 pb-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
-          <GuidesFilters country={params.country} language={params.language} />
-          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
-            {total} guide{total !== 1 ? 's' : ''}
-          </p>
-        </div>
+          {totalPages(total) > 1 && (
+            <Pagination page={currentPage} totalPages={totalPages(total)} baseParams={baseParams} />
+          )}
+
+          <section
+            className={`${s.blur} ${s.guide} mt-10 flex flex-wrap items-center justify-between gap-7`}
+            style={{ borderRadius: 24, padding: '48px clamp(24px, 5vw, 64px)' }}
+            data-block="for-guides"
+          >
+            <div className="flex max-w-[620px] flex-[1_1_420px] flex-col gap-3">
+              <Eyebrow dark>For guides</Eyebrow>
+              <h2 className="f-display" style={{ margin: 0, fontWeight: 600, fontSize: 'clamp(30px, 4vw, 44px)', lineHeight: 1.08, color: '#FFFFFF' }}>
+                Do you guide on your own water?
+              </h2>
+              <p className="f-body m-0 text-[17px]" style={{ lineHeight: 1.55, color: ON_DARK }}>
+                We send you anglers who have already picked your water and their dates. You set your price, and the angler pays it to you directly.
+              </p>
+            </div>
+            <a href="mailto:contact@fjordanglers.com?subject=Guiding%20with%20FjordAnglers" className="f-body" style={primaryButtonStyle}>
+              Become a guide
+            </a>
+          </section>
+        </main>
       </div>
-
-      {/* ─── GUIDES GRID ─────────────────────────────────────────── */}
-      <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12">
-        {guides.length === 0 ? (
-          <div className="py-36 flex flex-col items-center">
-            <p
-              className="font-bold f-display mb-3 text-center"
-              style={{ fontSize: 'clamp(48px, 8vw, 88px)', color: 'rgba(10,46,77,0.05)', fontStyle: 'italic', lineHeight: 1 }}
-            >
-              No guides found
-            </p>
-            <p className="text-sm mb-8 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-              Try broadening your filters to find available guides.
-            </p>
-            <Link
-              href="/guides"
-              className="inline-flex items-center gap-2 text-white text-sm font-semibold px-6 py-3 rounded-full transition-all hover:brightness-110 f-body"
-              style={{ background: '#E67E50' }}
-            >
-              Clear all filters
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {guides.map(guide => {
-              // flag rendered as <CountryFlag> below
-              const fishPills = guide.fish_expertise.slice(0, 3)
-
-              return (
-                <GuideLink key={guide.id} slug={guide.slug} className="group block">
-                  <article
-                    className="overflow-hidden transition-all duration-300 hover:shadow-[0_20px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1"
-                    style={{
-                      borderRadius: '28px',
-                      background: '#FDFAF7',
-                      border: '1px solid rgba(10,46,77,0.07)',
-                      boxShadow: '0 2px 16px rgba(10,46,77,0.05)',
-                    }}
-                  >
-                    {/* Cover image */}
-                    <div className="relative overflow-hidden" style={{ height: '180px' }}>
-                      {guide.cover_url != null ? (
-                        <Image
-                          src={guide.cover_url}
-                          alt={`${guide.full_name} — ${guide.country}`}
-                          fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-[1.05]"
-                        />
-                      ) : (
-                        <div className="w-full h-full" style={{ background: '#0A2E4D' }} />
-                      )}
-                      <div
-                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        style={{ background: 'rgba(7,17,28,0.22)' }}
-                      />
-                    </div>
-
-                    {/* Card body */}
-                    <div className="px-6 pb-6">
-                      <div className="flex items-end justify-between -mt-8 mb-4" style={{ position: 'relative', zIndex: 10 }}>
-                        <div
-                          className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0"
-                          style={{ border: '3px solid #FDFAF7', boxShadow: '0 2px 12px rgba(10,46,77,0.12)' }}
-                        >
-                          {guide.avatar_url != null ? (
-                            <Image
-                              src={guide.avatar_url}
-                              alt={guide.full_name}
-                              width={64}
-                              height={64}
-                              className="object-cover w-full h-full"
-                            />
-                          ) : (
-                            <div
-                              className="w-full h-full flex items-center justify-center text-white text-xl f-display font-bold"
-                              style={{ background: '#0A2E4D' }}
-                            >
-                              {guide.full_name[0]}
-                            </div>
-                          )}
-                        </div>
-
-                        {guide.average_rating != null && (
-                          <span
-                            className="text-xs font-semibold px-2.5 py-1 rounded-full f-body"
-                            style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}
-                          >
-                            ★ {guide.average_rating.toFixed(1)}
-                          </span>
-                        )}
-                      </div>
-
-                      <h3 className="font-bold text-lg leading-tight mb-1 f-display" style={{ color: '#0A2E4D' }}>
-                        {guide.full_name}
-                      </h3>
-
-                      <p className="text-xs mb-3 f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                        <CountryFlag country={guide.country} /> {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
-                        {guide.years_experience != null && (
-                          <span> · {guide.years_experience} yrs exp</span>
-                        )}
-                      </p>
-
-                      <div className="flex flex-wrap gap-1.5 mb-4">
-                        {fishPills.map(fish => (
-                          <span
-                            key={fish}
-                            className="text-xs font-medium px-2.5 py-1 rounded-full f-body"
-                            style={{ background: 'rgba(201,107,56,0.09)', color: '#9E4820' }}
-                          >
-                            {fish}
-                          </span>
-                        ))}
-                        {guide.fish_expertise.length > 3 && (
-                          <span
-                            className="text-xs font-medium px-2.5 py-1 rounded-full f-body"
-                            style={{ background: 'rgba(10,46,77,0.05)', color: 'rgba(10,46,77,0.4)' }}
-                          >
-                            +{guide.fish_expertise.length - 3} more
-                          </span>
-                        )}
-                      </div>
-
-                      {guide.bio != null && (
-                        <p
-                          className="text-sm leading-relaxed line-clamp-2 mb-5 f-body"
-                          style={{ color: 'rgba(10,46,77,0.55)' }}
-                        >
-                          {guide.bio}
-                        </p>
-                      )}
-
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
-                          {guide.languages.slice(0, 2).join(', ')}
-                          {guide.languages.length > 2 && ` +${guide.languages.length - 2}`}
-                        </p>
-                        <span
-                          className="text-xs font-semibold px-4 py-2 rounded-full transition-all group-hover:brightness-110 f-body"
-                          style={{ background: '#E67E50', color: '#fff' }}
-                        >
-                          View Profile →
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                </GuideLink>
-              )
-            })}
-          </div>
-        )}
-
-        {totalPages(total) > 1 && (
-          <Pagination page={currentPage} totalPages={totalPages(total)} baseParams={baseParams} />
-        )}
-      </main>
-
-    </div>
     </>
   )
 }

@@ -23,8 +23,6 @@ vi.mock('@/lib/supabase/queries', () => ({
   getDestinationHub: async () => null,
 }))
 vi.mock('@/lib/supabase/testimonials', () => ({ getTestimonial: async () => null }))
-vi.mock('@/app/(public)/guides/guides-filters', () => ({ GuidesFilters: () => null }))
-vi.mock('./guides-filters', () => ({ GuidesFilters: () => null }))
 vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null, PLAN_YOUR_TRIP_HREF: '/trips' }))
 vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
 vi.mock('@/components/ui/contact-expert-button', () => ({ ContactExpertButton: () => null }))
