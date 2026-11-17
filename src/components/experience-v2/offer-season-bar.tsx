@@ -24,9 +24,14 @@
 import { useId, useState, type FocusEvent, type PointerEvent } from 'react'
 import type { SeasonPeriod } from '@/lib/experience-v2-content'
 import { mutedStyle } from './offer-box'
+import { NAVY } from '@/components/site/ui'
 
-/** Wide enough to read at 390 px: one letter per month, with the full name in the title. */
+/** One letter per month at 390 px, the three-letter name from `sm`; the full name for screen readers. */
 const MONTH_INITIALS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** The 2026-11 mockup's bar colours: navy peak, river blue for open, sand for closed. */
+const STATE_COLOUR = { peak: NAVY, open: '#8FB3CF', closed: '#DDD3C4' } as const
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -66,10 +71,10 @@ export default function SeasonBar({ seasonMonths, peakMonths, periods }: SeasonB
 
   return (
     <div data-testid="offer-season-bar">
-      <p className="mb-1.5 text-[13px] uppercase tracking-wide" style={mutedStyle}>
+      <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.12em]" style={mutedStyle}>
         Season, month by month
       </p>
-      <ol className="grid grid-cols-12 gap-[3px] text-center text-[11px]">
+      <ol className="m-0 grid list-none grid-cols-12 gap-[5px] p-0 text-center text-[13px] sm:text-[13.5px]">
         {MONTH_INITIALS.map((initial, index) => {
           const month       = index + 1
           const isPeak      = peak.has(month)
@@ -81,33 +86,33 @@ export default function SeasonBar({ seasonMonths, peakMonths, periods }: SeasonB
           const inShown     = period != null && periodIndex === shownIndex
           const title       = `${MONTH_NAMES[index]} — ${isPeak ? 'best' : isOpen ? 'open' : 'closed'}${period != null ? ` · ${period.title}` : ''}`
 
-          const cellStyle = {
-            ...(isPeak
-              ? { background: 'var(--fa-navy)', color: '#fff' }
-              : isOpen
-                ? { background: 'rgba(10,46,77,0.22)' }
-                : { background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.45)' }),
-            // An inset ring, not a border or outline: it takes no space and stays inside the cell,
-            // so the active month never moves the bar or touches its neighbours. Navy edge + white
-            // line reads on all three cell colours, the navy "best" month included.
-            ...(isShown ? { boxShadow: 'inset 0 0 0 2px var(--fa-navy), inset 0 0 0 4px #fff' } : {}),
-          }
+          const cellStyle = { color: state === 'closed' ? 'rgba(10,46,77,0.55)' : NAVY }
 
+          // The month's name over its bar. The month on show gets a navy ring round the bar —
+          // a box-shadow, so it takes no space and nothing in the row moves.
           const label = (
             <>
-              <span aria-hidden>{initial}</span>
+              <span aria-hidden className={isShown ? 'font-bold' : undefined}>
+                <span className="sm:hidden">{initial}</span>
+                <span className="hidden sm:inline">{MONTH_SHORT[index]}</span>
+              </span>
               <span className="sr-only">{MONTH_NAMES[index]}</span>
+              <span
+                aria-hidden
+                className="mt-2.5 block h-2.5 w-full rounded-[3px]"
+                style={{ background: STATE_COLOUR[state], ...(isShown ? { boxShadow: `0 0 0 2px #FDFAF7, 0 0 0 4px ${NAVY}` } : {}) }}
+              />
             </>
           )
 
           return (
             <li key={month} data-month={month} data-state={state} data-active={isShown || undefined} title={title}>
               {periodIndex == null ? (
-                <div className="rounded py-2" style={cellStyle}>{label}</div>
+                <div className="flex min-w-0 flex-col items-center py-1" style={cellStyle}>{label}</div>
               ) : (
                 <button
                   type="button"
-                  className="block w-full cursor-pointer rounded py-2 focus-visible:outline-none"
+                  className="flex w-full min-w-0 cursor-pointer flex-col items-center rounded py-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A2E4D]"
                   style={cellStyle}
                   aria-pressed={pinned === month}
                   aria-controls={panelId}
@@ -129,14 +134,14 @@ export default function SeasonBar({ seasonMonths, peakMonths, periods }: SeasonB
                 <span
                   aria-hidden
                   className="mx-auto mt-1 block h-[3px] w-3/5 rounded-full"
-                  style={{ background: inShown ? 'rgba(10,46,77,0.55)' : 'transparent' }}
+                  style={{ background: inShown ? 'var(--fa-salmon)' : 'transparent' }}
                 />
               )}
             </li>
           )
         })}
       </ol>
-      <p className="mt-2 text-[12px]" style={mutedStyle}>
+      <p className="mt-3.5 text-[13px]" style={mutedStyle}>
         dark = best months · mid = open · pale = closed
       </p>
 
@@ -149,16 +154,16 @@ export default function SeasonBar({ seasonMonths, peakMonths, periods }: SeasonB
             ))}
           </div>
 
-          <div id={panelId} data-testid="season-panel" className="mt-3 rounded-xl px-3.5 py-3" style={{ background: 'rgba(10,46,77,0.05)' }}>
+          <div id={panelId} data-testid="season-panel" className="mt-4 rounded-[12px] border px-4 py-3.5" style={{ borderColor: '#E3DBCE', background: '#FFFFFF' }}>
             {shownPeriod != null ? (
               <>
-                <p className="text-[14px] font-semibold">{shownPeriod.title}</p>
-                <p className="mt-1 whitespace-pre-line text-[14px] leading-relaxed" style={{ color: 'rgba(10,46,77,0.78)' }}>
+                <p className="text-[15.5px] font-bold">{shownPeriod.title}</p>
+                <p className="mt-1 whitespace-pre-line text-[14.5px] leading-[1.55]" style={mutedStyle}>
                   {shownPeriod.text}
                 </p>
               </>
             ) : (
-              <p className="text-[13px]" style={mutedStyle}>Pick a month to see what that part of the season is like.</p>
+              <p className="text-[13.5px]" style={mutedStyle}>Pick a month to see what that part of the season is like.</p>
             )}
           </div>
         </>

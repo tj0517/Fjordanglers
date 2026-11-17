@@ -12,8 +12,9 @@
 
 import OfferSection from './offer-section'
 import { OfferLocationMap } from '@/components/offer/OfferLocationMap'
-import { Box, mutedStyle } from './offer-box'
 import SeasonBar from './offer-season-bar'
+import { CREAM, ON_DARK, SALMON_ON_DARK } from '@/components/site/ui'
+import grain from '@/components/site/grain.module.css'
 import type { LodgingSuggestion, SeasonPeriod } from '@/lib/experience-v2-content'
 
 export type OfferLogisticsProps = {
@@ -49,58 +50,75 @@ export default function OfferLogistics({
 
   return (
     <OfferSection section="S11" eyebrow="Getting there" title="Where it is, and when" accordion={{ defaultOpen: true }}>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[3fr_2fr]">
+      <div className="flex flex-wrap items-stretch gap-6">
         {hasMap && (
-          <div data-testid="offer-map">
-            <OfferLocationMap
-              lat={locationLat!}
-              lng={locationLng!}
-              zoom={REGION_ZOOM}
-              geojson={null}
-            />
-            <p className="mt-1.5 text-[12px]" style={mutedStyle}>
+          <div data-testid="offer-map" className="min-w-0 flex-[1_1_360px]">
+            <div className="overflow-hidden rounded-[20px]">
+              <OfferLocationMap
+                lat={locationLat!}
+                lng={locationLng!}
+                zoom={REGION_ZOOM}
+                geojson={null}
+              />
+            </div>
+            <p className="mt-2 text-[12.5px]" style={{ color: '#4F6275' }}>
               {region} — the fishing area, not an exact meeting point.
             </p>
           </div>
         )}
 
         {(hasFacts || hasSeason) && (
-          <Box className="flex flex-col gap-3.5">
-            {nearestAirport != null && (
-              <p className="text-[15px]">
-                <b>Nearest airport:</b> {nearestAirport}
-              </p>
-            )}
-
-            {suggestedLodging.length > 0 && (
-              <div className="text-[15px]">
-                <b>Where to stay:</b>
-                <ul className="mt-1 list-disc space-y-1 pl-5">
-                  {suggestedLodging.map((place, i) => (
-                    <li key={`${i}-${place.name}`}>
-                      {place.url != null ? (
-                        <a href={place.url} target="_blank" rel="noopener noreferrer" className="underline">
-                          {place.name}
-                        </a>
-                      ) : (
-                        place.name
-                      )}
-                      {place.note != null && (
-                        <span style={mutedStyle}> — {place.note}</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-1.5 text-[12px]" style={mutedStyle}>
-                  Suggestions only — you book your own lodging.
-                </p>
+          <div className={`${grain.blur} ${grain.finland} flex min-w-0 flex-[1_1_420px] flex-col gap-2.5 self-start rounded-[20px] p-3.5`}>
+            {hasSeason && (
+              <div className="rounded-[14px] px-4 py-5 sm:px-[22px]" style={{ background: `${CREAM}F7` }}>
+                <SeasonBar seasonMonths={seasonMonths} peakMonths={peakMonths} periods={seasonPeriods} />
               </div>
             )}
 
-            <SeasonBar seasonMonths={seasonMonths} peakMonths={peakMonths} periods={seasonPeriods} />
-          </Box>
+            {hasFacts && (
+              <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+                {nearestAirport != null && (
+                  <Fact label="Nearest airport">{nearestAirport}</Fact>
+                )}
+
+                {suggestedLodging.length > 0 && (
+                  <Fact label="Where to stay">
+                    <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+                      {suggestedLodging.map((place, i) => (
+                        <li key={`${i}-${place.name}`}>
+                          {place.url != null ? (
+                            <a href={place.url} target="_blank" rel="noopener noreferrer" className="text-white underline underline-offset-[3px]" style={{ textDecorationColor: SALMON_ON_DARK }}>
+                              {place.name}
+                            </a>
+                          ) : (
+                            place.name
+                          )}
+                          {place.note != null && (
+                            <span className="mt-1 block text-[13.5px] font-medium" style={{ color: ON_DARK }}>{place.note}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    <span className="mt-1.5 block text-[12.5px] font-medium" style={{ color: ON_DARK }}>
+                      Suggestions only — you book your own lodging.
+                    </span>
+                  </Fact>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </OfferSection>
+  )
+}
+
+/** One frosted tile on the grain block (the mockup's `.fq`): label over value. */
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className={`${grain.fq} flex min-w-0 flex-col gap-1`} style={{ padding: '13px 18px' }}>
+      <span className="text-[11.5px] font-bold uppercase tracking-[0.1em]" style={{ color: SALMON_ON_DARK }}>{label}</span>
+      <div className="text-[15.5px] font-semibold leading-[1.35] text-white">{children}</div>
+    </div>
   )
 }

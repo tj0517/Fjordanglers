@@ -16,7 +16,9 @@
 
 import { useState } from 'react'
 import OfferSection from './offer-section'
-import { Box, cardShadow, mutedStyle } from './offer-box'
+import { Box, mutedStyle } from './offer-box'
+import { CREAM, LINE, NAVY, ON_DARK_SOFT, SALMON_ON_DARK } from '@/components/site/ui'
+import grain from '@/components/site/grain.module.css'
 import { optionPriceText, durationText } from './option-price'
 import type { DayStep, ItineraryDay } from '@/lib/experience-v2-content'
 
@@ -69,8 +71,8 @@ export default function OfferDay({ offerMode, daySchedule, archetypes, currency 
                   aria-selected={active}
                   data-archetype={a.id}
                   onClick={() => setSelectedId(a.id)}
-                  className="rounded-2xl bg-white p-4 text-left transition-shadow"
-                  style={{ boxShadow: active ? '0 0 0 2px var(--fa-navy)' : cardShadow, minHeight: 44 }}
+                  className="rounded-[14px] p-4 text-left transition-colors"
+                  style={{ background: CREAM, border: `1.5px solid ${active ? NAVY : LINE}`, minHeight: 44 }}
                 >
                   <b className="block text-[15px]">{a.label}</b>
                   {length != null && <span className="block text-[13px]" style={mutedStyle}>{length}</span>}
@@ -109,14 +111,18 @@ export default function OfferDay({ offerMode, daySchedule, archetypes, currency 
           )}
         </div>
       ) : (
-        <ol className="space-y-3" data-testid="timeline">
+        <ol className={`${grain.blur} ${grain.canyon} m-0 flex list-none flex-col rounded-[20px] px-5 py-2 sm:px-9 sm:py-3.5`} data-testid="timeline">
           {daySchedule.map((step, i) => (
-            <li key={`${i}-${step.title}`} className="flex gap-4">
-              <b className="w-14 flex-none text-[15px] tabular-nums">{step.time}</b>
-              <div className="min-w-0 border-l pl-4" style={{ borderColor: 'rgba(10,46,77,0.2)' }}>
-                <p className="text-[15px] font-semibold">{step.title}</p>
+            <li
+              key={`${i}-${step.title}`}
+              className="flex flex-col gap-1.5 py-5 sm:flex-row sm:gap-7 sm:py-6"
+              style={i < daySchedule.length - 1 ? { borderBottom: '1px solid rgba(255,255,255,.22)' } : undefined}
+            >
+              <b className="flex-none pt-[3px] text-[13px] font-bold uppercase tracking-[0.06em] tabular-nums sm:w-28" style={{ color: SALMON_ON_DARK }}>{step.time}</b>
+              <div className="flex min-w-0 flex-col gap-1">
+                <p className="text-[16.5px] font-semibold text-white" style={{ fontWeight: 700 }}>{step.title}</p>
                 {step.description != null && (
-                  <p className="mt-0.5 whitespace-pre-line text-[15px] leading-relaxed" style={{ color: 'rgba(10,46,77,0.78)' }}>
+                  <p className="whitespace-pre-line text-[15px] leading-[1.55]" style={{ color: ON_DARK_SOFT }}>
                     {step.description}
                   </p>
                 )}
@@ -126,7 +132,7 @@ export default function OfferDay({ offerMode, daySchedule, archetypes, currency 
         </ol>
       )}
 
-      <p className="mt-4 text-sm" style={mutedStyle}>{SAMPLE_PLAN_NOTE}</p>
+      <p className="mt-3.5 text-[13.5px] leading-relaxed" style={mutedStyle}>{SAMPLE_PLAN_NOTE}</p>
     </OfferSection>
   )
 }

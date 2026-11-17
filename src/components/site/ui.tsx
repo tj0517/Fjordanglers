@@ -16,6 +16,11 @@ export const CREAM     = '#FDFAF7'
 export const PAGE_BG   = '#F3EDE4'
 export const LINE      = '#E3DBCE'
 export const ON_DARK   = '#EEF2F5'
+/** Body copy on a light surface, and the softer line under a heading on a dark one. */
+export const INK       = '#33485C'
+export const ON_DARK_SOFT = '#E3EAF0'
+/** The sand of tags and of the assurance strip. */
+export const SAND      = '#E9DFCF'
 
 const eyebrowStyle: CSSProperties = {
   margin: 0, fontSize: '12.5px', fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase',
@@ -51,13 +56,21 @@ const buttonBase: CSSProperties = {
 /** The large size: the home hero's and the closing block's CTA. */
 const buttonLarge: CSSProperties = { minHeight: 54, padding: '0 28px', fontSize: '16.5px' }
 
-/** Salmon fill, beige text, navy outline — the main CTA on every page (README "Wspólne zasady"). */
+/**
+ * Salmon fill, beige text, navy outline — the main CTA on every page (README "Wspólne zasady").
+ * Exported for a CTA that has to be a plain `<a>` with its own click handler (the offer page's
+ * widget opens the inquiry form instead of navigating).
+ */
+export const primaryButtonStyle: CSSProperties = {
+  ...buttonBase, fontWeight: 700, background: SALMON, color: PAGE_BG, border: `1.5px solid ${NAVY}`,
+}
+
 export function PrimaryButton({ href, children, size = 'md' }: { href: string; children: ReactNode; size?: 'md' | 'lg' }) {
   return (
     <Link
       href={href}
       className="f-body"
-      style={{ ...buttonBase, ...(size === 'lg' ? buttonLarge : {}), fontWeight: 700, background: SALMON, color: PAGE_BG, border: `1.5px solid ${NAVY}` }}
+      style={{ ...primaryButtonStyle, ...(size === 'lg' ? buttonLarge : {}) }}
     >
       {children}
     </Link>
@@ -108,13 +121,15 @@ export function HeadingLink({ href, children, dark = false }: { href: string; ch
   )
 }
 
-/** The small uppercase label on a card photo. */
-export function Tag({ children, tone = 'cream' }: { children: ReactNode; tone?: 'cream' | 'sand' }) {
+const TAG_BACKGROUND = { cream: CREAM, sand: SAND, salmon: SALMON } as const
+
+/** The small uppercase label on a card photo. `salmon` is the offer page's "Gear included". */
+export function Tag({ children, tone = 'cream' }: { children: ReactNode; tone?: keyof typeof TAG_BACKGROUND }) {
   return (
     <span
       className="f-body"
       style={{
-        display: 'inline-block', padding: '6px 9px', borderRadius: 5, background: tone === 'sand' ? '#E9DFCF' : CREAM,
+        display: 'inline-block', padding: '6px 9px', borderRadius: 5, background: TAG_BACKGROUND[tone],
         color: NAVY, fontSize: '11.5px', fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', lineHeight: 1.1,
       }}
     >

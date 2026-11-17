@@ -24,7 +24,7 @@ export function FaqList({ entries }: { entries: readonly FaqEntry[] }) {
               </svg>
             </span>
           </summary>
-          <p className={`${s.fqAnswer} f-body m-0 text-[16.5px]`} style={{ padding: '0 76px 24px 76px', lineHeight: 1.65 }}>{entry.answer}</p>
+          <p className={`${s.fqAnswer} f-body m-0 whitespace-pre-line text-[16.5px]`} style={{ padding: '0 76px 24px 76px', lineHeight: 1.65 }}>{entry.answer}</p>
         </details>
       ))}
     </div>

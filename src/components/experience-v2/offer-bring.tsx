@@ -5,7 +5,8 @@
  */
 
 import OfferSection from './offer-section'
-import { Box, BulletList } from './offer-box'
+import { BulletList } from './offer-box'
+import grain from '@/components/site/grain.module.css'
 
 export type OfferBringProps = { whatToBring: string[] }
 
@@ -15,9 +16,9 @@ export default function OfferBring({ whatToBring }: OfferBringProps) {
 
   return (
     <OfferSection section="S12" eyebrow="Packing" title="What to bring" accordion={{ defaultOpen: false }}>
-      <Box>
-        <BulletList items={whatToBring} />
-      </Box>
+      <div className={`${grain.blur} ${grain.iceland} rounded-[20px] px-6 py-6 sm:px-7`}>
+        <BulletList items={whatToBring} mark="dark" className="grid gap-x-7 gap-y-3 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]" />
+      </div>
     </OfferSection>
   )
 }

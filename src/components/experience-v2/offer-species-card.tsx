@@ -23,6 +23,7 @@ import { Dialog, DialogTrigger } from '@/components/ui/dialog-root'
 import type { SpeciesDetail } from '@/lib/experience-v2-content'
 import { seasonLabel } from '@/lib/season-months'
 import { Box, mutedStyle } from './offer-box'
+import { INK, SAND } from '@/components/site/ui'
 import { INQUIRY_ANCHOR } from './inquiry-anchor'
 import { PhotoLightbox, useLightboxIndex } from './offer-photo-lightbox-loader'
 
@@ -62,7 +63,9 @@ export default function OfferSpeciesCard({ species }: { species: SpeciesDetail }
   const card = (
     <Box className="relative flex h-full flex-col">
       {cover != null && (
-        <div className="relative -mx-5 -mt-5 mb-3.5 h-[180px] overflow-hidden rounded-t-2xl">
+        // The mockup's 150 px photo band on sand. Its cut-out fish sits contained; the pages carry
+        // photographs, which fill the band instead of floating in it.
+        <div className="relative -mx-5 -mt-5 mb-4 h-[150px] overflow-hidden rounded-t-[13px]" style={{ background: SAND }}>
           <Image src={cover} alt={species.name} fill sizes="(min-width: 1280px) 30vw, (min-width: 640px) 45vw, 100vw" className="object-cover" />
         </div>
       )}
@@ -71,11 +74,11 @@ export default function OfferSpeciesCard({ species }: { species: SpeciesDetail }
           data-testid="species-gallery"
           aria-label={`Open ${count} photos of ${species.name}`}
           onClick={lightbox.reset}
-          className="absolute inset-0 z-[1] cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--fa-navy)] focus-visible:ring-offset-2"
+          className="absolute inset-0 z-[1] cursor-pointer rounded-[14px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--fa-navy)] focus-visible:ring-offset-2"
         >
           <span
-            className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] font-semibold text-white"
-            style={{ background: 'rgba(10,46,77,0.72)', backdropFilter: 'blur(6px)' }}
+            className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-[5px] px-[9px] py-1.5 text-[11.5px] font-bold uppercase tracking-[0.07em]"
+            style={{ background: '#FDFAF7', color: 'var(--fa-navy)' }}
           >
             <Images aria-hidden size={14} strokeWidth={2.25} />
             +{count - 1} photos
@@ -89,7 +92,7 @@ export default function OfferSpeciesCard({ species }: { species: SpeciesDetail }
         <h3 className="f-display text-[19px] font-bold leading-tight">{species.name}</h3>
       </div>
       {species.description != null && (
-        <p className="mt-1.5 text-[14px] leading-relaxed" style={{ color: 'rgba(10,46,77,0.75)' }}>{species.description}</p>
+        <p className="mt-2 text-[14.5px] leading-[1.55]" style={{ color: INK }}>{species.description}</p>
       )}
       {(season != null || species.avgSizeText != null) && (
         <dl className="mt-3 space-y-0.5 text-[13px]" data-testid="species-facts">

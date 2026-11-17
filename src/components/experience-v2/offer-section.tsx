@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * The frame every S3–S14 section sits in (FA-1.54): an anchor, a `data-section` marker the
+ * The frame every S3–S14 section sits in (FA-1.54; the 2026-11 mockup's section: a sand rule,
+ * 44 px of air, a salmon eyebrow and a 30 px heading): an anchor, a `data-section` marker the
  * tests and the screenshots key on, an eyebrow, one heading, and — on mobile only — an
  * accordion.
  *
@@ -11,6 +12,7 @@
  */
 
 import { useState, type ReactNode } from 'react'
+import { Eyebrow } from '@/components/site/ui'
 import { hairline } from './offer-box'
 
 export type OfferSectionProps = {
@@ -26,7 +28,7 @@ export type OfferSectionProps = {
   children: ReactNode
 }
 
-const headingClass = 'f-display text-[26px] font-bold leading-[1.1] tracking-[-0.01em] sm:text-[32px]'
+const headingClass = 'f-display text-[26px] font-bold leading-[1.12] tracking-[-0.01em] sm:text-[30px]'
 
 export default function OfferSection({ section, anchor, eyebrow, title, accordion, children }: OfferSectionProps) {
   const [open, setOpen] = useState(accordion?.defaultOpen ?? true)
@@ -34,16 +36,14 @@ export default function OfferSection({ section, anchor, eyebrow, title, accordio
   const collapsible = accordion != null
 
   const eyebrowEl = eyebrow != null && (
-    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: 'rgba(10,46,77,0.5)' }}>
-      {eyebrow}
-    </p>
+    <div className="mb-2"><Eyebrow>{eyebrow}</Eyebrow></div>
   )
 
   return (
     <section
       id={anchor}
       data-section={section}
-      className="mt-12 scroll-mt-24 border-t pt-10 sm:mt-14 sm:pt-12"
+      className="mt-11 scroll-mt-24 border-t pt-11"
       style={{ borderColor: hairline }}
     >
       {collapsible ? (
@@ -67,7 +67,7 @@ export default function OfferSection({ section, anchor, eyebrow, title, accordio
                 <span
                   aria-hidden
                   className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-lg font-normal"
-                  style={{ background: 'rgba(10,46,77,0.06)' }}
+                  style={{ background: 'rgba(10,46,77,0.06)', color: 'var(--fa-navy)' }}
                 >
                   {open ? '−' : '+'}
                 </span>
@@ -85,7 +85,7 @@ export default function OfferSection({ section, anchor, eyebrow, title, accordio
       <div
         id={`offer-${section}-body`}
         data-open={open}
-        className={`mt-6 ${open ? '' : 'hidden sm:block'}`}
+        className={`mt-5 ${open ? '' : 'hidden sm:block'}`}
       >
         {children}
       </div>

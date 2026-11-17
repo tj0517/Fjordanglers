@@ -22,7 +22,9 @@
 import OfferSection from './offer-section'
 import OfferStoryBlock from './offer-story-block'
 import OfferSpeciesCard from './offer-species-card'
-import { Box, mutedStyle } from './offer-box'
+import { mutedStyle } from './offer-box'
+import { INK, SALMON_ON_DARK } from '@/components/site/ui'
+import grain from '@/components/site/grain.module.css'
 import type { SpeciesDetail, StoryBlock } from '@/lib/experience-v2-content'
 
 export type OfferStoryProps = {
@@ -37,13 +39,20 @@ export type OfferStoryProps = {
 
 /** The small label over a group — "Waters", "Programs", "What you fish for". */
 function Eyebrow({ children }: { children: string }) {
-  return <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em]" style={mutedStyle}>{children}</p>
+  return <p className="mb-3 text-[12.5px] font-bold uppercase tracking-[0.12em]" style={mutedStyle}>{children}</p>
 }
 
-/** Photo cards, one column for a single block, two from `sm` up. */
+/**
+ * Text-only blocks are the mockup's cream cards, one under the other. Photo cards keep their
+ * grid: one column for a single block, two from `sm` up.
+ */
 function BlockGrid({ blocks, testId }: { blocks: StoryBlock[]; testId: string }) {
+  const withPhotos = blocks.some(block => block.imageUrls.length > 0)
   return (
-    <div className={`grid grid-cols-1 gap-4 ${blocks.length === 1 ? '' : 'sm:grid-cols-2'}`} data-testid={testId}>
+    <div
+      className={withPhotos ? `grid grid-cols-1 gap-4 ${blocks.length === 1 ? '' : 'sm:grid-cols-2'}` : 'flex flex-col gap-3'}
+      data-testid={testId}
+    >
       {blocks.map((block, i) => (
         <OfferStoryBlock key={`${i}-${block.headline ?? ''}`} block={block} single={blocks.length === 1} />
       ))}
@@ -64,11 +73,7 @@ export default function OfferStory({ storyText, contentBlocks, speciesDetails, c
       {paragraphs.length > 0 && (
         <div className="max-w-[66ch]" data-testid="offer-story">
           {paragraphs.map((para, i) => (
-            <p
-              key={i}
-              className={i === 0 ? 'text-[18px] leading-relaxed md:text-[19px]' : 'mt-4 text-[16px] leading-relaxed'}
-              style={{ color: i === 0 ? 'var(--fa-navy)' : 'rgba(10,46,77,0.78)' }}
-            >
+            <p key={i} className={`${i === 0 ? '' : 'mt-5'} text-[16.5px] leading-[1.7]`} style={{ color: INK }}>
               {para}
             </p>
           ))}
@@ -81,7 +86,7 @@ export default function OfferStory({ storyText, contentBlocks, speciesDetails, c
           <Eyebrow>Waters</Eyebrow>
           {waterBlocks.length > 0
             ? <BlockGrid blocks={waterBlocks} testId="offer-water-blocks" />
-            : <p className="text-[15px] font-medium">{environment.join(' · ')}</p>}
+            : <p className="text-[15.5px] font-semibold">{environment.join(' · ')}</p>}
         </div>
       )}
 
@@ -95,7 +100,7 @@ export default function OfferStory({ storyText, contentBlocks, speciesDetails, c
       {speciesDetails.length > 0 && (
         <div className={paragraphs.length > 0 || hasWaters || programBlocks.length > 0 ? 'mt-8' : ''} data-testid="offer-species">
           <Eyebrow>What you fish for</Eyebrow>
-          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
             {speciesDetails.map(species => (
               <li key={species.name}>
                 <OfferSpeciesCard species={species} />
@@ -106,11 +111,9 @@ export default function OfferStory({ storyText, contentBlocks, speciesDetails, c
       )}
 
       {catchesText != null && (
-        <div className="mt-6">
-          <Box accent>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={mutedStyle}>What anglers catch here</p>
-            <p className="mt-1.5 text-[15px] leading-relaxed">{catchesText}</p>
-          </Box>
+        <div className={`${grain.blur} ${grain.guide} mt-6 flex flex-col gap-2 rounded-[18px] px-6 py-6 sm:px-7`}>
+          <p className="text-[11.5px] font-bold uppercase tracking-[0.12em]" style={{ color: SALMON_ON_DARK }}>What anglers catch here</p>
+          <p className="f-display text-[18px] font-medium leading-normal text-white sm:text-[19px]">{catchesText}</p>
         </div>
       )}
     </OfferSection>

@@ -19,6 +19,7 @@ import { Images } from 'lucide-react'
 import { Dialog, DialogTrigger } from '@/components/ui/dialog-root'
 import type { StoryBlock } from '@/lib/experience-v2-content'
 import { Box } from './offer-box'
+import { INK } from '@/components/site/ui'
 import { PhotoLightbox, useLightboxIndex } from './offer-photo-lightbox-loader'
 
 export default function OfferStoryBlock({ block, single }: { block: StoryBlock; single: boolean }) {
@@ -35,8 +36,8 @@ export default function OfferStoryBlock({ block, single }: { block: StoryBlock; 
       {cover != null && (
         <div
           className={single
-            ? 'relative -mx-5 -mt-5 h-[220px] flex-none overflow-hidden rounded-t-2xl sm:-my-5 sm:ml-[-20px] sm:mr-0 sm:h-auto sm:w-[320px] sm:rounded-l-2xl sm:rounded-tr-none'
-            : 'relative -mx-5 -mt-5 mb-4 h-[200px] overflow-hidden rounded-t-2xl'}
+            ? 'relative -mx-5 -mt-5 h-[200px] flex-none overflow-hidden rounded-t-[13px] sm:-my-5 sm:ml-[-20px] sm:mr-0 sm:h-auto sm:min-h-[170px] sm:w-[240px] sm:rounded-l-[13px] sm:rounded-tr-none'
+            : 'relative -mx-5 -mt-5 mb-4 h-[200px] overflow-hidden rounded-t-[13px]'}
         >
           <Image src={cover} alt={block.headline ?? ''} fill sizes="(min-width: 640px) 45vw, 100vw" className="object-cover" />
         </div>
@@ -46,11 +47,11 @@ export default function OfferStoryBlock({ block, single }: { block: StoryBlock; 
           data-testid="story-block-gallery"
           aria-label={`Open ${count} photos of ${name}`}
           onClick={lightbox.reset}
-          className="absolute inset-0 z-[1] cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--fa-navy)] focus-visible:ring-offset-2"
+          className="absolute inset-0 z-[1] cursor-pointer rounded-[14px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--fa-navy)] focus-visible:ring-offset-2"
         >
           <span
-            className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] font-semibold text-white"
-            style={{ background: 'rgba(10,46,77,0.72)', backdropFilter: 'blur(6px)' }}
+            className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-[5px] px-[9px] py-1.5 text-[11.5px] font-bold uppercase tracking-[0.07em]"
+            style={{ background: '#FDFAF7', color: 'var(--fa-navy)' }}
           >
             <Images aria-hidden size={14} strokeWidth={2.25} />
             +{count - 1} photos
@@ -58,8 +59,8 @@ export default function OfferStoryBlock({ block, single }: { block: StoryBlock; 
         </DialogTrigger>
       )}
       <div className="min-w-0 flex-1">
-        {block.headline != null && <h3 className="f-display text-[21px] font-bold leading-tight">{block.headline}</h3>}
-        {block.text != null && <p className={`${block.headline != null ? 'mt-2' : ''} text-[15px] leading-relaxed`} style={{ color: 'rgba(10,46,77,0.78)' }}>{block.text}</p>}
+        {block.headline != null && <h3 className="text-[16.5px] font-bold leading-snug">{block.headline}</h3>}
+        {block.text != null && <p className={`${block.headline != null ? 'mt-1.5' : ''} whitespace-pre-line text-[15px] leading-[1.6]`} style={{ color: INK }}>{block.text}</p>}
       </div>
     </Box>
   )

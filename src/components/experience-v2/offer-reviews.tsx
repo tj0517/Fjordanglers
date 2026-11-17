@@ -1,7 +1,7 @@
 /**
  * S10 "What anglers said" (FA-1.55) — the first section below the sticky column, and the
- * one that has to carry trust from strangers rather than from us. Drawn as a navy band
- * across the page, with the cards on it, so it reads as a different voice from the rest.
+ * one that has to carry trust from strangers rather than from us. Drawn as the 2026-11 mockup's
+ * grain band, with the cards on it, so it reads as a different voice from the rest.
  *
  * Every card comes from a review the angler submitted through their own link (FA-1.50); the
  * data layer has already dropped unsubmitted and unconsented rows (FA-1.59) and cut the
@@ -18,6 +18,8 @@
 
 import type { ExperienceV2Review } from '@/lib/supabase/queries'
 import OfferReviewCard from './offer-review-card'
+import { Eyebrow, ON_DARK } from '@/components/site/ui'
+import grain from '@/components/site/grain.module.css'
 
 export type OfferReviewsProps = {
   reviews: ExperienceV2Review[]
@@ -60,17 +62,15 @@ export default function OfferReviews({
     <section
       id="recenzje"
       data-section="S10"
-      className="-mx-4 mt-14 scroll-mt-24 px-5 py-8 sm:mx-0 sm:rounded-3xl sm:px-8 sm:py-10 md:px-12 md:py-12"
-      style={{ background: 'var(--fa-navy)', color: '#fff' }}
+      className={`${grain.blur} ${grain.nz} mt-14 scroll-mt-24 rounded-3xl text-white`}
+      style={{ padding: 'clamp(24px, 4vw, 48px)' }}
     >
       <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-12">
         <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.55)' }}>
-            From anglers
-          </p>
-          <h2 className="f-display text-[28px] font-bold leading-[1.1] tracking-[-0.01em] sm:text-[34px]">{title}</h2>
+          <div className="mb-2.5"><Eyebrow dark>Reviews</Eyebrow></div>
+          <h2 className="f-display text-[30px] font-bold leading-[1.12] tracking-[-0.01em] sm:text-[36px]">{title}</h2>
           {googleRating != null && (
-            <p className="mt-2 text-[15px]" style={{ color: 'rgba(255,255,255,0.75)' }}>What anglers said</p>
+            <p className="mt-2 text-[15px]" style={{ color: ON_DARK }}>What anglers said</p>
           )}
           {googleProfileUrl != null && (
             <p className="mt-3 text-[15px]">
@@ -88,7 +88,7 @@ export default function OfferReviews({
 
           <p
             className="mt-6 border-t pt-5 text-[13px] leading-relaxed"
-            style={{ color: 'rgba(255,255,255,0.62)', borderColor: 'rgba(255,255,255,0.14)' }}
+            style={{ color: ON_DARK, borderColor: 'rgba(255,255,255,0.22)' }}
             data-testid="reviews-source"
           >
             Written by anglers who booked this trip through FjordAnglers, from a review link we

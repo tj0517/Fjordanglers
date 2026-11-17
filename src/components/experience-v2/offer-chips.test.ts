@@ -45,7 +45,8 @@ const none: HeroFacts = {
 /** The chip labels, in order. */
 function labels(heroFacts: HeroFacts | null, over: Partial<typeof page> = {}): string[] {
   const html = renderToStaticMarkup(createElement(OfferChips, { ...page, ...over, heroFacts }))
-  return [...html.matchAll(/<\/svg>([^<]+)<\/li>/g)].map(match => match[1])
+  // Each chip is one <li>; its label is the text left once the tag's own markup is stripped.
+  return [...html.matchAll(/<li[^>]*>(.*?)<\/li>/g)].map(match => match[1]!.replace(/<[^>]+>/g, ''))
 }
 
 describe('OfferChips', () => {

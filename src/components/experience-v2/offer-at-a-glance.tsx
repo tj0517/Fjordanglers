@@ -4,11 +4,13 @@
  *
  * "Start and pick-up" and "Group size" can be typed in the admin (`hero_facts`, FA-1.63);
  * with nothing typed they are computed as before, each on its own.
+ *
+ * Drawn as the mockup's frosted tiles (`.fq`) on a grain block, label over value, no icons.
  */
 
-import { Footprints, Languages, MapPin, Target, Users, type LucideIcon } from 'lucide-react'
 import OfferSection from './offer-section'
-import { Box, mutedStyle } from './offer-box'
+import { SALMON_ON_DARK } from '@/components/site/ui'
+import grain from '@/components/site/grain.module.css'
 import { languageNames, type HeroFacts } from '@/lib/experience-v2-content'
 import { anglersPerGuideLabel } from '@/lib/pricing/experience-price'
 
@@ -39,36 +41,26 @@ export default function OfferAtAGlance(props: OfferAtAGlanceProps) {
 
   // Species are not a card here: "What you fish for" in the story section shows them with
   // a photo and a description, and the same name twice in 400 px reads as padding.
-  const cards: { icon: LucideIcon; label: string; value: string }[] = [
-    { icon: Target,     label: 'Techniques',        value: props.technique.join(', ') },
-    { icon: MapPin,     label: 'Start and pick-up', value: meeting },
-    {
-      icon:  Users,
-      label: 'Group size',
-      value: props.heroFacts?.groupSize ?? anglersPerGuideLabel(props.maxAnglersPerGuide),
-    },
-    { icon: Languages,  label: 'Guide speaks', value: languageNames(props.languages).join(', ') },
-    { icon: Footprints, label: 'Terrain',      value: terrainText(props.walkingKmMin, props.walkingKmMax) ?? '' },
+  const cards: { label: string; value: string }[] = [
+    { label: 'Techniques',        value: props.technique.join(', ') },
+    { label: 'Start and pick-up', value: meeting },
+    { label: 'Group size',        value: props.heroFacts?.groupSize ?? anglersPerGuideLabel(props.maxAnglersPerGuide) },
+    { label: 'Guide speaks',      value: languageNames(props.languages).join(', ') },
+    { label: 'Terrain',           value: terrainText(props.walkingKmMin, props.walkingKmMax) ?? '' },
   ].filter(card => card.value !== '')
 
   // Group size is a NOT NULL column, so there is always at least one card.
   return (
     <OfferSection section="S3" eyebrow="The essentials" title="At a glance">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {cards.map(({ icon: Icon, label, value }) => (
-          <Box key={label} className="flex items-start gap-3.5">
-            <span
-              aria-hidden
-              className="flex h-10 w-10 flex-none items-center justify-center rounded-xl"
-              style={{ background: 'rgba(10,46,77,0.06)' }}
-            >
-              <Icon size={19} strokeWidth={1.75} />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[12px] font-semibold uppercase tracking-[0.12em]" style={mutedStyle}>{label}</span>
-              <span className="mt-1 block whitespace-pre-line text-[15px] font-medium leading-snug">{value}</span>
-            </span>
-          </Box>
+      <div
+        className={`${grain.blur} ${grain.nz} grid gap-2.5 rounded-[20px] p-3.5 sm:p-5`}
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}
+      >
+        {cards.map(({ label, value }) => (
+          <span key={label} className={`${grain.fq} flex min-w-0 flex-col gap-1`} style={{ padding: '13px 18px' }}>
+            <span className="block text-[11.5px] font-bold uppercase tracking-[0.1em]" style={{ color: SALMON_ON_DARK }}>{label}</span>
+            <span className="block whitespace-pre-line text-[15.5px] font-semibold leading-[1.35] text-white">{value}</span>
+          </span>
         ))}
       </div>
     </OfferSection>

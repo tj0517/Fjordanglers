@@ -19,7 +19,7 @@
 
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Clock, Lock, ShieldCheck, Star } from 'lucide-react'
+import { ArrowLeft, Star } from 'lucide-react'
 import { env } from '@/lib/env'
 import { getExperienceV2, getHubCrumbForCountry, getRelatedExperiencePages } from '@/lib/supabase/queries'
 import { getTestimonial } from '@/lib/supabase/testimonials'
@@ -48,6 +48,7 @@ import { v2Description, v2FromPrice, v2OfferJsonLd } from '@/lib/seo/v2-offer-js
 // The inquiry section of S14. The CTAs keep the href even though they also open the wizard.
 import { INQUIRY_ANCHOR } from '@/components/experience-v2/inquiry-anchor'
 import { SITE_URL } from '@/lib/site'
+import { CREAM, INK, LINE, MUTED, SAND } from '@/components/site/ui'
 
 
 /**
@@ -188,14 +189,14 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
           </div>
         )}
 
-        <div className="mx-auto max-w-[1200px] px-4 sm:px-8 md:pt-[72px]">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-6 md:pt-[72px]">
           {/* ── S1 title block — above the gallery on desktop ── */}
           <div className="mt-6 md:mt-10">
-            <nav aria-label="Breadcrumb" className="mb-5 hidden items-center gap-3 text-[13px] md:flex" style={{ color: 'rgba(10,46,77,0.6)' }}>
+            <nav aria-label="Breadcrumb" className="mb-6 hidden flex-wrap items-center gap-3 text-[14px] md:flex" style={{ color: MUTED }}>
               <Link
                 href="/trips"
-                className="inline-flex items-center gap-1.5 rounded-full bg-white py-1.5 pl-2.5 pr-3.5 font-semibold transition-shadow hover:shadow-md"
-                style={{ color: 'var(--fa-navy)', boxShadow: '0 1px 2px rgba(10,46,77,0.08)' }}
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-[9px] px-3.5 font-semibold"
+                style={{ color: 'var(--fa-navy)', background: CREAM, border: `1.5px solid ${LINE}` }}
               >
                 <ArrowLeft aria-hidden size={14} strokeWidth={2.25} />
                 All trips
@@ -204,12 +205,12 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
             </nav>
 
             <div className="anim-1 relative">
-              <h1 className="f-display max-w-[20ch] text-[32px] font-bold leading-[1.06] tracking-[-0.015em] md:text-[48px]">
+              <h1 className="f-display max-w-[20ch] font-bold leading-[1.05] tracking-[-0.015em]" style={{ fontSize: 'clamp(32px, 4.4vw, 52px)' }}>
                 {page.experienceName}
               </h1>
 
               {page.introText != null && (
-                <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed md:mt-4 md:text-lg" style={{ color: 'rgba(10,46,77,0.7)' }}>
+                <p className="mt-3.5 max-w-[62ch] text-[17px] leading-[1.6] md:text-[18px]" style={{ color: INK }}>
                   {page.introText}
                 </p>
               )}
@@ -240,7 +241,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
           {/* ── S1 gallery — desktop bento with lightbox; its own bottom margin is the
                  air between the photos and the offer card. ── */}
           {images.length > 0 && (
-            <div className="mt-7 hidden md:block">
+            <div className="mt-8 hidden md:block">
               <ExperienceGallery images={images} title={page.experienceName} visibleAt="desktop" />
             </div>
           )}
@@ -284,26 +285,22 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                 {page.offerMode === 'custom' ? 'Plan your trip' : 'Check availability'}
               </OfferHeroCta>
 
-              {/* The three lines that make sending an inquiry cost nothing. */}
+              {/* The three lines that make sending an inquiry cost nothing — the mockup's sand strip. */}
               <ul
-                className="anim-3 mt-3 grid grid-cols-1 gap-0.5 rounded-2xl p-1.5 text-sm md:mt-6 md:grid-cols-3 md:gap-1 md:p-2"
-                style={{ background: 'rgba(10,46,77,0.05)' }}
+                className="anim-3 mt-3 grid list-none gap-0.5 rounded-2xl p-1.5 md:mt-[18px] [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]"
+                style={{ background: SAND }}
                 data-testid="offer-assurances"
               >
-                {([
-                  [ShieldCheck, 'Inquiry is free and non-binding'],
-                  [Lock,        'Deposit only after you accept the offer'],
-                  [Clock,       `We answer within ${page.responseSlaHours} h`],
-                ] as const).map(([Icon, text]) => (
-                  <li key={text} className="flex items-center gap-3 rounded-xl px-2.5 py-1.5 md:px-3 md:py-2.5">
-                    <span
-                      aria-hidden
-                      className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-white md:h-8 md:w-8"
-                      style={{ boxShadow: '0 1px 2px rgba(10,46,77,0.08)' }}
-                    >
-                      <Icon size={15} strokeWidth={2} />
-                    </span>
-                    <span className="font-medium leading-snug">{text}</span>
+                {[
+                  'Inquiry is free and non-binding',
+                  'Deposit only after you accept the offer',
+                  `We answer within ${page.responseSlaHours} h`,
+                ].map(text => (
+                  <li key={text} className="flex items-center gap-2.5 px-3 py-2.5 text-[14.5px] font-medium">
+                    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="flex-none">
+                      <path d="m5 12.5 4.5 4.5L19 7.5" />
+                    </svg>
+                    <span className="leading-snug">{text}</span>
                   </li>
                 ))}
               </ul>

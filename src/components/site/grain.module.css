@@ -32,6 +32,7 @@
 .iceland { background-image: linear-gradient(100deg, rgba(7,22,36,.6), rgba(7,22,36,.3)), url(/hub/iceland-blur.jpg); }
 .finland { background-image: linear-gradient(100deg, rgba(7,22,36,.58), rgba(7,22,36,.28)), url(/hub/finland-blur.jpg); }
 .guide   { background-image: linear-gradient(100deg, rgba(7,22,36,.6), rgba(7,22,36,.3)), url(/hub/guide-blur.jpg); }
+.nz      { background-image: linear-gradient(100deg, rgba(7,22,36,.6), rgba(7,22,36,.3)), url(/hub/nzriver-blur.jpg); }
 .foot    { background-image: linear-gradient(180deg, rgba(7,22,36,.66), rgba(7,22,36,.86)), url(/hub/finland-blur.jpg); }
 
 .fq {

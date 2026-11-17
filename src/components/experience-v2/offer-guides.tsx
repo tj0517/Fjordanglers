@@ -5,10 +5,10 @@
  * `experience_guides` rows with `show_on_page` AND `status = 'active'`, so a paused or
  * hidden guide never reaches this component and no second filter lives here.
  *
- * Above the cards, the numbers that say why this guide: Google rating, review count, years
- * on the water, reply time — all real fields, nothing invented. Each card carries a photo
- * from the page's gallery, because a face next to a landscape is what the reference pages
- * have and a bordered paragraph does not.
+ * Each guide is one flat navy block (2026-11 mockup): the photo, the name, one line of facts —
+ * Google rating, years on the water, association, languages, all real fields, nothing
+ * invented — the bio, and the page's reply promise in salmon. The photo is the guide's avatar,
+ * else the page's gallery photo of the same index.
  *
  * There is no "quote" field on `guides` or `experience_guides`, so a guide card has none.
  *
@@ -19,8 +19,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import OfferSection from './offer-section'
-import { Box, mutedStyle } from './offer-box'
 import { languageNames } from '@/lib/experience-v2-content'
+import { NAVY, ON_DARK_SOFT, SALMON_ON_DARK } from '@/components/site/ui'
 
 type OfferGuide = {
   id:                string
@@ -65,18 +65,6 @@ export default function OfferGuides({ guides, photoUrls, responseSlaHours }: Off
   // The empty-field guard: no guide shown on this page, no section.
   if (guides.length === 0) return null
 
-  const primary = guides.find(g => g.isPrimary) ?? guides[0]!
-
-  const stats = [
-    primary.googleRating != null
-      ? { value: `★ ${primary.googleRating.toFixed(1)}`, label: primary.googleReviewCount != null ? `${primary.googleReviewCount} Google reviews` : 'on Google' }
-      : null,
-    primary.yearsExperience != null
-      ? { value: `${primary.yearsExperience}`, label: primary.yearsExperience === 1 ? 'year guiding' : 'years guiding' }
-      : null,
-    { value: `${responseSlaHours} h`, label: 'to our first reply' },
-  ].filter((s): s is { value: string; label: string } => s != null)
-
   return (
     <OfferSection
       section="S7"
@@ -84,93 +72,83 @@ export default function OfferGuides({ guides, photoUrls, responseSlaHours }: Off
       title={guides.length === 1 ? 'Your guide' : 'Your guides'}
       accordion={{ defaultOpen: true }}
     >
-      {stats.length > 1 && (
-        <dl className="mb-6 flex flex-wrap gap-x-10 gap-y-4" data-testid="guide-stats">
-          {stats.map(stat => (
-            <div key={stat.label} className="min-w-[96px]">
-              <dd className="f-display text-[34px] font-bold leading-none tracking-[-0.01em]">{stat.value}</dd>
-              <dt className="mt-1.5 text-[13px]" style={mutedStyle}>{stat.label}</dt>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-4">
         {guides.map((guide, i) => (
-          <GuideCard key={guide.id} guide={guide} photoUrl={photoUrls[i] ?? null} />
+          <GuideCard key={guide.id} guide={guide} photoUrl={guide.avatarUrl ?? photoUrls[i] ?? null} responseSlaHours={responseSlaHours} />
         ))}
       </div>
     </OfferSection>
   )
 }
 
-function Cover({ url, alt }: { url: string; alt: string }) {
-  return (
-    <div className="relative -mx-5 -mt-5 mb-4 h-[200px] overflow-hidden rounded-t-2xl">
-      <Image src={url} alt={alt} fill sizes="(min-width: 640px) 40vw, 100vw" className="object-cover" />
-    </div>
-  )
-}
-
-function GuideCard({ guide, photoUrl }: { guide: OfferGuide; photoUrl: string | null }) {
+function GuideCard({ guide, photoUrl, responseSlaHours }: { guide: OfferGuide; photoUrl: string | null; responseSlaHours: number }) {
   const facts = [
+    guide.googleRating != null
+      ? `★ ${guide.googleRating.toFixed(1)}${guide.googleReviewCount != null ? ` · ${guide.googleReviewCount} Google reviews` : ' on Google'}`
+      : null,
     guide.yearsExperience != null
       ? `${guide.yearsExperience} ${guide.yearsExperience === 1 ? 'year' : 'years'} of experience`
       : null,
     guide.association,
+    guide.languages.length > 0 ? `Speaks ${languageNames(guide.languages).join(', ')}` : null,
     guide.responseTimeHours != null ? `usually replies within ${guide.responseTimeHours} h` : null,
   ].filter((fact): fact is string => fact != null && fact.trim() !== '')
 
-  const body = (
-    <Box className="flex h-full flex-col">
-      {photoUrl != null && <Cover url={photoUrl} alt="" />}
+  const linked = guide.slug != null
 
-      <div className="flex items-center gap-3.5">
-        {guide.avatarUrl != null ? (
-          <Image
-            src={guide.avatarUrl}
-            alt={guide.fullName}
-            width={56}
-            height={56}
-            className="h-14 w-14 flex-none rounded-full object-cover"
-            style={{ boxShadow: '0 0 0 3px #fff, 0 2px 8px rgba(10,46,77,0.18)' }}
-          />
-        ) : (
-          <div
-            aria-hidden
-            className="flex h-14 w-14 flex-none items-center justify-center rounded-full text-lg font-semibold"
-            style={{ background: 'rgba(10,46,77,0.08)' }}
-          >
-            {initials(guide.fullName)}
-          </div>
-        )}
-        <div className="min-w-0">
-          <h3 className="f-display text-[22px] font-bold leading-tight">{guide.fullName}</h3>
-          {guide.languages.length > 0 && (
-            <p className="mt-0.5 text-[13px]" style={mutedStyle}>Speaks {languageNames(guide.languages).join(', ')}</p>
-          )}
+  const body = (
+    <div className="flex h-full flex-wrap items-center gap-5 rounded-[20px] p-6" style={{ background: NAVY }}>
+      {photoUrl != null ? (
+        <Image
+          src={photoUrl}
+          alt={guide.fullName}
+          width={132}
+          height={132}
+          className="h-[104px] w-[104px] flex-none rounded-2xl object-cover sm:h-[132px] sm:w-[132px]"
+        />
+      ) : (
+        <div
+          aria-hidden
+          className="f-display flex h-[104px] w-[104px] flex-none items-center justify-center rounded-2xl text-[34px] font-bold text-white sm:h-[132px] sm:w-[132px]"
+          style={{ background: 'rgba(255,255,255,0.12)' }}
+        >
+          {initials(guide.fullName)}
         </div>
+      )}
+
+      <div className="flex min-w-0 flex-[1_1_280px] flex-col gap-2">
+        <h3 className="f-display text-[22px] font-bold leading-tight text-white sm:text-[24px]">{guide.fullName}</h3>
+        {facts.length > 0 && (
+          <p className="text-[15px]" style={{ color: ON_DARK_SOFT }}>{facts.join(' · ')}</p>
+        )}
+        {guide.bio != null && guide.bio.trim() !== '' && (
+          <p className="text-[15px] leading-relaxed" style={{ color: ON_DARK_SOFT }}>{shorten(guide.bio, BIO_MAX_CHARS)}</p>
+        )}
+        <p className="mt-1 text-[14.5px]" style={{ color: SALMON_ON_DARK }}>Answers within {responseSlaHours} h</p>
       </div>
 
-      {facts.length > 0 && (
-        <p className="mt-3 text-sm" style={mutedStyle}>{facts.join(' · ')}</p>
+      {/* The whole block is the link; this is how it reads as one, not a second link. */}
+      {linked && (
+        <span
+          aria-hidden
+          className="inline-flex min-h-[46px] flex-none items-center justify-center whitespace-nowrap rounded-[10px] px-5 text-[14.5px] font-bold text-white"
+          style={{ border: '1.5px solid rgba(255,255,255,.7)' }}
+        >
+          View profile
+        </span>
       )}
-      {guide.bio != null && guide.bio.trim() !== '' && (
-        <p className="mt-2.5 text-[15px] leading-relaxed">{shorten(guide.bio, BIO_MAX_CHARS)}</p>
-      )}
-    </Box>
+    </div>
   )
 
-  if (guide.slug == null) return <div data-testid="guide-card">{body}</div>
+  if (!linked) return <div data-testid="guide-card">{body}</div>
 
   return (
     <Link
       href={`/guides/${guide.slug}`}
       data-testid="guide-card"
-      className="block h-full rounded-2xl outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--fa-navy)] focus-visible:ring-offset-2"
+      className="block h-full rounded-[20px] outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--fa-navy)] focus-visible:ring-offset-2"
     >
       {body}
     </Link>
   )
 }
-
