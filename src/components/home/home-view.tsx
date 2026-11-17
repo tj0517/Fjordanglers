@@ -79,7 +79,7 @@ const FAQ = [
   { question: 'How fast do I get an offer?',   answer: 'We check with the guide and come back with availability and a price within two business days.' },
   { question: 'When do I pay?',                answer: 'You pay a deposit once the dates are confirmed. The rest you pay directly to your guide.' },
   { question: 'Who will I fish with?',         answer: 'A local guide who fishes that water every week of the season. You talk to the guide who takes you out.' },
-  { question: 'What if I need to cancel?',     answer: '[ANSWER: cancellation and refund terms]' },
+  // "What if I need to cancel?" waits for tj's answer text (2026-11-17).
 ] as const
 
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
