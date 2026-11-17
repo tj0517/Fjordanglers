@@ -23,6 +23,7 @@ vi.mock('next/script', () => ({
 
 import { CookieBanner } from '@/components/ui/cookie-banner'
 import { GoogleTags } from '@/components/analytics/GoogleTags'
+import { thirdPartyScriptsAllowed } from '@/lib/analytics/third-party-free-routes'
 
 const TOKEN = 'A'.repeat(43)
 const CONSENT_KEY = 'fa_cookie_consent'
@@ -64,6 +65,32 @@ describe('token pages — no Google tag, GTM, banner, Pixel or Clarity', () => {
     const html = show(path, null)
     expect(html).not.toContain(BANNER)
     expect(html).not.toMatch(GOOGLE)
+  })
+})
+
+describe('/login — exact path, because an invited guide lands on /login?next=/invite/<code> (tj (b))', () => {
+  it('/login with consent stored as accepted renders no third-party script', () => {
+    const html = show('/login', 'accepted')
+    expect(html).not.toMatch(GOOGLE)
+    expect(html).not.toMatch(META_CLARITY)
+  })
+
+  it('/login with no consent stored renders no banner and no Google tag', () => {
+    const html = show('/login', null)
+    expect(html).not.toContain(BANNER)
+    expect(html).not.toMatch(GOOGLE)
+  })
+
+  it('matching: /login and /login?next=… excluded; /loginx and / not; prefixes still prefixes', () => {
+    expect(thirdPartyScriptsAllowed('/login')).toBe(false)
+    expect(thirdPartyScriptsAllowed(`/login?next=${encodeURIComponent(`/invite/${TOKEN}`)}`)).toBe(false)
+    expect(thirdPartyScriptsAllowed('/login#x')).toBe(false)
+    expect(thirdPartyScriptsAllowed('/loginx')).toBe(true)
+    expect(thirdPartyScriptsAllowed('/login/x')).toBe(true)
+    expect(thirdPartyScriptsAllowed('/')).toBe(true)
+    expect(thirdPartyScriptsAllowed('/offers/x')).toBe(false)
+    expect(thirdPartyScriptsAllowed('/r/x')).toBe(false)
+    expect(thirdPartyScriptsAllowed('/offersx')).toBe(true)
   })
 })
 

@@ -59,9 +59,11 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 - Przed pierwszym krokiem w przeglądarce: `docker ps`, URL bazy dev servera 127.0.0.1/localhost (do merge FA-1.67 ręcznie), blokada hostów Google, Meta, Clarity potwierdzona w sesji Playwright.
 
 ## Weryfikacja
-    pnpm test -- third-party
+    pnpm exec vitest run third-party
     pnpm test -- experience-funnel
     grep -n "THIRD_PARTY_FREE_ROUTES" -A3 src/lib/analytics/third-party-free-routes.ts
 
 ## Notatki z realizacji
 - **2026-11-17, tj (wf-plan):** D1 (a) — wszystkie cztery trasy z tokenem w jednym PR + przegląd parametrów zapytania; D2 (a) — tokenów, które mogły wyciec, nie unieważniamy (prod 17.11: 0 aktywnych linków ofert, 3 aktywne linki opinii, 0 zaproszeń, 1 publiczny link intake). Konwersja Ads strzela tylko przy formularzu zapytania, nie na stronach z tokenem.
+- **2026-11-17, tj (STOP 1, parametry zapytania):** (b) — `/login` na `THIRD_PARTY_FREE_ROUTES`, dopasowanie dokładne (ścieżka, bez query string), nie prefiks; pozostałe wpisy zostają prefiksami; testy: `/login` i `/login?next=…` wykluczone, `/loginx` i `/` nie, `/offers/x` dalej wykluczone; red proof jak dla tras z tokenem; `/login?next=/invite/<code>` w przejściu przeglądarką (0 prób). (c) — kod zaproszenia poza adresem `/login` → deferred. Do deferred także: brak `referrer: 'no-referrer'` na `/offers/`, `/reviews/`, `/guide-intake/`; nieaktualny komentarz w `reset-password-form.tsx`. Pozostałe trasy z tabeli (`/auth/reset`, `/auth/callback`, `/reset-password`, `/inquiry/[id]/confirmed`) — „nie dotyczy” przyjęte; tabela zostaje w opisie PR. Bez ładowania prawdziwych skryptów Mety/Clarity.
+- **2026-11-17, tj (STOP 2):** przejście w przeglądarce zatwierdzone (blokada w każdym przebiegu, zgoda `accepted` przed skryptami strony, `about:blank` przed zwrotem); stack Seaclouds nie ruszać. Komenda weryfikacji: `pnpm exec vitest run third-party` zamiast `pnpm test -- third-party`.
