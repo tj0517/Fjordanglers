@@ -74,3 +74,11 @@ SELECT policyname, cmd, roles FROM pg_policies WHERE tablename IN ('<tabela pod�
 - **2026-11-10, tj (wf-plan):** „Connect with your calendar” z dwoma przyciskami; Apple = link udostępniania; przyciski w koncie + jednorazowy podpisany link; w MVP tylko Google i Apple, FishingBooker ręcznie.
 - **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
 - **2026-11-17, tj:** O-55 → (a) crony Vercela (sub-daily wymaga planu Pro — tj potwierdza plan przed zmianą `vercel.json`); `blocked_by_questions` wyczyszczone.
+- **2026-11-17, tj (STOP 1, schemat):**
+  - D1 (b) — link kalendarza szyfrowany w aplikacji kluczem z env; STOP przed użyciem: agent podaje nazwę zmiennej i sposób wygenerowania, tj ustawia wartość w Vercel i lokalnie (agent nigdy jej nie widzi ani nie zapisuje). Testy i CI — stały, jawnie testowy klucz. Podpowiedź w adminie = sam host, zero znaków z tajnej części linku.
+  - D2 (a) — źródło w kluczu (`guide_id, date, source`), istniejące wiersze = `manual`. Przyjęte skutki: „open season” czyści tylko ręczne przyszłe blokady; odblokowanie dnia zajętego w kalendarzu zostawia go zajętym. Przed migracją: co dziś widzi przewodnik na kalendarzu w dashboardzie dla dnia z kalendarza + najmniejsza poprawka jako opcje (bez budowania bez zgody).
+  - D3 (a) — strefa z kraju przewodnika, potem strefa kalendarza, potem UTC.
+  - D4 (a) — wiersze `audit_log` w tej samej transakcji, payload bez linku; deferred: tabela zdarzeń na poziomie przewodnika.
+  - D5 — pakiet: link ważny 7 dni, zużyty dopiero przy udanym połączeniu, nowy link unieważnia stary niewykorzystany. **Jeden kalendarz na przewodnika — świadomy wybór MVP; oznacza, że Google z FA-M.10 zastąpi Apple.** Deferred: kilka kalendarzy na przewodnika.
+  - D6 (b) — przewodnik tylko czyta swoje zajęte dni, zapis wyłącznie przez serwer; red proof: zalogowany przewodnik wstawia i kasuje wiersz bezpośrednio.
+  - Różnice z makietą: wygrywa zadanie — Google wyłączony „soon”, dodane kroki dla Maca.
