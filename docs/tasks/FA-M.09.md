@@ -92,3 +92,4 @@ SELECT policyname, cmd, roles FROM pg_policies WHERE tablename IN ('<tabela pod�
   - „Set open season”: budujemy ponowny odczyt — akcja zwraca aktualne zajęte dni przewodnika, kalendarz zastępuje lokalną kopię; jeden test.
   - Kolejność wdrożenia: migracja przed kodem to bezpieczna kolejność; tj potwierdza na STOP przed merge.
   - Testy strony „Connect” i crona bez klucza („odmawia, nic nie zapisuje”) są dowodem w PR. Brak lokalnego `CALENDAR_LINK_KEY` przy przejściu w przeglądarce → zgłosić, nie obchodzić.
+- **2026-11-17, tj:** oba lokalne stacki (fjordanglers i Seaclouds) zostają włączone obok siebie na czas przejścia w przeglądarce — jak w FA-M.07; nadpisuje linię §9 „tylko stack fjordanglers” dla FA-M.09. Jedna ciężka rzecz naraz (bez buildu i pełnego suite w trakcie przejścia).
