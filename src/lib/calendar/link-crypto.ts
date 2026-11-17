@@ -12,7 +12,6 @@
  */
 
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
-import { env } from '@/lib/env'
 
 const VERSION = 'v1'
 const ALGORITHM = 'aes-256-gcm'
@@ -30,8 +29,11 @@ export type CalendarKeyState =
 export const CALENDAR_DISABLED_MESSAGE =
   'Calendar connect and sync are disabled: CALENDAR_LINK_KEY is missing or is not 32 bytes of base64.'
 
-/** The key, or why there is none. `raw` defaults to the environment; tests pass it explicitly. */
-export function calendarLinkKey(raw: string | undefined = env.CALENDAR_LINK_KEY): CalendarKeyState {
+/**
+ * The key, or why there is none. Read from the environment at call time (declared, unchecked, in
+ * env.ts) so connect and sync see the key as it is now; tests pass `raw` explicitly.
+ */
+export function calendarLinkKey(raw: string | undefined = process.env.CALENDAR_LINK_KEY): CalendarKeyState {
   if (raw == null || raw.trim() === '') return { ok: false, reason: 'missing' }
   const value = raw.trim()
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value)) return { ok: false, reason: 'malformed' }

@@ -3847,7 +3847,7 @@ export type Database = {
         Args: {
           p_connected_at: string
           p_dates: string[]
-          p_error: string
+          p_error?: string
           p_guide_id: string
         }
         Returns: string

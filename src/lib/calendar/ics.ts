@@ -36,12 +36,18 @@ export interface BusyDaysInput {
   ics: string
   /** `guides.country`; null / '' / unknown → next step of the zone chain. */
   guideCountry: string | null
-  /** First and last day of the horizon, inclusive (`YYYY-MM-DD`). */
-  from: string
-  to: string
+  /**
+   * First and last day, inclusive (`YYYY-MM-DD`). Omitted → today in the guide's zone through
+   * 12 months ahead (the sync horizon), computed once the zone is known.
+   */
+  from?: string
+  to?: string
+  /** "Now" for the default horizon; tests pin it. */
+  now?: Date
 }
 
 export interface BusyDaysResult {
+  /** Sorted, distinct, inside the horizon. */
   dates: string[]
   /** The zone the days were computed in. */
   zone: string
@@ -114,6 +120,15 @@ function pad(n: number): string {
 
 function wallDate(t: ICAL.Time): string {
   return `${t.year}-${pad(t.month)}-${pad(t.day)}`
+}
+
+/** The sync horizon in a zone: today there → the day before the same date next year (12 months). */
+export function horizonInZone(zone: string, now: Date = new Date()): { from: string; to: string } {
+  const from = new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(now)
+  const end = new Date(`${from}T00:00:00Z`)
+  end.setUTCFullYear(end.getUTCFullYear() + 1)
+  end.setUTCDate(end.getUTCDate() - 1)
+  return { from, to: end.toISOString().slice(0, 10) }
 }
 
 function nextDay(iso: string): string {
@@ -218,6 +233,9 @@ export function busyDaysFromIcs(input: BusyDaysInput): BusyDaysResult {
     if (typeof tzid === 'string' && !isIanaZone(tzid)) embedded.set(tzid, new ICAL.Timezone(vtz))
   }
   const ctx: ZoneContext = { guideZone, embedded }
+  const horizon = input.from != null && input.to != null
+    ? { from: input.from, to: input.to }
+    : horizonInZone(guideZone, input.now)
 
   const vevents = root.getAllSubcomponents('vevent').slice(0, MAX_EVENTS)
   // Changed / moved occurrences (RECURRENCE-ID) belong to their series' master.
@@ -238,13 +256,13 @@ export function busyDaysFromIcs(input: BusyDaysInput): BusyDaysResult {
 
   const out = new Set<string>()
   // Stop expanding a series once its occurrences start after the horizon (one day of slack for zones).
-  const stopAfter = nextDay(input.to)
+  const stopAfter = nextDay(horizon.to)
   let total = 0
 
   for (const event of [...masters.values(), ...standalone]) {
     if (!event.isRecurring()) {
       if (event.startDate == null) continue
-      addOccurrence(out, event, event.startDate, event.endDate ?? event.startDate, ctx, input.from, input.to)
+      addOccurrence(out, event, event.startDate, event.endDate ?? event.startDate, ctx, horizon.from, horizon.to)
       continue
     }
     const it = event.iterator()
@@ -253,7 +271,7 @@ export function busyDaysFromIcs(input: BusyDaysInput): BusyDaysResult {
       if (++count > MAX_OCCURRENCES_PER_EVENT || ++total > MAX_OCCURRENCES_TOTAL) break
       if (wallDate(next) > stopAfter) break
       const details = event.getOccurrenceDetails(next)
-      addOccurrence(out, details.item, details.startDate, details.endDate, ctx, input.from, input.to)
+      addOccurrence(out, details.item, details.startDate, details.endDate, ctx, horizon.from, horizon.to)
     }
   }
 

@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { busyDaysFromIcs, NotACalendarError, resolveGuideZone } from '../ics'
+import { busyDaysFromIcs, horizonInZone, NotACalendarError, resolveGuideZone } from '../ics'
 
 const fixture = (name: string) => readFileSync(resolve(__dirname, 'fixtures', name), 'utf8')
 const HORIZON = { from: '2026-12-01', to: '2027-11-30' }
@@ -84,6 +84,19 @@ describe('recurring events', () => {
       '2027-03-01', '2027-03-02', '2027-03-03', // daily, UNTIL inclusive
       '2027-06-07',                 // yearly; 2026-06-07 is before the horizon
     ])
+  })
+})
+
+describe('default horizon: 12 months from today in the guide zone', () => {
+  it('today in Auckland is already tomorrow in UTC', () => {
+    const now = new Date('2026-11-17T20:00:00Z')            // 09:00 on 11-18 in Auckland
+    expect(horizonInZone('Pacific/Auckland', now)).toEqual({ from: '2026-11-18', to: '2027-11-17' })
+    expect(horizonInZone('Europe/Oslo', now)).toEqual({ from: '2026-11-17', to: '2027-11-16' })
+  })
+
+  it('without from/to the fixture is clipped to that horizon', () => {
+    const r = busyDaysFromIcs({ ics: fixture('recurring.ics'), guideCountry: 'Norway', now: new Date('2027-02-01T12:00:00Z') })
+    expect(r.dates).toEqual(['2027-02-09', '2027-03-01', '2027-03-02', '2027-03-03', '2027-06-07'])
   })
 })
 

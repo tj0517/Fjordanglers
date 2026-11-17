@@ -331,7 +331,7 @@ CREATE FUNCTION public.record_calendar_sync(
   p_guide_id     uuid,
   p_connected_at timestamptz,
   p_dates        date[],
-  p_error        text
+  p_error        text DEFAULT NULL
 ) RETURNS text
   LANGUAGE plpgsql
   SECURITY INVOKER
