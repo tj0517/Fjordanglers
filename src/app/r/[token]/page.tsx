@@ -4,6 +4,10 @@
  * page has rendered in a browser (tj D1 a). Every refusal renders the same not-found page.
  * No third-party script is loaded here — Google tags, cookie banner, Meta Pixel, Clarity
  * (`THIRD_PARTY_FREE_ROUTES`).
+ *
+ * FA-M.07: "About the client" rows (Accommodation, Licence) and "Note from FjordAnglers" come
+ * from the Trip Brief FA keeps on the inquiry card, so they show also when the client never filled
+ * the form. Empty values render nothing; all text is plain React text (no HTML).
  */
 
 import type { Metadata } from 'next'
@@ -61,9 +65,38 @@ export default async function RequestPage({ params }: { params: Promise<{ token:
           </section>
         )}
 
+        {(view.accommodation != null || view.licence != null) && (
+          <section className="space-y-2" data-testid="request-trip-brief">
+            <h2 className="text-base font-semibold f-body" style={{ color: NAVY }}>About the client</h2>
+            <dl className="rounded-2xl px-4" style={{ background: '#fff', border: '1px solid rgba(10,46,77,0.1)' }}>
+              {view.accommodation != null && <BriefRow label="Accommodation" value={view.accommodation} />}
+              {view.licence != null && <BriefRow label="Licence" value={view.licence} />}
+            </dl>
+          </section>
+        )}
+
+        {view.faNote != null && (
+          <section className="space-y-2" data-testid="request-fa-note">
+            <h2 className="text-base font-semibold f-body" style={{ color: NAVY }}>Note from FjordAnglers</h2>
+            <p className="rounded-2xl p-4 text-sm f-body leading-relaxed whitespace-pre-line break-words"
+              style={{ background: '#fff', border: '1px solid rgba(10,46,77,0.1)', color: NAVY }}>
+              {view.faNote}
+            </p>
+          </section>
+        )}
+
         <RequestPanel token={token} earliestAltDate={view.earliestAltDate} initialAnswer={view.answered} />
       </div>
     </main>
+  )
+}
+
+function BriefRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-4 py-2.5 border-b last:border-b-0" style={{ borderColor: 'rgba(10,46,77,0.08)' }}>
+      <dt className="text-sm f-body flex-none" style={{ color: MUTED }}>{label}</dt>
+      <dd className="text-sm f-body text-right break-words min-w-0" style={{ color: NAVY }}>{value}</dd>
+    </div>
   )
 }
 

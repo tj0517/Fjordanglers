@@ -10,9 +10,12 @@
  * Any refusal comes back as one shape with no reason (`{ ok: false }` / `expired`), so the
  * page cannot tell a link holder whether a request exists, was withdrawn or ran out.
  *
- * Reads only the columns named in its select — no FA notes (tj D3 a; the guide brief block is
- * FA-M.07) — and the brief comes without its budget lines (tj D2 a). Server-only: imports the token module
- * (node:crypto) and is called with the service client from the page and its server actions.
+ * Reads only the columns named in its selects, and the form brief comes without its budget lines
+ * (tj D2 a). From the Trip Brief (`inquiry_trip_details`, FA-M.07, tj decision b) only
+ * accommodation, licence and the note FA writes for the guide — never `price_range` or any other
+ * money, and none of the inquiry's internal FA notes. Both reads happen only after the token check.
+ * Server-only: imports the token module (node:crypto) and is called with the service client from
+ * the page and its server actions.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -21,6 +24,7 @@ import { tripTimezone } from '@/lib/countries'
 import { guideBriefSummaryLines } from '@/lib/inquiries/brief'
 import { briefSchema } from '@/lib/inquiries/brief-schema'
 import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
+import { licenceLine } from '@/lib/inquiries/trip-brief'
 import { answerGuideRequest, findGuideRequestByToken, recordGuideRequestOpened } from './requests'
 import type { GuideAnswer } from './schema'
 
@@ -42,6 +46,12 @@ interface GuideRequestPageView {
   partySize:      number | null
   /** The brief as lines, without budget; null when the inquiry has no (valid) brief. */
   brief:          string[] | null
+  /** Trip Brief (FA-M.07): accommodation as FA wrote it; null when empty. */
+  accommodation:  string | null
+  /** Trip Brief: "Client buys — Taupō licence"; null when neither buyer nor note is set. */
+  licence:        string | null
+  /** Trip Brief: the note FA writes for the guide ("Note from FjordAnglers"); null when empty. */
+  faNote:         string | null
   /** The first day the guide may propose: tomorrow in the trip country's time zone. */
   earliestAltDate: string
   /** null until the guide has answered. */
@@ -70,6 +80,13 @@ export async function getGuideRequestPage(client: Client, token: string): Promis
     .single()
   if (error != null) throw new Error(`getGuideRequestPage: inquiry read failed: ${error.message}`)
 
+  const { data: tripBrief, error: tripBriefError } = await client
+    .from('inquiry_trip_details')
+    .select('accommodation, licence_buyer, licence_note, guide_notes')
+    .eq('inquiry_id', request.inquiryId)
+    .maybeSingle()
+  if (tripBriefError != null) throw new Error(`getGuideRequestPage: trip brief read failed: ${tripBriefError.message}`)
+
   const experience = await getInquiryExperience({
     experience_page_id: inquiry.experience_page_id,
     trip_id:            inquiry.trip_id,
@@ -85,6 +102,9 @@ export async function getGuideRequestPage(client: Client, token: string): Promis
       requestedDates:  [...(inquiry.requested_dates ?? [])].sort(),
       partySize:       inquiry.party_size,
       brief:           parsedBrief?.success === true ? guideBriefSummaryLines(parsedBrief.data) : null,
+      accommodation:   nonEmpty(tripBrief?.accommodation),
+      licence:         licenceLine(tripBrief?.licence_buyer ?? null, tripBrief?.licence_note ?? null),
+      faNote:          nonEmpty(tripBrief?.guide_notes),
       earliestAltDate: dateInZone(tripTimezone(inquiry.trip_country), 1),
       answered:        request.answer == null || request.answeredAt == null ? null : {
         answer:     request.answer,
@@ -94,6 +114,11 @@ export async function getGuideRequestPage(client: Client, token: string): Promis
       },
     },
   }
+}
+
+function nonEmpty(value: string | null | undefined): string | null {
+  const v = value?.trim() ?? ''
+  return v === '' ? null : v
 }
 
 /**

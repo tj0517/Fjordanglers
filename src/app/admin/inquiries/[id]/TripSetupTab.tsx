@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { saveTripDetails } from '@/actions/inquiries'
 import { extractTripDetailsAI } from '@/actions/ai'
 import type { TripDetails } from '@/actions/inquiries'
+import { LICENCE_BUYERS, LICENCE_BUYER_LABELS, TRIP_BRIEF_LIMITS, licenceLine } from '@/lib/inquiries/trip-brief'
 
 
 // ─── Date flexibility options ─────────────────────────────────────────────────
@@ -79,7 +80,7 @@ export function TripSetupTab({
   const d = initialDetails
 
   // ── Trip brief state ──────────────────────────────────────────────────────
-  const hasExistingBrief = d != null && (d.price_range ?? d.date_flexibility ?? d.target_species ?? d.accommodation ?? d.guide_notes) != null
+  const hasExistingBrief = d != null && (d.price_range ?? d.date_flexibility ?? d.target_species ?? d.accommodation ?? d.guide_notes ?? d.licence_buyer ?? d.licence_note) != null
   const [isEditing,      setIsEditing]      = useState(!hasExistingBrief)
   const [confirmedDate,  setConfirmedDate]  = useState(
     d?.confirmed_date ?? (requestedDates.length > 0 ? requestedDates.map(fmtDate).join(', ') : '')
@@ -92,6 +93,8 @@ export function TripSetupTab({
   const [targetSpecies,  setTargetSpecies]  = useState(d?.target_species   ?? '')
   const [accommodation,  setAccommodation]  = useState(d?.accommodation    ?? '')
   const [guideNotes,     setGuideNotes]     = useState(d?.guide_notes      ?? '')
+  const [licenceBuyer,   setLicenceBuyer]   = useState(d?.licence_buyer    ?? '')
+  const [licenceNote,    setLicenceNote]    = useState(d?.licence_note     ?? '')
   const [saveErr,        setSaveErr]        = useState<string | null>(null)
   const [saving, startSave]                 = useTransition()
 
@@ -167,13 +170,16 @@ export function TripSetupTab({
       setSaveErr(null)
       const parsedParty = parseInt(confirmedParty, 10)
       const res = await saveTripDetails(inquiryId, {
-        confirmed_date:       confirmedDate.trim()  || undefined,
-        confirmed_party_size: !isNaN(parsedParty) ? parsedParty : undefined,
-        price_range:          priceRange.trim()     || undefined,
-        date_flexibility:     dateFlex              || undefined,
-        target_species:       targetSpecies.trim()  || undefined,
-        accommodation:        accommodation.trim()  || undefined,
-        guide_notes:          guideNotes.trim()     || undefined,
+        // Every field, empty ones as null — an emptied field is cleared (FA-M.07, tj decision 3).
+        confirmed_date:       confirmedDate.trim()  || null,
+        confirmed_party_size: !isNaN(parsedParty) ? parsedParty : null,
+        price_range:          priceRange.trim()     || null,
+        date_flexibility:     dateFlex              || null,
+        target_species:       targetSpecies.trim()  || null,
+        accommodation:        accommodation.trim()  || null,
+        guide_notes:          guideNotes.trim()     || null,
+        licence_buyer:        licenceBuyer          || null,
+        licence_note:         licenceNote.trim()    || null,
       })
       if (!res.success) {
         setSaveErr(res.error ?? 'Failed to save')
@@ -288,8 +294,9 @@ export function TripSetupTab({
               <BriefReadRow label="Date flex"      value={DATE_FLEX_OPTIONS.find(o => o.value === dateFlex)?.label || null} />
               <BriefReadRow label="Target species" value={targetSpecies  || null} />
               <BriefReadRow label="Accommodation"  value={accommodation  || null} />
+              <BriefReadRow label="Licence"        value={licenceLine(licenceBuyer || null, licenceNote || null)} />
               <BriefReadRow label="Note for guide" value={guideNotes     || null} />
-              {!confirmedDate && !priceRange && !dateFlex && !targetSpecies && !accommodation && !guideNotes && (
+              {!confirmedDate && !priceRange && !dateFlex && !targetSpecies && !accommodation && !guideNotes && !licenceBuyer && !licenceNote && (
                 <p className="text-xs f-body italic text-primary/35">
                   No brief filled in yet. Click Edit to add details.
                 </p>
@@ -373,12 +380,29 @@ export function TripSetupTab({
                 <input type="text" value={accommodation}
                   onChange={e => { setAccommodation(e.target.value); markUserEdit('accommodation') }}
                   placeholder="e.g. Included in price · Self-arranged · Camping"
+                  maxLength={TRIP_BRIEF_LIMITS.accommodation}
                   className={cn('trip-input', aiSuggestedFields.has('accommodation') && 'trip-input-ai')} />
+              </div>
+
+              <div className="mb-5">
+                <label className="trip-label" htmlFor="licence-buyer">Licence / permits — who buys</label>
+                <select id="licence-buyer" value={licenceBuyer}
+                  onChange={e => setLicenceBuyer(e.target.value)}
+                  className="trip-input">
+                  <option value="">— not set —</option>
+                  {LICENCE_BUYERS.map(v => <option key={v} value={v}>{LICENCE_BUYER_LABELS[v]}</option>)}
+                </select>
+                <input type="text" value={licenceNote} aria-label="Licence note"
+                  onChange={e => setLicenceNote(e.target.value)}
+                  placeholder="e.g. Taupō licence · Ranga beat permit"
+                  maxLength={TRIP_BRIEF_LIMITS.licence_note}
+                  className="trip-input mt-2" />
               </div>
 
               <div className="mb-5">
                 <label className="trip-label">Note for guide</label>
                 <textarea rows={3} value={guideNotes}
+                  maxLength={TRIP_BRIEF_LIMITS.guide_notes}
                   onChange={e => { setGuideNotes(e.target.value); markUserEdit('guideNotes') }}
                   placeholder="Any other info the guide needs to know…"
                   className={cn('trip-input resize-y', aiSuggestedFields.has('guideNotes') && 'trip-input-ai')} />

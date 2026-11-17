@@ -127,11 +127,11 @@ describe('getGuideRequestPage', () => {
     expect(res.view.brief?.some(l => l.startsWith('Budget'))).toBe(false)
   })
 
-  it('carries exactly the allowlisted fields — nothing else from the inquiry (D3 a: no FA notes)', async () => {
+  it('carries exactly the allowlisted fields — nothing else from the inquiry or the Trip Brief', async () => {
     const created = await create()
     const res = await getGuideRequestPage(svc(), created.token)
     expect(res.ok && Object.keys(res.view).sort()).toEqual(
-      ['answered', 'brief', 'country', 'earliestAltDate', 'partySize', 'region', 'requestedDates'],
+      ['accommodation', 'answered', 'brief', 'country', 'earliestAltDate', 'faNote', 'licence', 'partySize', 'region', 'requestedDates'],
     )
   })
 
@@ -147,6 +147,64 @@ describe('getGuideRequestPage', () => {
     await getGuideRequestPage(svc(), created.token)
     expect((await row(created.requestId)).first_opened_at).toBeNull()
     expect(await eventsFor(created.requestId, 'guide.request_opened')).toHaveLength(0)
+  })
+})
+
+// ─── Trip Brief (FA-M.07, tj decision b) ──────────────────────────────────────
+
+describe('getGuideRequestPage — the Trip Brief FA keeps on the card', () => {
+  async function setTripBrief(inquiryId: string, patch: Database['public']['Tables']['inquiry_trip_details']['Insert'] | null) {
+    const s = svc()
+    const del = await s.from('inquiry_trip_details').delete().eq('inquiry_id', inquiryId)
+    if (del.error != null) throw new Error(del.error.message)
+    if (patch == null) return
+    const ins = await s.from('inquiry_trip_details').insert(patch)
+    if (ins.error != null) throw new Error(ins.error.message)
+  }
+
+  afterAll(async () => { await setTripBrief(INQ_BARE, null); await setTripBrief(INQ_IS, null) })
+
+  it('an inquiry WITHOUT a form brief shows accommodation, licence and the FA note', async () => {
+    await setTripBrief(INQ_BARE, {
+      inquiry_id: INQ_BARE, accommodation: 'Client books — Tūrangi',
+      licence_buyer: 'client', licence_note: 'Taupō licence',
+      guide_notes: 'They land the evening before; early start on day 1.',
+    })
+    const res = await getGuideRequestPage(svc(), (await create(INQ_BARE)).token)
+    expect(res.ok && res.view).toMatchObject({
+      brief:         null,
+      accommodation: 'Client books — Tūrangi',
+      licence:       'Client buys — Taupō licence',
+      faNote:        'They land the evening before; early start on day 1.',
+    })
+  })
+
+  it('an empty Trip Brief (no row, or a row of empty values) gives three nulls', async () => {
+    await setTripBrief(INQ_BARE, null)
+    const none = await getGuideRequestPage(svc(), (await create(INQ_BARE)).token)
+    expect(none.ok && none.view).toMatchObject({ accommodation: null, licence: null, faNote: null })
+
+    await setTripBrief(INQ_BARE, { inquiry_id: INQ_BARE, accommodation: '  ', guide_notes: '', licence_buyer: null, licence_note: ' ' })
+    const blank = await getGuideRequestPage(svc(), (await create(INQ_BARE)).token)
+    expect(blank.ok && blank.view).toMatchObject({ accommodation: null, licence: null, faNote: null })
+  })
+
+  it('money never reaches the guide: price_range in the Trip Brief and the form budget stay out of the view', async () => {
+    await setTripBrief(INQ_IS, { inquiry_id: INQ_IS, price_range: '€777/day PRICE-SENTINEL', accommodation: 'Lodge' })
+    const res = await getGuideRequestPage(svc(), (await create(INQ_IS)).token)
+    expect(res.ok).toBe(true)
+    const json = JSON.stringify(res.ok ? res.view : null)
+    expect(json).not.toContain('PRICE-SENTINEL')
+    expect(json).not.toContain('€777')
+    expect(json).not.toMatch(/budget/i)
+  })
+
+  it('a refused token reads nothing and returns the one shape', async () => {
+    await setTripBrief(INQ_BARE, { inquiry_id: INQ_BARE, guide_notes: 'NOTE-SENTINEL' })
+    const created = await create(INQ_BARE)
+    await expire(created.requestId)
+    expect(await getGuideRequestPage(svc(), created.token)).toEqual({ ok: false })
+    expect(await getGuideRequestPage(svc(), randomBytes(32).toString('base64url'))).toEqual({ ok: false })
   })
 })
 
