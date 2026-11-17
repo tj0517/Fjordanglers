@@ -19,10 +19,11 @@ export interface FormatPriceInput {
   currency: string
 }
 
+/** The amount is printed like `formatCents` prints it, so a v1 card and a hub's hero agree ("€450.50", "€1,500"). */
 export function formatPrice({ priceFrom, priceType, currency }: FormatPriceInput): string {
   if (priceType === 'request') return 'Price on request'
   const unit = priceType === 'flat' ? 'per trip' : '/ person'
-  return `from ${currencySymbol(currency)}${priceFrom} ${unit}`
+  return `from ${formatCents(Math.round(priceFrom * 100), currency)} ${unit}`
 }
 
 /**

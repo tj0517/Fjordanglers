@@ -14,6 +14,11 @@ describe('formatPrice', () => {
     expect(formatPrice({ priceFrom: 800, priceType: 'request', currency: 'EUR' })).toBe('Price on request')
   })
 
+  it('prints the amount as formatCents does: cents kept when there are any, thousands separated', () => {
+    expect(formatPrice({ priceFrom: 450.5, priceType: 'per_person', currency: 'EUR' })).toBe('from €450.50 / person')
+    expect(formatPrice({ priceFrom: 1500, priceType: 'flat', currency: 'NZD' })).toBe('from NZ$1,500 per trip')
+  })
+
   it('unknown currency never falls back to €', () => {
     const result = formatPrice({ priceFrom: 550, priceType: 'flat', currency: 'XXX' })
     expect(result).toContain('XXX 550')
