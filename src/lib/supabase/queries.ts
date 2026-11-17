@@ -1106,7 +1106,7 @@ export type DestinationHubData = {
   ogImage:    string | null
   otherHubs:  { slug: string; h1: string }[]
   /** Published articles about the hub's countries, newest first (FA-1.90); empty hides the section. */
-  articles:   ArticleLink[]
+  articles:   BlogPostSummary[]
 }
 
 type RawHubGuideRow = {
@@ -1153,11 +1153,10 @@ function hubPriceFrom(
  * list in `DESTINATION_HUBS` (FA-1.90, tj D2) — a title can no longer drift from its post. A failed
  * read hides the section, not the hub (`publishedPostsOrNone`).
  */
-async function hubArticles(hub: DestinationHubSkeleton): Promise<ArticleLink[]> {
+async function hubArticles(hub: DestinationHubSkeleton): Promise<BlogPostSummary[]> {
   const countries: string[] = getHubCountries(hub)
   return (await publishedPostsOrNone('getDestinationHub'))
     .filter(p => p.country != null && countries.includes(p.country))
-    .map(p => ({ slug: p.slug, title: p.title }))
 }
 
 /**
@@ -1589,37 +1588,6 @@ export async function isAdminUser(
   return data?.role === 'admin'
 }
 
-/** What the site nav shows about the signed-in user (display only). */
-export type NavUser = {
-  name: string | null
-  role: 'admin' | 'guide' | 'angler'
-  avatarUrl: string | null
-}
-
-const NAV_ROLES: readonly NavUser['role'][] = ['admin', 'guide', 'angler']
-
-/**
- * The caller's own nav profile (FA-1.80). `userId` must come from the verified
- * session (`auth.getUser()`), never from request input. Read through the
- * caller-supplied request-scoped client; never cached — it is per-user data.
- * Returns null when there is no profile row or the role is not one the nav knows.
- */
-export async function getNavUser(
-  client: SupabaseClient<Database>,
-  userId: string,
-): Promise<NavUser | null> {
-  const { data } = await client
-    .from('profiles')
-    .select('role, full_name, avatar_url')
-    .eq('id', userId)
-    .maybeSingle()
-
-  const role = NAV_ROLES.find(r => r === data?.role)
-  if (data == null || role == null) return null
-
-  return { name: data.full_name, role, avatarUrl: data.avatar_url }
-}
-
 // ─── Blog ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -1676,9 +1644,6 @@ export async function getBlogPost(slug: string): Promise<BlogPost | null> {
 }
 
 // ─── Internal links around the blog (FA-1.90) ─────────────────────────────────
-
-/** An article as a link: what the hub's "Read before you go" list needs. */
-type ArticleLink = { slug: string; title: string }
 
 /**
  * `getBlogPosts` for a block on someone else's page: a failed read is logged and answered with no

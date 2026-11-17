@@ -110,7 +110,7 @@ const payload = (over: Partial<HubContentPayload> = {}): HubContentPayload => ({
   faq: [{ question: 'When?', answer: 'Summer.' }],
   heroQuoteText: null, heroQuoteAuthor: null, heroQuoteCountry: null,
   proofNote: null,
-  contactName: null, contactEmail: null, contactWhatsapp: null,
+  contactName: null, contactEmail: null, contactWhatsapp: null, heroImageUrl: null,
   ...over,
 })
 

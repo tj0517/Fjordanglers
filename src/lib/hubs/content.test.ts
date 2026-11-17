@@ -7,7 +7,7 @@ const row: HubContentRow = {
   season_months: [5, 6], peak_months: [6], season_note: 'Note.', species: ['Brown trout'],
   faq: [{ question: 'Q?', answer: 'A.' }],
   hero_quote_text: null, hero_quote_author: null, hero_quote_country: null, proof_note: null,
-  contact_name: null, contact_email: null, contact_whatsapp: null,
+  contact_name: null, contact_email: null, contact_whatsapp: null, hero_image_url: null,
 }
 
 describe('hubContentFromRow (FA-1.85)', () => {

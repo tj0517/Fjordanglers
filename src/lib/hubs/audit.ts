@@ -14,7 +14,7 @@ import type { HubContentRow } from '@/lib/hubs/content'
 const TRACKED = [
   'h1', 'intro', 'meta_title', 'meta_description', 'season_months', 'peak_months', 'season_note',
   'species', 'faq', 'hero_quote_text', 'hero_quote_author', 'hero_quote_country', 'proof_note',
-  'contact_name', 'contact_email', 'contact_whatsapp',
+  'contact_name', 'contact_email', 'contact_whatsapp', 'hero_image_url',
 ] as const
 
 type AuditedHubColumn = (typeof TRACKED)[number]

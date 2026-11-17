@@ -110,7 +110,7 @@ describe('the hub funnel', () => {
     const { container, getByRole } = render(<DestinationHubView data={completeHub()} />)
     // jsdom does not navigate; the click only has to reach the card's handler.
     container.addEventListener('click', e => e.preventDefault())
-    const cards = () => [...container.querySelectorAll('[data-testid="hub-cards"] > div > a')]
+    const cards = () => [...container.querySelectorAll('[data-testid="hub-cards"] > article > a')]
 
     fireEvent.click(cards()[1]!)
     fireEvent.click(getByRole('button', { name: 'Kingfish' }))
@@ -126,7 +126,7 @@ describe('the hub funnel', () => {
     const { container } = render(<DestinationHubView data={completeHub()} />)
     container.addEventListener('click', e => e.preventDefault())
     for (const name of ['season', 'trips', 'faq', 'reviews']) show(section(container, name), 1)
-    fireEvent.click(container.querySelector('[data-testid="hub-cards"] > div > a')!)
+    fireEvent.click(container.querySelector('[data-testid="hub-cards"] > article > a')!)
     expect(events()).not.toContain('conversion')
     expect(events()).not.toContain('SUBMIT_LEAD_FORM')
     expect(new Set(events())).toEqual(new Set(['hub_view', 'section_view', 'hub_card_click']))

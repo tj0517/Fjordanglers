@@ -68,7 +68,7 @@ export default function LegalNoticePage() {
       <SiteNav />
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <header className="px-5 md:px-8 pt-14 pb-12 max-w-[860px] mx-auto">
+      <header className="px-5 md:px-8 pt-[120px] pb-12 max-w-[860px] mx-auto">
         <p
           className="text-[11px] uppercase tracking-[0.26em] font-semibold mb-3 f-body"
           style={{ color: '#E67E50' }}

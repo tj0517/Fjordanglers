@@ -5,6 +5,7 @@ import {
   META_TITLE_MAX,
   FAQ_MAX,
   hubConstraintMessage,
+  isHubImageUrl,
   type HubContentPayload,
 } from './editor'
 
@@ -25,6 +26,7 @@ const valid = (over: Partial<HubContentPayload> = {}): HubContentPayload => ({
   contactName: null,
   contactEmail: null,
   contactWhatsapp: null,
+  heroImageUrl: null,
   ...over,
 })
 
@@ -104,5 +106,22 @@ describe('hubConstraintMessage', () => {
     expect(hubConstraintMessage('violates check constraint "destination_hubs_contact_complete"')).toMatch(/contact needs/)
     expect(hubConstraintMessage('violates check constraint "destination_hubs_meta_description_length"')).toMatch(/160/)
     expect(hubConstraintMessage('some other error')).toBeNull()
+  })
+})
+
+describe('isHubImageUrl', () => {
+  const SUPABASE = 'https://abc.supabase.co'
+
+  it('takes an upload under guide-photos/hubs/ and a site path', () => {
+    expect(isHubImageUrl(`${SUPABASE}/storage/v1/object/public/guide-photos/hubs/x.jpg`, SUPABASE)).toBe(true)
+    expect(isHubImageUrl('/hub/canyon.jpg', SUPABASE)).toBe(true)
+  })
+
+  it('refuses another folder, another host, a protocol-relative URL and a path that climbs', () => {
+    expect(isHubImageUrl(`${SUPABASE}/storage/v1/object/public/guide-photos/blog/x.jpg`, SUPABASE)).toBe(false)
+    expect(isHubImageUrl('https://evil.example/hubs/x.jpg', SUPABASE)).toBe(false)
+    expect(isHubImageUrl('//evil.example/x.jpg', SUPABASE)).toBe(false)
+    expect(isHubImageUrl('/hub/../secret', SUPABASE)).toBe(false)
+    expect(isHubImageUrl('javascript:alert(1)', SUPABASE)).toBe(false)
   })
 })

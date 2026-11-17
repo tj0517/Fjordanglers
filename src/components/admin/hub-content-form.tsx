@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { saveHubContent } from '@/actions/hubs'
+import ImageUpload from '@/components/admin/image-upload'
 import { Counter, FieldLabel, Hint, RED, TextArea, TextInput } from '@/components/admin/editor-fields'
 import {
   CONTACT_EMAIL_MAX,
@@ -45,6 +46,7 @@ export type HubContentFormValues = {
   contactName: string
   contactEmail: string
   contactWhatsapp: string
+  heroImageUrl: string | null
 }
 
 export interface HubContentFormProps {
@@ -120,6 +122,9 @@ export function HubContentForm({ slug, initialValues: v }: HubContentFormProps) 
   const [contactName, setContactName] = useState(v.contactName)
   const [contactEmail, setContactEmail] = useState(v.contactEmail)
   const [contactWhatsapp, setContactWhatsapp] = useState(v.contactWhatsapp)
+  const [heroImageUrl, setHeroImageUrl] = useState(v.heroImageUrl)
+  // Remounts the uploader after "Remove image", so it drops its own preview too.
+  const [imageKey, setImageKey] = useState(0)
 
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -129,7 +134,7 @@ export function HubContentForm({ slug, initialValues: v }: HubContentFormProps) 
   const payload = (): HubContentPayload => ({
     h1, intro, metaTitle, metaDescription, seasonMonths, peakMonths, seasonNote, species, faq,
     heroQuoteText: quoteText, heroQuoteAuthor: quoteAuthor, heroQuoteCountry: quoteCountry,
-    proofNote, contactName, contactEmail, contactWhatsapp,
+    proofNote, contactName, contactEmail, contactWhatsapp, heroImageUrl,
   })
 
   // The same schema the server runs. Anything it refuses blocks saving — the table refuses the same
@@ -227,6 +232,30 @@ export function HubContentForm({ slug, initialValues: v }: HubContentFormProps) 
           </div>
           <Hint>The limits are Google&rsquo;s — longer text is cut off in the results. The blog allows 155 for its description; the hubs, 160.</Hint>
         </div>
+      </section>
+
+      {/* Hero photo */}
+      <section className="max-w-2xl">
+        <ImageUpload
+          key={imageKey}
+          label="Hero photo"
+          currentUrl={heroImageUrl}
+          variant="cover"
+          folder="hubs"
+          onUpload={url => setHeroImageUrl(url)}
+          hint="The big photo at the top of the hub. Empty = the newest trip's photo, then the default canyon photo."
+        />
+        {heroImageUrl != null && (
+          <button
+            type="button"
+            onClick={() => { setHeroImageUrl(null); setImageKey(k => k + 1) }}
+            className="mt-2 text-xs font-medium f-body underline"
+            style={{ color: 'rgba(10,46,77,0.55)' }}
+          >
+            Remove photo
+          </button>
+        )}
+        {showIssue('heroImageUrl', true)}
       </section>
 
       {/* Season */}

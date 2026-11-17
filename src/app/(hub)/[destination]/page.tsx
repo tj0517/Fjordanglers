@@ -56,21 +56,17 @@ export default async function DestinationHubPage({
 
   const jsonLd = buildHubJsonLd(data, SITE_URL)
 
+  // The hub carries its own navigation and footer (the 2026-11 redesign), so it lives outside the
+  // (public) layout and its SiteNav / SiteFooter.
   return (
-    <div style={{ background: '#F3EDE4' }}>
+    <>
       <WebEventTracker />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.itemList) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.breadcrumb) }} />
       {jsonLd.faq != null && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd.faq) }} />
       )}
-
-      {/* Spacer for fixed nav */}
-      <div style={{ height: '72px' }} />
-
-      <main>
-        <DestinationHubView data={data} />
-      </main>
-    </div>
+      <DestinationHubView data={data} />
+    </>
   )
 }

@@ -58,10 +58,10 @@ export default function OfferHowItWorks({ offerEtaText, feePct }: OfferHowItWork
   )
 }
 
-export type Step = { title: string; body: string; highlight?: boolean }
+type Step = { title: string; body: string; highlight?: boolean }
 
-/** The numbered step cards, without the section frame — the country hub uses it too (FA-1.65). */
-export function StepCards({ steps, className = '' }: { steps: Step[]; className?: string }) {
+/** The numbered step cards, without the section frame. */
+function StepCards({ steps, className = '' }: { steps: Step[]; className?: string }) {
   return (
     <ol className={`grid grid-cols-1 gap-3 ${className}`}>
       {steps.map((step, i) => (

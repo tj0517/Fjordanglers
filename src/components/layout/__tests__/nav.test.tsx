@@ -1,93 +1,66 @@
 // @vitest-environment jsdom
-/**
- * FA-1.80 — the nav is a cached, signed-out shell plus a client island:
- *   no local session → signed-out nav, /api/nav-user never called
- *   local session    → same-size placeholder, then the user's menu
- *   endpoint 401     → back to signed-out
- */
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { render, cleanup, fireEvent, screen } from '@testing-library/react'
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, cleanup } from '@testing-library/react'
-
-const h = vi.hoisted(() => ({ getSession: vi.fn() }))
-
-vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => ({ auth: { getSession: h.getSession } }),
-}))
-vi.mock('@/actions/auth', () => ({ signOut: vi.fn() }))
-vi.mock('next/navigation', () => ({ usePathname: () => '/iceland' }))
-vi.mock('next/image', () => ({ default: () => null }))
+const nav = vi.hoisted(() => ({ pathname: '/iceland' }))
+vi.mock('next/navigation', () => ({ usePathname: () => nav.pathname }))
 
 import { SiteNav } from '../nav'
 
-const fetchMock = vi.fn()
-
-function respond(status: number, body?: unknown) {
-  fetchMock.mockResolvedValue({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-  })
-}
-
-beforeEach(() => {
-  h.getSession.mockReset()
-  fetchMock.mockReset()
-  vi.stubGlobal('fetch', fetchMock)
-})
 afterEach(() => {
   cleanup()
-  vi.unstubAllGlobals()
+  nav.pathname = '/iceland'
 })
 
-describe('SiteNav', () => {
-  it('signed out: no account menu, no placeholder, no profile request', async () => {
-    h.getSession.mockResolvedValue({ data: { session: null } })
+/**
+ * The site nav's mobile menu (tj, 2026-11-17): a button below `md` opens a menu with the three
+ * links and "Plan your trip"; Escape, a link click and a new path close it.
+ */
 
+const button = () => screen.getByRole('button', { name: /menu/i })
+const menu = () => screen.getByTestId('site-nav-menu')
+
+describe('SiteNav — mobile menu', () => {
+  it('the button says whether the menu is open and which element it controls', () => {
     render(<SiteNav />)
-    await waitFor(() => expect(h.getSession).toHaveBeenCalled())
+    expect(button().getAttribute('aria-expanded')).toBe('false')
+    expect(button().getAttribute('aria-controls')).toBe(menu().id)
+    expect(menu().hidden).toBe(true)
 
-    expect(screen.queryByLabelText('Account menu')).toBeNull()
-    expect(screen.queryByTestId('nav-user-placeholder')).toBeNull()
-    expect(screen.getAllByText('Explore trips →').length).toBeGreaterThan(0)
-    expect(fetchMock).not.toHaveBeenCalled()
+    fireEvent.click(button())
+    expect(button().getAttribute('aria-expanded')).toBe('true')
+    expect(button().getAttribute('aria-label')).toBe('Close menu')
+    expect(menu().hidden).toBe(false)
   })
 
-  it('signed in: placeholder while the profile loads, then the account menu', async () => {
-    h.getSession.mockResolvedValue({ data: { session: { access_token: 't' } } })
-    let release: (v: unknown) => void = () => {}
-    fetchMock.mockReturnValue(new Promise(r => { release = r }))
-
+  it('holds Trips, Guides, Journal and Plan your trip → /trips', () => {
     render(<SiteNav />)
-
-    expect(await screen.findByTestId('nav-user-placeholder')).toBeTruthy()
-    expect(screen.queryByLabelText('Account menu')).toBeNull()
-
-    release({ ok: true, status: 200, json: async () => ({ name: 'Test Admin', role: 'admin', avatarUrl: null }) })
-
-    expect(await screen.findByLabelText('Account menu')).toBeTruthy()
-    expect(screen.queryByTestId('nav-user-placeholder')).toBeNull()
-    expect(fetchMock).toHaveBeenCalledWith('/api/nav-user', expect.objectContaining({ cache: 'no-store' }))
+    fireEvent.click(button())
+    const links = [...menu().querySelectorAll('a')].map(a => [a.textContent, a.getAttribute('href')])
+    expect(links).toEqual([['Trips', '/trips'], ['Guides', '/guides'], ['Journal', '/blog'], ['Plan your trip', '/trips']])
   })
 
-  it('signed in but the endpoint says 401 (stale session): back to the signed-out nav', async () => {
-    h.getSession.mockResolvedValue({ data: { session: { access_token: 't' } } })
-    respond(401)
-
+  it('Escape closes it and puts focus back on the button', () => {
     render(<SiteNav />)
-
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
-    await waitFor(() => expect(screen.queryByTestId('nav-user-placeholder')).toBeNull())
-    expect(screen.queryByLabelText('Account menu')).toBeNull()
+    fireEvent.click(button())
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(button().getAttribute('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(button())
   })
 
-  it('network failure while loading: back to the signed-out nav', async () => {
-    h.getSession.mockResolvedValue({ data: { session: { access_token: 't' } } })
-    fetchMock.mockRejectedValue(new Error('offline'))
-
+  it('a link click closes it', () => {
     render(<SiteNav />)
+    fireEvent.click(button())
+    fireEvent.click(menu().querySelector('a')!)
+    expect(button().getAttribute('aria-expanded')).toBe('false')
+  })
 
-    await waitFor(() => expect(screen.queryByTestId('nav-user-placeholder')).toBeNull())
-    expect(screen.queryByLabelText('Account menu')).toBeNull()
+  it('navigation to another path closes it', () => {
+    const { rerender } = render(<SiteNav overlay />)
+    fireEvent.click(button())
+    expect(button().getAttribute('aria-expanded')).toBe('true')
+    nav.pathname = '/trips'
+    rerender(<SiteNav overlay />)
+    expect(button().getAttribute('aria-expanded')).toBe('false')
   })
 })

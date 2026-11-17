@@ -30,7 +30,7 @@ const RELATED: ArticleRelated = {
   hub:    { slug: 'norway', label: 'Guided Fishing Trips in Norway' },
 }
 
-const hubData = () => ({ ...completeHub(), articles: [{ slug: 'fishing-regulations-norway-2026', title: 'Fishing in Norway 2026' }] })
+const hubData = () => ({ ...completeHub(), articles: [summary('fishing-regulations-norway-2026', 'Norway')] })
 
 vi.mock('@/lib/supabase/queries', () => ({
   getBlogPost:              async () => POST,
@@ -44,17 +44,16 @@ vi.mock('@/lib/supabase/queries', () => ({
 }))
 vi.mock('@/lib/supabase/testimonials', () => ({ getTestimonial: async () => null }))
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND') } }))
-vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null }))
+vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null, PLAN_YOUR_TRIP_HREF: '/trips' }))
 vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
 vi.mock('@/components/home/species-slider', () => ({ SpeciesSlider: () => null }))
 vi.mock('@/components/home/experiences-slider', () => ({ ExperiencesSlider: () => null }))
 vi.mock('@/components/home/bg-video', () => ({ BgVideo: () => null }))
 vi.mock('@/components/ui/contact-expert-button', () => ({ ContactExpertButton: () => null }))
-vi.mock('@/components/destination-hub/hub-map-view', () => ({ default: () => null }))
 vi.mock('@/components/analytics/WebEventTracker', () => ({ WebEventTracker: () => null }))
 
 import HomePage from '@/app/page'
-import DestinationHubPage from '@/app/(public)/[destination]/page'
+import DestinationHubPage from '@/app/(hub)/[destination]/page'
 import BlogPostPage from '@/app/(public)/blog/[slug]/page'
 
 const HUB_SLUGS = DESTINATION_HUBS.map(h => h.slug)
