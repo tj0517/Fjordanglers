@@ -55,6 +55,10 @@ Trip Brief gains a licences/permits field, and saving it emits an event.
 - [ ] STOP — order of migration and code (§3), tj decides.
 - [ ] Trip Brief on the inquiry card: licences/permits in edit and read views; `saveTripDetails`
   validates input with a schema (bounded lengths, allowed values) instead of spreading it.
+- [ ] `saveTripDetails` stops writing `guide_options` (the admin save has failed on its NOT NULL
+  since FA-1.12, 2026-09-17) — tj decision 2.
+- [ ] An emptied field is stored as NULL, the guide no longer sees it, and the event lists it as
+  changed — tj decision 3.
 - [ ] `saveTripDetails` emits `inquiry.brief_updated` (new catalogue entry); payload names the
   changed fields, not their text.
 - [ ] Request page: `getGuideRequestPage` reads accommodation, licences/permits and the FA note
@@ -68,6 +72,13 @@ Trip Brief gains a licences/permits field, and saving it emits an event.
 - [ ] `database.types.ts` regenerated in the diff; no `as any`, no new `eslint-disable`.
 - [ ] Invalid licences/permits value and over-long text rejected by `saveTripDetails`, nothing
   written — **jak sprawdzić:** test, shown red on the bad input.
+- [ ] Stored values at the app limits (accommodation 300, FA note 2000) still save — **jak
+  sprawdzić:** test. (Prod maxima 2026-11-17: 205 / 976.)
+- [ ] Saving a brief for an inquiry with no row yet succeeds — **jak sprawdzić:** test, red on
+  the code from `main` (`guide_options` null), pasted; grep shows no other caller relies on the
+  admin save writing `guide_options`.
+- [ ] Clearing a saved note stores NULL; the row and the request page view no longer carry it,
+  and the event names `guide_notes` — **jak sprawdzić:** test.
 - [ ] Non-admin caller of `saveTripDetails` refused — **jak sprawdzić:** test.
 - [ ] Saving writes the row and one `inquiry.brief_updated` with the changed field names —
   **jak sprawdzić:** action test + `inquiry_events` read on the local DB, pasted.
@@ -90,7 +101,7 @@ Trip Brief gains a licences/permits field, and saving it emits an event.
 - `TripBriefCard` and the guide panel → FA-M.13 (deferred row if the new field belongs there).
 - Fixed choices for accommodation, merging `inquiry_trip_details` into `inquiries.brief` → stage 4.
 - Sending the request, reminders, WhatsApp → FA-M.05, FA-M.06.
-- Any other field or behaviour of `saveTripDetails`, the AI extraction
+- Any other field or behaviour of `saveTripDetails` (beyond tj decisions 2 and 3), the AI extraction
   (`src/lib/ai/extract-trip.ts`) and the state machine.
 Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 
@@ -114,3 +125,4 @@ test failing when a budget line is added.
 
 ## Notatki z realizacji
 - **2026-11-17, tj (wf-task):** (b) one brief — the existing Trip Brief (`inquiry_trip_details`) is the source for the request page, only a licences/permits field is added; no new fields in `inquiries.brief`. Money: (a) no budget or price on the request page.
+- **2026-11-17, tj:** 1 (A) licence as two nullable columns on `inquiry_trip_details`: `licence_buyer text CHECK (licence_buyer IN ('client','guide','not_needed'))`, `licence_note text CHECK (char_length(licence_note) <= 300)`; labels client → "Client buys", guide → "Guide arranges", not_needed → "No licence needed"; no "FA buys". Existing fields limited in app validation only: accommodation 300, `guide_notes` 2000 (prod maxima 205 / 976); test that values at those lengths still save. 2 (A) fix the broken Trip Brief save in this PR — `saveTripDetails` stops writing `guide_options`; red test on `main` code (no existing row), grep for other callers. 3 (A) an emptied field is stored as NULL, the guide no longer sees it, `inquiry.brief_updated` lists it as changed; test save → clear → row and request page view. Scope extended by exactly 2 and 3. Deferred: both page reads of `inquiry_trip_details`. The second local Supabase stack is stopped by tj before the browser step.
