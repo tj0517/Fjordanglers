@@ -36,7 +36,7 @@ Kalendarz zostaje u przewodnika, FA tylko odczytuje zajętość. To zadanie budu
 ## Zakres
 - [ ] Odczyt stanu: `guide_unavailable_dates`, kto i gdzie je zapisuje/czyta, polityki; `guide_private`; crony (O-55).
 - [ ] Migracja: podłączenie kalendarza per przewodnik (dostawca, link kalendarza — **prywatny, dostęp tylko serwer**, status, ostatnia synchronizacja, ostatni błąd); źródło blokady na zajętych dniach (`manual` / `calendar`) tak, by synchronizacja nie kasowała ręcznych blokad; RLS w tej samej migracji.
-- [ ] Synchronizacja: pobranie i parsowanie ICS (wydarzenia całodniowe i godzinowe → zajęty dzień w strefie czasowej przewodnika; wydarzenia oznaczone jako „wolny” pomijane), horyzont 12 miesięcy, zastąpienie tylko blokad ze źródła `calendar`; błąd pobrania zapisuje status, nie usuwa starych blokad.
+- [ ] Synchronizacja: pobranie i parsowanie ICS (wydarzenia całodniowe i godzinowe → zajęty dzień w strefie czasowej przewodnika; wydarzenie całodniowe zawsze = zajęty dzień, także oznaczone jako „wolny”; wydarzenia godzinowe oznaczone jako „wolny” pomijane — tj 2026-11-17, opcja b), horyzont 12 miesięcy, zastąpienie tylko blokad ze źródła `calendar`; błąd pobrania zapisuje status, nie usuwa starych blokad.
 - [ ] Zadanie cykliczne co kilka godzin (mechanizm wg O-55), z sekretem crona.
 - [ ] Podpisany link „connect calendar” (jednorazowy, z terminem) generowany w adminie do skopiowania / wysłania na WhatsApp; strona z dwoma przyciskami: **Apple** (instrukcja iPhone/Mac + pole na link, walidacja i próbne pobranie) i **Google** (wyłączony z dopiskiem „soon” do FA-M.10).
 - [ ] Karta zapytania w adminie: zajęte dni z kalendarza odróżnione od ręcznych + data ostatniej synchronizacji.
@@ -87,3 +87,8 @@ SELECT policyname, cmd, roles FROM pg_policies WHERE tablename IN ('<tabela pod�
   - D2 follow-up → (b): serwer odmawia odblokowania dnia zajętego w kalendarzu, strona wyjaśnia. Koszt ponownego odczytu dat po „Set open season” — tylko wycena, bez budowania.
   - `CALENDAR_LINK_KEY`: lokalnie ustawiony przez tj (wartość jednorazowa, inna niż prod). Wartość prod tj ustawia w Vercel przed merge — przypomnieć na STOP przed merge; prod nie jest gotowy bez potwierdzenia tj.
   - Klucz testowy w kodzie testów. Check `secrets` w CI musi przejść bez allowlisty i zmian CI; jeśli go oflaguje — STOP i pokazać.
+- **2026-11-17, tj (parser, okno wdrożenia):**
+  - Wydarzenia całodniowe → (b): zawsze zajęty dzień, także oznaczone jako „wolny”; godzinowe oznaczone jako „wolny” pomijane. Zakres zaktualizowany; fixtures dla obu przypadków; deferred: sprawdzić flagę na pierwszym prawdziwym kalendarzu iCloud i policzyć, jak często (b) blokuje dzień, w którym przewodnik był wolny.
+  - „Set open season”: budujemy ponowny odczyt — akcja zwraca aktualne zajęte dni przewodnika, kalendarz zastępuje lokalną kopię; jeden test.
+  - Kolejność wdrożenia: migracja przed kodem to bezpieczna kolejność; tj potwierdza na STOP przed merge.
+  - Testy strony „Connect” i crona bez klucza („odmawia, nic nie zapisuje”) są dowodem w PR. Brak lokalnego `CALENDAR_LINK_KEY` przy przejściu w przeglądarce → zgłosić, nie obchodzić.
