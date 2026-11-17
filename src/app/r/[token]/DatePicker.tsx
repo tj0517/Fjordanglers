@@ -11,6 +11,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 const MONTHS_AHEAD = 24
 
+/** 0 … n-1 */
+function range(n: number): number[] {
+  return [...Array(n).keys()]
+}
+
 function iso(y: number, m: number, d: number): string {
   return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10)
 }
@@ -59,8 +64,8 @@ export function DatePicker({
         {WEEKDAYS.map(w => <span key={w} className="py-1">{w}</span>)}
       </div>
       <div className="grid grid-cols-7 gap-1">
-        {Array.from({ length: lead }, (_, i) => <span key={`lead-${i}`} />)}
-        {Array.from({ length: daysInMonth }, (_, i) => {
+        {range(lead).map(i => <span key={`lead-${i}`} />)}
+        {range(daysInMonth).map(i => {
           const date = iso(year, month, i + 1)
           const isSelected = selected.includes(date)
           const disabled = date < earliest || (full && !isSelected)
