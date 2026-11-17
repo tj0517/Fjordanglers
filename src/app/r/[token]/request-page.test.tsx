@@ -33,7 +33,7 @@ vi.mock('./actions', () => ({
 import RequestPage, { metadata } from './page'
 import RequestNotFound from './not-found'
 import { GoogleTags } from '@/components/analytics/GoogleTags'
-import { GOOGLE_TAG_FREE_ROUTES } from '@/lib/analytics/google-tag-routes'
+import { THIRD_PARTY_FREE_ROUTES } from '@/lib/analytics/third-party-free-routes'
 import { briefSummaryLines, guideBriefSummaryLines, type Brief } from '@/lib/inquiries/brief'
 
 const TOKEN = 'A'.repeat(43)
@@ -167,6 +167,6 @@ describe('Google tags (D1 a) — not on /r/…, still on normal pages', () => {
   })
 
   it('/r is on the excluded list as a prefix (the constant every token page must be on)', () => {
-    expect(GOOGLE_TAG_FREE_ROUTES).toContain('/r/')
+    expect(THIRD_PARTY_FREE_ROUTES).toContain('/r/')
   })
 })

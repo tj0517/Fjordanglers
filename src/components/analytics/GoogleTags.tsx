@@ -2,16 +2,16 @@
 
 import Script from 'next/script'
 import { usePathname } from 'next/navigation'
-import { googleTagsAllowed } from '@/lib/analytics/google-tag-routes'
+import { thirdPartyScriptsAllowed } from '@/lib/analytics/third-party-free-routes'
 
 /**
  * GTM and the Google Ads tag, exactly as the root layout loaded them, skipped on the routes in
- * `GOOGLE_TAG_FREE_ROUTES` (FA-M.04). `usePathname` is known during the server render, so on a
+ * `THIRD_PARTY_FREE_ROUTES` (FA-M.04). `usePathname` is known during the server render, so on a
  * skipped route the HTML carries neither the scripts nor their preload links.
  */
 export function GoogleTags({ gtmId }: { gtmId: string | undefined }) {
   const pathname = usePathname()
-  if (!googleTagsAllowed(pathname)) return null
+  if (!thirdPartyScriptsAllowed(pathname)) return null
 
   return (
     <>

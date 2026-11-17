@@ -3,6 +3,8 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import Script from 'next/script'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { thirdPartyScriptsAllowed } from '@/lib/analytics/third-party-free-routes'
 
 const CONSENT_KEY   = 'fa_cookie_consent'
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
@@ -64,15 +66,20 @@ function grantConsent() {
 export function CookieBanner({ gtmId: _gtmId }: { gtmId: string }) {
   const consent = useSyncExternalStore(subscribeConsent, readConsent, serverConsent)
   const visible = consent === 'none'
+  // Token routes (THIRD_PARTY_FREE_ROUTES, FA-M.04): no banner, no Pixel, no Clarity — their URL
+  // must not reach a third party, whatever consent is stored.
+  const allowed = thirdPartyScriptsAllowed(usePathname())
 
   // Push the current consent to gtag — updating an external system, which is
   // what an effect is for.
   useEffect(() => {
-    if (consent === 'accepted') grantConsent()
-  }, [consent])
+    if (allowed && consent === 'accepted') grantConsent()
+  }, [allowed, consent])
 
   function accept()  { storeConsent('accepted') }
   function decline() { storeConsent('declined') }
+
+  if (!allowed) return null
 
   return (
     <>

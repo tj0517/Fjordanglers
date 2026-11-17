@@ -145,7 +145,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <GclidCapture />
         {GTM_ID && <CookieBanner gtmId={GTM_ID} />}
 
-        {/* ── GTM + Google Ads — skipped on token routes (GOOGLE_TAG_FREE_ROUTES, FA-M.04) ── */}
+        {/* ── GTM + Google Ads — skipped on token routes (THIRD_PARTY_FREE_ROUTES, FA-M.04) ── */}
         <GoogleTags gtmId={GTM_ID} />
       </body>
     </html>

@@ -2,7 +2,8 @@
  * /r/[token] — a guide's trip request (FA-M.04). Opened from WhatsApp, no sign-in: the token is
  * the credential. The GET writes nothing; the opening is recorded by `OpenedBeacon` after the
  * page has rendered in a browser (tj D1 a). Every refusal renders the same not-found page.
- * Google tags are not loaded here (`GOOGLE_TAG_FREE_ROUTES`).
+ * No third-party script is loaded here — Google tags, cookie banner, Meta Pixel, Clarity
+ * (`THIRD_PARTY_FREE_ROUTES`).
  */
 
 import type { Metadata } from 'next'
