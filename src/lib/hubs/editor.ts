@@ -27,7 +27,7 @@ export const QUOTE_AUTHOR_MAX = 80
 export const QUOTE_COUNTRY_MAX = 60
 export const CONTACT_NAME_MAX = 80
 export const CONTACT_EMAIL_MAX = 254
-export const HERO_IMAGE_URL_MAX = 2048
+const HERO_IMAGE_URL_MAX = 2048
 
 export const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
 

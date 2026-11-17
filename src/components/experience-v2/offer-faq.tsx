@@ -36,8 +36,8 @@ function Entry({ question, answer }: FaqEntry) {
   )
 }
 
-/** The questions themselves, without the section frame — the country hub uses it too (FA-1.65). */
-export function FaqList({ faq }: OfferFaqProps) {
+/** The questions themselves, without the section frame. */
+function FaqList({ faq }: OfferFaqProps) {
   return (
     <div data-testid="offer-faq" className="border-t" style={{ borderColor: 'rgba(10,46,77,0.14)' }}>
       {faq.map((entry, i) => <Entry key={`${i}-${entry.question}`} {...entry} />)}
