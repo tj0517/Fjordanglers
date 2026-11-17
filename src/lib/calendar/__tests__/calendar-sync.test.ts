@@ -37,7 +37,8 @@ const hop: HopFn = async url => {
   if (answer === 'hang') return new Promise(() => {})
   return { status: answer.status, location: null, body: Buffer.from(answer.body ?? '') }
 }
-const deps = { fetch: { hop, timeoutMs: 100 }, now: NOW }
+// Test files run in parallel on one database: every sync here is limited to this file's guide.
+const deps = { fetch: { hop, timeoutMs: 100 }, now: NOW, guideIds: [GUIDE] }
 
 function svc(): Db {
   return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {

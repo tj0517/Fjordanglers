@@ -145,6 +145,8 @@ export interface SyncSummary {
 
 export interface SyncDeps extends ConnectDeps {
   concurrency?: number
+  /** Sync only these guides (default: every connected calendar). */
+  guideIds?: string[]
 }
 
 export class CalendarSyncDisabledError extends Error {
@@ -202,10 +204,12 @@ export async function syncAllCalendars(client: Client, deps: SyncDeps = {}): Pro
   const key = calendarLinkKey()
   if (!key.ok) throw new CalendarSyncDisabledError()
 
-  const { data, error } = await client
+  let query = client
     .from('guide_calendar_connections')
     .select('guide_id, link_ciphertext, connected_at, guides(country)')
     .order('last_attempt_at', { ascending: true, nullsFirst: true })
+  if (deps.guideIds != null) query = query.in('guide_id', deps.guideIds)
+  const { data, error } = await query
   if (error != null) throw new Error(`calendar connections read failed: ${error.message}`)
 
   const rows: ConnectionRow[] = data ?? []

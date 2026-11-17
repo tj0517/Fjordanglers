@@ -29,6 +29,14 @@ vi.mock('@/lib/supabase/server', async () => {
   }
 })
 
+// The cron route's success path is checked through a spy: a real "sync every calendar" would reach
+// the guides of other test files running in parallel on the same database (the real sync is covered,
+// per guide, in calendar-sync.test.ts). The 401 and 503 cases fail before any read and stay real.
+vi.mock('@/lib/calendar/connections', async importOriginal => {
+  const real = await importOriginal<typeof import('@/lib/calendar/connections')>()
+  return { ...real, syncAllCalendars: vi.fn(real.syncAllCalendars) }
+})
+
 import { NextRequest } from 'next/server'
 import { issueCalendarConnectLink } from '@/actions/calendar'
 import { setAvailability, setOpenSeason } from '@/actions/availability'
@@ -36,7 +44,7 @@ import { GET as cronGET } from '@/app/api/cron/calendar-sync/route'
 import ConnectCalendarPage from '@/app/connect-calendar/[token]/page'
 import { connectCalendar } from '@/app/connect-calendar/[token]/actions'
 import { UnauthorizedError } from '@/lib/auth/guards'
-import { connectLinkRefusal, connectWithLink, issueConnectLink } from '../connections'
+import { connectLinkRefusal, connectWithLink, issueConnectLink, syncAllCalendars } from '../connections'
 import { hashCalendarConnectToken } from '../connect-token'
 import type { HopFn } from '../fetch'
 import { CALENDAR_DISABLED_MESSAGE } from '../link-crypto'
@@ -338,11 +346,13 @@ describe('cron route', () => {
     expect(after).toEqual(before)
   })
 
-  it('with the secret → 200 and a summary without links', async () => {
+  it('with the secret → runs the sync and returns its summary (200)', async () => {
+    const summary = { total: 2, ok: 1, failed: 1, stale: 0, failures: [{ guideId: GUIDE, error: 'not_found' as const }] }
+    vi.mocked(syncAllCalendars).mockClear()
+    vi.mocked(syncAllCalendars).mockResolvedValueOnce(summary)
     const res = await call('Bearer test-only-cron-secret')
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body).toMatchObject({ total: expect.any(Number), ok: expect.any(Number), failed: expect.any(Number) })
-    expect(JSON.stringify(body)).not.toContain('SYNTHETIC')
+    expect(await res.json()).toEqual(summary)
+    expect(vi.mocked(syncAllCalendars)).toHaveBeenCalledTimes(1)
   })
 })
