@@ -2,7 +2,7 @@
 id: FA-M.09
 title: Kalendarz przewodnika, część 1 — synchronizacja zajętości z linku kalendarza (Apple) do zajętych dni, strona „Connect with your calendar” przez podpisany link
 stage: M
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -10,7 +10,7 @@ effort: high
 agent: fa-core
 branch: feat/fa-m.09-calendar-sync
 depends_on: []
-blocked_by_questions: [O-55]
+blocked_by_questions: []
 touches_db: true
 touches_prod: true
 estimate_h: 8
@@ -73,3 +73,4 @@ SELECT policyname, cmd, roles FROM pg_policies WHERE tablename IN ('<tabela pod�
 ## Notatki z realizacji
 - **2026-11-10, tj (wf-plan):** „Connect with your calendar” z dwoma przyciskami; Apple = link udostępniania; przyciski w koncie + jednorazowy podpisany link; w MVP tylko Google i Apple, FishingBooker ręcznie.
 - **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
+- **2026-11-17, tj:** O-55 → (a) crony Vercela (sub-daily wymaga planu Pro — tj potwierdza plan przed zmianą `vercel.json`); `blocked_by_questions` wyczyszczone.
