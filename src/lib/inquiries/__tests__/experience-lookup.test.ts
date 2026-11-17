@@ -29,6 +29,7 @@ interface PageRow {
   experience_name: string
   slug: string
   country: string
+  region: string
   guide_id: string | null
   price_from: number
   price_type: string
@@ -42,6 +43,7 @@ function page(over: Partial<PageRow> & { id: string }): PageRow {
     experience_name: `Page ${over.id.slice(0, 2)}`,
     slug:            `slug-${over.id.slice(0, 2)}`,
     country:         'Iceland',
+    region:          'Westfjords',
     guide_id:        null,
     price_from:      200,
     price_type:      'per_person',
@@ -141,7 +143,7 @@ describe('getInquiryExperience — resolution order', () => {
     mockDb([
       {
         data: page({
-          id: PAGE_A, experience_name: 'Trip', slug: 'trip', country: 'Norway',
+          id: PAGE_A, experience_name: 'Trip', slug: 'trip', country: 'Norway', region: 'Lyngen',
           guide_id: 'g-1', price_from: 350, price_type: 'flat', currency: 'EUR',
         }),
         error: null,
@@ -149,7 +151,7 @@ describe('getInquiryExperience — resolution order', () => {
     ])
 
     expect(await getInquiryExperience({ experience_page_id: PAGE_A, trip_id: null })).toEqual({
-      id: PAGE_A, name: 'Trip', slug: 'trip', country: 'Norway',
+      id: PAGE_A, name: 'Trip', slug: 'trip', country: 'Norway', region: 'Lyngen',
       guideId: 'g-1', priceFrom: 350, priceType: 'flat', currency: 'EUR',
     })
   })
@@ -277,7 +279,7 @@ describe('tripTitleOf', () => {
     expect(tripTitleOf(null)).toBe(TRIP_TITLE_FALLBACK)
     expect(
       tripTitleOf({
-        id: PAGE_A, name: 'Real name', slug: 's', country: 'Iceland',
+        id: PAGE_A, name: 'Real name', slug: 's', country: 'Iceland', region: 'Westfjords',
         guideId: null, priceFrom: 1, priceType: 'flat', currency: 'EUR',
       }),
     ).toBe('Real name')

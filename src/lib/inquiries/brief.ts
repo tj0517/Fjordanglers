@@ -149,6 +149,19 @@ export function budgetBandLabel(band: string): string {
  * a different version of the answers.
  */
 export function briefSummaryLines(brief: Brief): string[] {
+  return summaryLines(brief, { budget: true })
+}
+
+/**
+ * The brief as the guide reads it on the request page (FA-M.04, tj D2 a): the same lines
+ * without the budget ones. The angler's budget already carries FA's fee, and the guide prices
+ * the trip — what guides see about money is decided in FA-M.07.
+ */
+export function guideBriefSummaryLines(brief: Brief): string[] {
+  return summaryLines(brief, { budget: false })
+}
+
+function summaryLines(brief: Brief, opts: { budget: boolean }): string[] {
   const when = brief.dates_mode === 'exact'
     ? (brief.date_from == null
         ? `${brief.days} day(s), dates to confirm`
@@ -167,6 +180,8 @@ export function briefSummaryLines(brief: Brief): string[] {
     `Fitness: ${FITNESS_LABELS[brief.fitness]}`,
     `Wading: ${brief.wading_ok ? 'yes, happy to wade' : 'prefers not to wade'}`,
   ]
+
+  if (!opts.budget) return lines
 
   if (brief.budget_band != null) lines.push(`Budget band: ${budgetBandLabel(brief.budget_band)}`)
   if (brief.budget_ack === true) lines.push('Budget: confirmed the price shown on the page')
