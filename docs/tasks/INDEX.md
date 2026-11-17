@@ -144,7 +144,7 @@ Zakres: dokument „Aplikacja dla przewodników — zakres MVP” (Claude Docs) 
 | FA-M.04 | Strona zlecenia `/r/[token]` — akceptuj / odrzuć / 1–3 inne daty, bez logowania, mobile-first | M | sonnet | done (PR #200) | FA-M.03 |
 | FA-M.05 | Wysyłka zlecenia z karty zapytania — WhatsApp szablonem z linkiem + oś czasu zlecenia | M | sonnet | todo | FA-M.03, FA-M.04, FA-M.11 |
 | FA-M.06 | Ponaglenie po 12 h (sezon) / 24 h — jedno WhatsApp do przewodnika + flaga dla admina | M | sonnet | todo (O-55) | FA-M.05 |
-| FA-M.07 | Brief dla przewodnika — nocleg, licencje/permity i notatka FA na stronie zlecenia, z jednego Trip Briefu (migracja: kolumna licencji) | M | sonnet | in_progress | FA-M.04 |
+| FA-M.07 | Brief dla przewodnika — nocleg, licencje/permity i notatka FA na stronie zlecenia, z jednego Trip Briefu (migracja: kolumna licencji) | M | sonnet | review (PR #203) | FA-M.04 |
 | FA-M.08 | Konta przewodników — zaproszenie, logowanie, reset, sesje (zakres wg audytu) | L | opus | done (PR #196) | FA-M.02 |
 | FA-M.09 | Kalendarz 1 — synchronizacja zajętości, Apple (link udostępniania), strona „Connect” przez podpisany link | L | opus | todo (O-55) | — |
 | FA-M.10 | Kalendarz 2 — „Connect with Google” (OAuth, odczyt zajętości, tokeny) | L | opus | todo | FA-M.09, FA-M.11 |

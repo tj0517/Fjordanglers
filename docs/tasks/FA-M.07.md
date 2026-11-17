@@ -2,13 +2,14 @@
 id: FA-M.07
 title: Brief dla przewodnika — nocleg, licencje/permity i notatka FA na stronie zlecenia, z jednego Trip Briefu
 stage: M
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-admin
 branch: feat/fa-m.07-guide-brief
+pr: 203
 depends_on: [FA-M.04]
 blocked_by_questions: []
 touches_db: true
