@@ -33,12 +33,13 @@ const LINKS = [
 /** Every "Plan your trip" on the site leads to the trip list (tj, 2026-11-17). */
 export const PLAN_YOUR_TRIP_HREF = '/trips'
 
+/** `className` carries the display (`hidden md:inline-flex`, `flex`) — the base has none, so the two never fight. */
 function PlanYourTrip({ className, onClick }: { className: string; onClick?: () => void }) {
   return (
     <Link
       href={PLAN_YOUR_TRIP_HREF}
       onClick={onClick}
-      className={`${s.blur} ${s.fjord} inline-flex flex-none items-center justify-center rounded-full ${className}`}
+      className={`${s.blur} ${s.fjord} flex-none items-center justify-center rounded-full ${className}`}
       style={{ textDecoration: 'none' }}
     >
       <span className="f-body inline-flex items-center gap-2 whitespace-nowrap text-[15px] font-semibold" style={{ color: '#FFFFFF' }}>
@@ -143,7 +144,7 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
               {label}
             </Link>
           ))}
-          <PlanYourTrip className="mt-1 min-h-[48px] w-full px-6" onClick={close} />
+          <PlanYourTrip className="mt-1 flex min-h-[48px] w-full px-6" onClick={close} />
         </nav>
       </div>
     </header>
