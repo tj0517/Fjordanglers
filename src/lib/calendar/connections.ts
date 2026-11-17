@@ -24,7 +24,7 @@ import { calendarLinkKey, decryptCalendarLink, encryptCalendarLink } from './lin
 type Client = SupabaseClient<Database>
 
 /** Error codes stored on a connection (CHECK in the migration). */
-export type SyncErrorCode = Exclude<CalendarFetchError, 'invalid_url'> | 'not_a_calendar' | 'decrypt_failed'
+type SyncErrorCode = Exclude<CalendarFetchError, 'invalid_url'> | 'not_a_calendar' | 'decrypt_failed'
 
 export type ConnectLinkRefusal = 'not_found' | 'revoked' | 'used' | 'expired'
 
@@ -132,7 +132,7 @@ function busyDaysForCalendar(ics: string, country: string | null, now: Date): st
 
 // ─── sync ────────────────────────────────────────────────────────────────────
 
-export type SyncResult = 'ok' | 'failed' | 'stale' | 'no_connection'
+type SyncResult = 'ok' | 'failed' | 'stale' | 'no_connection'
 
 export interface SyncSummary {
   total: number
@@ -235,7 +235,7 @@ export async function syncAllCalendars(client: Client, deps: SyncDeps = {}): Pro
 
 // ─── readers ─────────────────────────────────────────────────────────────────
 
-export type BusySource = 'manual' | 'calendar'
+type BusySource = 'manual' | 'calendar'
 
 export interface BusyDay {
   date: string

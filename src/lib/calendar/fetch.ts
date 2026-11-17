@@ -17,9 +17,9 @@ import { request as httpsRequest } from 'node:https'
 import { BlockList, isIP, type LookupFunction } from 'node:net'
 import { z } from 'zod'
 
-export const FETCH_TIMEOUT_MS = 10_000
-export const FETCH_MAX_BYTES = 5 * 1024 * 1024
-export const FETCH_MAX_REDIRECTS = 3
+const FETCH_TIMEOUT_MS = 10_000
+const FETCH_MAX_BYTES = 5 * 1024 * 1024
+const FETCH_MAX_REDIRECTS = 3
 
 export type CalendarFetchError =
   | 'invalid_url'
@@ -91,7 +91,7 @@ export function isPublicAddress(address: string): boolean {
   return !blocked.check(address, 'ipv6')
 }
 
-export class BlockedAddressError extends Error {
+class BlockedAddressError extends Error {
   constructor() {
     super('calendar host resolves to a non-public address')
     this.name = 'BlockedAddressError'
@@ -130,7 +130,7 @@ export interface HopResponse {
   body: Buffer
 }
 
-export class TooLargeError extends Error {
+class TooLargeError extends Error {
   constructor() {
     super('calendar response over the size limit')
     this.name = 'TooLargeError'
