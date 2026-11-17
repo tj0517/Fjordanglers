@@ -334,7 +334,7 @@ function ExampleOffer() {
         <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid #E9DFCF' }}>
           <span className="flex flex-col">
             <span className="f-body text-[12px]" style={{ color: MUTED }}>Deposit to hold the date</span>
-            <span className="f-body text-[20px] font-extrabold">[DEPOSIT]</span>
+            <span className="f-body text-[20px] font-extrabold">NZ$1,500</span>
           </span>
           <span className="f-body inline-flex min-h-[44px] items-center rounded-full px-[18px] text-[14px] font-semibold" style={{ background: NAVY, color: '#FFFFFF' }}>
             Pay deposit
