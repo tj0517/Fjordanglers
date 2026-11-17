@@ -80,9 +80,9 @@ export function CalendarConnectStatus({ guideId, calendar }: { guideId: string; 
         </button>
       </p>
       {link != null && (
-        <div className="flex items-center gap-2 text-[11px] f-body">
+        <div className="flex flex-wrap items-center gap-2 text-[11px] f-body">
           <input readOnly value={link.url} aria-label="Calendar connect link"
-            className="flex-1 min-w-0 rounded-md px-2 py-1 bg-primary/5 text-primary" onFocus={e => e.currentTarget.select()} />
+            className="basis-full min-w-0 rounded-md px-2 py-1 bg-primary/5 text-primary" onFocus={e => e.currentTarget.select()} />
           <button type="button" onClick={copy}
             className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary font-semibold">
             {copied ? <Check size={11} aria-hidden /> : <Copy size={11} aria-hidden />}
