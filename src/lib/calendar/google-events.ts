@@ -15,7 +15,7 @@
 
 import { addDays, horizonInZone, localDate, nextDay, resolveGuideZone } from './ics'
 
-export interface GoogleEventTime {
+interface GoogleEventTime {
   /** All-day: `YYYY-MM-DD`. */
   date?: string
   /** Timed: RFC 3339 with an offset. */

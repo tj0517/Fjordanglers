@@ -28,7 +28,7 @@ const EVENTS_URL = 'https://www.googleapis.com/calendar/v3/calendars/primary/eve
 export const GOOGLE_EVENT_FIELDS = 'nextPageToken,timeZone,items(start(date,dateTime),end(date,dateTime),transparency)'
 
 /** Where Google sends the guide back. Registered in Google Cloud for localhost:3000 and www (tj). */
-export const GOOGLE_CALLBACK_PATH = '/api/calendar/google/callback'
+const GOOGLE_CALLBACK_PATH = '/api/calendar/google/callback'
 
 const TIMEOUT_MS = 10_000
 const PAGE_SIZE = 2500
