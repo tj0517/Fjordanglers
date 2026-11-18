@@ -8,6 +8,7 @@ import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { avatarImg } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
 import { formatPrice } from '@/lib/format-price'
+import { languageNames } from '@/lib/experience-v2-content'
 import { SITE_URL } from '@/lib/site'
 import { guideProfilePath } from '@/lib/guide-url'
 import { retiredGuideTarget } from '@/lib/guide-redirects'
@@ -330,7 +331,7 @@ export default async function GuideProfilePage({
                   <div className="flex flex-col gap-[10px]">
                     <Eyebrow dark>Languages</Eyebrow>
                     <div className="flex flex-wrap gap-1.5">
-                      {guide.languages.map(lang => <Tag key={lang}>{lang}</Tag>)}
+                      {languageNames(guide.languages).map(lang => <Tag key={lang}>{lang}</Tag>)}
                     </div>
                   </div>
                   {guide.google_rating != null && (

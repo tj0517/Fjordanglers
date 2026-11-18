@@ -116,6 +116,16 @@ describe('trips', () => {
   })
 })
 
+describe('languages (tj 2026-11-18)', () => {
+  it('codes print as English names in the Skills block', async () => {
+    getGuide.mockResolvedValue(guide({ languages: ['en', 'is'] }))
+    const html = await render()
+    expect(html).toMatch(/>English<\/span>/)
+    expect(html).toMatch(/>Icelandic<\/span>/)
+    expect(html).not.toMatch(/>en<\/span>/)
+  })
+})
+
 describe('contact card buttons (tj 2026-11-18)', () => {
   const buttons = (html: string) => /data-testid="guide-card-buttons"(.*?)<\/div>/.exec(html)![1]!
   const NEWER = { ...TRIP, id: 'e-2', slug: 'newer-trip' }

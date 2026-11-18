@@ -78,6 +78,13 @@ describe('guide card', () => {
     const html = await render()
     expect(html).not.toContain('iceland.jpg')
   })
+  it('language codes print as English names; names typed out stay as they are (tj)', async () => {
+    getGuides.mockResolvedValue({ guides: [guide({ languages: ['en', 'is'] }), guide({ id: 'g-2', slug: 'b', languages: ['English', 'German'] })], total: 2 })
+    const grid = /data-testid="guides-grid"(.*?)<\/section>/.exec(await render())![1]!
+    expect(grid).toContain('English, Icelandic')
+    expect(grid).toContain('English, German')
+    expect(grid).not.toMatch(/>en, is</)
+  })
 })
 
 describe('filters', () => {

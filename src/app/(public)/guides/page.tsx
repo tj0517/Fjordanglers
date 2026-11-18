@@ -6,6 +6,7 @@ import { SITE_URL } from '@/lib/site'
 import { GuideLink } from '@/components/guides/guide-link'
 import { guideProfilePath } from '@/lib/guide-url'
 import { listingCanonicalUrl } from '@/lib/listing-canonical'
+import { languageNames } from '@/lib/experience-v2-content'
 import { PhotoHero } from '@/components/site/photo-hero'
 import { FilterRow, Pagination, pageHref } from '@/components/site/listing'
 import {
@@ -45,6 +46,8 @@ function GuideCard({ guide }: { guide: GuideRow }) {
   const place = [guide.city, guide.country].filter(p => p != null && p.trim() !== '').join(', ')
   const fish  = guide.fish_expertise.slice(0, 3)
   const more  = guide.fish_expertise.length - fish.length
+  /** "en" → "English"; a name typed out stays as it is. */
+  const languages = languageNames(guide.languages)
 
   return (
     <GuideLink
@@ -88,8 +91,8 @@ function GuideCard({ guide }: { guide: GuideRow }) {
         )}
         <span className="mt-auto flex items-center justify-between gap-3 pt-[14px]" style={{ borderTop: `1px solid ${LINE}` }}>
           <span className="f-body text-[13.5px]" style={{ color: MUTED }}>
-            {guide.languages.slice(0, 2).join(', ')}
-            {guide.languages.length > 2 && ` +${guide.languages.length - 2}`}
+            {languages.slice(0, 2).join(', ')}
+            {languages.length > 2 && ` +${languages.length - 2}`}
           </span>
           <span className="f-body inline-flex items-center gap-2 text-[14.5px] font-bold" style={{ color: NAVY }}>View profile<Arrow /></span>
         </span>
