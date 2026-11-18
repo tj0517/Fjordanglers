@@ -142,6 +142,7 @@ describe('hero and closing block', () => {
     expect(stats).toMatch(/Countries<\/dt><dd[^>]*>5</)
     expect(stats).toMatch(/Languages<\/dt><dd[^>]*>6</)
     expect(html).toContain('Do you guide on your own water?')
+    expect(html).toContain('You set your price; we handle the enquiry and the deposit.')
     expect(html).toContain('>Become a guide<')
   })
 })

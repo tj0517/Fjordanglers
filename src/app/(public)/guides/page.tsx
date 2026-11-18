@@ -240,7 +240,7 @@ export default async function GuidesPage({
                 Do you guide on your own water?
               </h2>
               <p className="f-body m-0 text-[17px]" style={{ lineHeight: 1.55, color: ON_DARK }}>
-                We send you anglers who have already picked your water and their dates. You set your price, and the angler pays it to you directly.
+                We send you anglers who have already picked your water and their dates. You set your price; we handle the enquiry and the deposit.
               </p>
             </div>
             <a href="mailto:contact@fjordanglers.com?subject=Guiding%20with%20FjordAnglers" className="f-body" style={primaryButtonStyle}>
