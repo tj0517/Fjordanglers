@@ -223,6 +223,8 @@ export default async function GuideProfilePage({
   const hasReviews = guide.total_reviews > 0
   const rating     = guide.average_rating != null ? `★ ${guide.average_rating.toFixed(1)}` : '—'
   const policy     = CANCELLATION_POLICY_INFO[guide.cancellation_policy]
+  /** The newest published trip: `getGuideExperiencePages` returns active pages, newest first. */
+  const newestTrip = guideExperiences[0] ?? null
 
   const facts = [
     { label: 'Experience', value: guide.years_experience != null ? `${guide.years_experience} years` : '—' },
@@ -411,15 +413,16 @@ export default async function GuideProfilePage({
                 ))}
               </div>
 
-              <div className="flex flex-col gap-[10px]">
-                <Link href="#experiences" className="f-body" style={{ ...primaryButtonStyle, minHeight: 50 }}>View trips</Link>
-                <button
-                  type="button"
-                  className="f-body cursor-pointer"
-                  style={{ ...primaryButtonStyle, minHeight: 50, background: CREAM, color: NAVY }}
-                >
-                  Send Message
-                </button>
+              {/* One trip → its page only; several → the list and the newest; none → the list link alone (tj, 2026-11-18). */}
+              <div className="flex flex-col gap-[10px]" data-testid="guide-card-buttons">
+                {guideExperiences.length !== 1 && (
+                  <Link href="#experiences" className="f-body" style={{ ...primaryButtonStyle, minHeight: 50 }}>View trips</Link>
+                )}
+                {newestTrip != null && (
+                  <Link href={`/experiences/${newestTrip.slug}`} className="f-body" style={{ ...primaryButtonStyle, minHeight: 50, background: CREAM, color: NAVY }}>
+                    Show the trip
+                  </Link>
+                )}
               </div>
 
               {(guide.instagram_url != null || guide.youtube_url != null || guide.facebook_url != null || guide.website_url != null) && (

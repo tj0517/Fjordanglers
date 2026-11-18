@@ -116,6 +116,36 @@ describe('trips', () => {
   })
 })
 
+describe('contact card buttons (tj 2026-11-18)', () => {
+  const buttons = (html: string) => /data-testid="guide-card-buttons"(.*?)<\/div>/.exec(html)![1]!
+  const NEWER = { ...TRIP, id: 'e-2', slug: 'newer-trip' }
+
+  it('no trip → "View trips" only, no "Show the trip", no "Send Message"', async () => {
+    getGuide.mockResolvedValue(guide())
+    const b = buttons(await render())
+    expect(b).toContain('>View trips<')
+    expect(b).not.toContain('Show the trip')
+    expect(b).not.toContain('Send Message')
+  })
+
+  it('one trip → "Show the trip" to its page, and no "View trips"', async () => {
+    getGuide.mockResolvedValue(guide())
+    getGuideExperiencePages.mockResolvedValue([TRIP])
+    const b = buttons(await render())
+    expect(b).toMatch(/href="\/experiences\/seed-backcountry-day-nz"[^>]*>Show the trip</)
+    expect(b).not.toContain('View trips')
+  })
+
+  it('several trips → "View trips" and "Show the trip" to the newest (first from the query)', async () => {
+    getGuide.mockResolvedValue(guide())
+    getGuideExperiencePages.mockResolvedValue([NEWER, TRIP])
+    const b = buttons(await render())
+    expect(b).toContain('>View trips<')
+    expect(b).toMatch(/href="\/experiences\/newer-trip"[^>]*>Show the trip</)
+    expect(b).not.toContain('seed-backcountry-day-nz')
+  })
+})
+
 describe('hero', () => {
   it('breadcrumb back to /guides, initials without an avatar, species and years tags', async () => {
     getGuide.mockResolvedValue(guide())
