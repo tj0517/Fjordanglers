@@ -9,6 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-m.10-google-calendar
+pr: 206
 depends_on: [FA-M.09, FA-M.11]
 blocked_by_questions: []
 touches_db: true
