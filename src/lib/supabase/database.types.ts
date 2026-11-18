@@ -1289,10 +1289,11 @@ export type Database = {
           last_attempt_at: string | null
           last_error: string | null
           last_synced_at: string | null
-          link_ciphertext: string
+          link_ciphertext: string | null
           link_host: string
           provider: string
           status: string
+          token_ciphertext: string | null
           updated_at: string
         }
         Insert: {
@@ -1304,10 +1305,11 @@ export type Database = {
           last_attempt_at?: string | null
           last_error?: string | null
           last_synced_at?: string | null
-          link_ciphertext: string
+          link_ciphertext?: string | null
           link_host: string
           provider: string
           status?: string
+          token_ciphertext?: string | null
           updated_at?: string
         }
         Update: {
@@ -1319,10 +1321,11 @@ export type Database = {
           last_attempt_at?: string | null
           last_error?: string | null
           last_synced_at?: string | null
-          link_ciphertext?: string
+          link_ciphertext?: string | null
           link_host?: string
           provider?: string
           status?: string
+          token_ciphertext?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1338,6 +1341,54 @@ export type Database = {
             columns: ["guide_id"]
             isOneToOne: true
             referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_calendar_oauth_states: {
+        Row: {
+          created_at: string
+          entry: string
+          expires_at: string
+          guide_id: string
+          id: string
+          link_id: string | null
+          state_hash: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          entry: string
+          expires_at: string
+          guide_id: string
+          id?: string
+          link_id?: string | null
+          state_hash: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          entry?: string
+          expires_at?: string
+          guide_id?: string
+          id?: string
+          link_id?: string | null
+          state_hash?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_calendar_oauth_states_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_calendar_oauth_states_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "guide_calendar_connect_links"
             referencedColumns: ["id"]
           },
         ]
@@ -3528,6 +3579,17 @@ export type Database = {
           summary_updated: boolean
         }[]
       }
+      begin_google_calendar_connect: {
+        Args: {
+          p_guide_id: string
+          p_link_token_hash: string
+          p_state_hash: string
+        }
+        Returns: {
+          guide_id: string
+          refusal: string
+        }[]
+      }
       calendar_connect_link_refusal: {
         Args: { p_token_hash: string }
         Returns: string
@@ -3551,6 +3613,19 @@ export type Database = {
         Returns: {
           busy_days: number
           guide_id: string
+          refusal: string
+        }[]
+      }
+      connect_google_calendar: {
+        Args: {
+          p_ciphertext: string
+          p_dates: string[]
+          p_guide_id: string
+          p_link_id: string
+        }
+        Returns: {
+          busy_days: number
+          previous_provider: string
           refusal: string
         }[]
       }
@@ -3579,6 +3654,13 @@ export type Database = {
         Returns: string
       }
       disablelongtransactions: { Args: never; Returns: string }
+      disconnect_calendar: {
+        Args: { p_actor: string; p_guide_id: string }
+        Returns: {
+          busy_days_removed: number
+          provider: string
+        }[]
+      }
       dropgeometrycolumn:
         | {
             Args: {
@@ -4469,6 +4551,15 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
+      }
+      take_google_calendar_state: {
+        Args: { p_state_hash: string }
+        Returns: {
+          entry: string
+          guide_id: string
+          link_id: string
+          refusal: string
+        }[]
       }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {
