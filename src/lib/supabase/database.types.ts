@@ -3581,8 +3581,8 @@ export type Database = {
       }
       begin_google_calendar_connect: {
         Args: {
-          p_guide_id: string
-          p_link_token_hash: string
+          p_guide_id?: string
+          p_link_token_hash?: string
           p_state_hash: string
         }
         Returns: {
@@ -3621,7 +3621,7 @@ export type Database = {
           p_ciphertext: string
           p_dates: string[]
           p_guide_id: string
-          p_link_id: string
+          p_link_id?: string
         }
         Returns: {
           busy_days: number

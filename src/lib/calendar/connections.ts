@@ -12,6 +12,11 @@
  *
  * The calendar link is a secret: it is decrypted only inside `syncOne` / validated inside
  * `connectWithLink`, and never logged, returned or put into an error.
+ *
+ * FA-M.10: a connection is an Apple link (`apple_ics`) or a Google account (`google`, encrypted
+ * refresh token). The sync handles both; Google refusing the token (`invalid_grant`) marks the row
+ * 'disconnected' and the cron stops reading it. Connecting Apple over Google revokes the Google
+ * grant (best effort, tj STOP 3). The Google connect / disconnect flows live in ./google-connect.ts.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -19,12 +24,13 @@ import type { Database } from '@/lib/supabase/database.types'
 import { generateCalendarConnectToken, hashCalendarConnectToken, isCalendarConnectToken } from './connect-token'
 import { calendarLinkHost, fetchCalendar, normalizeCalendarLink, type CalendarFetchError, type FetchOptions } from './fetch'
 import { busyDaysFromIcs, NotACalendarError } from './ics'
-import { calendarLinkKey, decryptCalendarLink, encryptCalendarLink } from './link-crypto'
+import { googleBusyDays, googleClientFromEnv, refreshGoogleAccess, revokeGoogleToken, type GoogleClientConfig, type GoogleError, type GoogleHttp } from './google'
+import { calendarLinkKey, decryptCalendarLink, decryptGoogleToken, encryptCalendarLink } from './link-crypto'
 
 type Client = SupabaseClient<Database>
 
 /** Error codes stored on a connection (CHECK in the migration). */
-type SyncErrorCode = Exclude<CalendarFetchError, 'invalid_url'> | 'not_a_calendar' | 'decrypt_failed'
+type SyncErrorCode = Exclude<CalendarFetchError, 'invalid_url'> | 'not_a_calendar' | 'decrypt_failed' | GoogleError
 
 export type ConnectLinkRefusal = 'not_found' | 'revoked' | 'used' | 'expired'
 
@@ -69,9 +75,28 @@ export type ConnectOutcome =
   | { kind: 'not_a_calendar' }
   | { kind: 'disabled' }
 
+/** How FA reaches Google; tests script it. `client` undefined → from the environment. */
+export interface GoogleDeps {
+  client?: GoogleClientConfig | null
+  http?: GoogleHttp
+}
+
 export interface ConnectDeps {
   fetch?: FetchOptions
   now?: Date
+  google?: GoogleDeps
+}
+
+/**
+ * Best-effort revoke of a Google grant whose ciphertext the caller read before replacing or deleting
+ * the connection. A failure is logged with the guide id only and never blocks the caller (tj STOP 1, 4).
+ */
+export async function revokeStoredGoogleToken(guideId: string, ciphertext: string | null, deps: GoogleDeps = {}): Promise<boolean> {
+  const key = calendarLinkKey()
+  const token = key.ok && ciphertext != null ? decryptGoogleToken(ciphertext, key.key) : null
+  const ok = token != null && await revokeGoogleToken(token, deps.http)
+  if (!ok) console.error('[calendar] google revoke failed for guide', guideId)
+  return ok
 }
 
 /** Apple: validate the pasted link, fetch it once, store it encrypted with the busy days found. */
@@ -102,6 +127,14 @@ export async function connectWithLink(
   const fetched = await fetchCalendar(url.toString(), deps.fetch)
   if (!fetched.ok) return { kind: 'fetch_failed', error: fetched.error }
 
+  // One calendar per guide (D5): if this replaces a Google connection, its grant is revoked afterwards.
+  const { data: previous, error: previousError } = await client
+    .from('guide_calendar_connections')
+    .select('provider, token_ciphertext')
+    .eq('guide_id', link.guide_id)
+    .maybeSingle()
+  if (previousError != null) throw new Error(`calendar connection read failed: ${previousError.message}`)
+
   let dates: string[]
   try {
     dates = busyDaysForCalendar(fetched.body, link.guides?.country ?? null, deps.now ?? new Date())
@@ -122,6 +155,7 @@ export async function connectWithLink(
   if (error != null || data == null) throw new Error(`connect_calendar_with_link failed: ${error?.message ?? 'no row'}`)
   const lateRefusal = asRefusal(data.refusal)
   if (lateRefusal != null) return { kind: 'refused', reason: lateRefusal }
+  if (previous?.provider === 'google') await revokeStoredGoogleToken(link.guide_id, previous.token_ciphertext, deps.google)
   return { kind: 'connected', busyDays: data.busy_days ?? 0 }
 }
 
@@ -132,13 +166,17 @@ function busyDaysForCalendar(ics: string, country: string | null, now: Date): st
 
 // ─── sync ────────────────────────────────────────────────────────────────────
 
-type SyncResult = 'ok' | 'failed' | 'stale' | 'no_connection'
+type SyncResult = 'ok' | 'failed' | 'stale' | 'no_connection' | 'disconnected'
 
 export interface SyncSummary {
   total: number
   ok: number
   failed: number
   stale: number
+  /** Google refused the token this run (`invalid_grant`) → the row is now 'disconnected'. */
+  disconnected: number
+  /** Google rows not read because the Google OAuth client is not configured. */
+  skipped: number
   /** Error code per failure, for the cron log. Guide ids only — never a link. */
   failures: { guideId: string; error: SyncErrorCode }[]
 }
@@ -158,7 +196,9 @@ export class CalendarSyncDisabledError extends Error {
 
 interface ConnectionRow {
   guide_id: string
-  link_ciphertext: string
+  provider: string
+  link_ciphertext: string | null
+  token_ciphertext: string | null
   connected_at: string
   guides: { country: string | null } | null
 }
@@ -176,11 +216,28 @@ async function recordSync(
     ...('error' in outcome ? { p_error: outcome.error } : {}),
   })
   if (error != null) throw new Error(`record_calendar_sync failed: ${error.message}`)
-  return (['ok', 'failed', 'stale', 'no_connection'] as const).find(r => r === data) ?? 'failed'
+  return (['ok', 'failed', 'stale', 'no_connection', 'disconnected'] as const).find(r => r === data) ?? 'failed'
+}
+
+async function syncGoogle(
+  client: Client,
+  row: ConnectionRow,
+  key: Buffer,
+  google: GoogleClientConfig,
+  deps: SyncDeps,
+): Promise<{ result: SyncResult; error?: SyncErrorCode }> {
+  const fail = async (code: SyncErrorCode) => ({ result: await recordSync(client, row, { error: code }), error: code })
+  const refreshToken = row.token_ciphertext != null ? decryptGoogleToken(row.token_ciphertext, key) : null
+  if (refreshToken == null) return fail('decrypt_failed')
+  const access = await refreshGoogleAccess(google, refreshToken, deps.google?.http)
+  if (!access.ok) return fail(access.error)
+  const days = await googleBusyDays(access.accessToken, row.guides?.country ?? null, deps.now ?? new Date(), deps.google?.http)
+  if (!days.ok) return fail(days.error)
+  return { result: await recordSync(client, row, { dates: days.dates }) }
 }
 
 async function syncOne(client: Client, row: ConnectionRow, key: Buffer, deps: SyncDeps): Promise<{ result: SyncResult; error?: SyncErrorCode }> {
-  const link = decryptCalendarLink(row.link_ciphertext, key)
+  const link = row.link_ciphertext != null ? decryptCalendarLink(row.link_ciphertext, key) : null
   if (link == null) return { result: await recordSync(client, row, { error: 'decrypt_failed' }), error: 'decrypt_failed' }
 
   const fetched = await fetchCalendar(link, deps.fetch)
@@ -206,20 +263,28 @@ export async function syncAllCalendars(client: Client, deps: SyncDeps = {}): Pro
 
   let query = client
     .from('guide_calendar_connections')
-    .select('guide_id, link_ciphertext, connected_at, guides(country)')
+    .select('guide_id, provider, link_ciphertext, token_ciphertext, connected_at, guides(country)')
+    .neq('status', 'disconnected')
     .order('last_attempt_at', { ascending: true, nullsFirst: true })
   if (deps.guideIds != null) query = query.in('guide_id', deps.guideIds)
   const { data, error } = await query
   if (error != null) throw new Error(`calendar connections read failed: ${error.message}`)
 
   const rows: ConnectionRow[] = data ?? []
-  const summary: SyncSummary = { total: rows.length, ok: 0, failed: 0, stale: 0, failures: [] }
+  const google = deps.google?.client !== undefined ? deps.google.client : googleClientFromEnv()
+  const summary: SyncSummary = { total: rows.length, ok: 0, failed: 0, stale: 0, disconnected: 0, skipped: 0, failures: [] }
   const queue = [...rows]
   const worker = async () => {
     for (let row = queue.shift(); row != null; row = queue.shift()) {
+      if (row.provider === 'google' && google == null) {
+        summary.skipped++
+        continue
+      }
       let outcome: { result: SyncResult; error?: SyncErrorCode }
       try {
-        outcome = await syncOne(client, row, key.key, deps)
+        outcome = row.provider === 'google' && google != null
+          ? await syncGoogle(client, row, key.key, google, deps)
+          : await syncOne(client, row, key.key, deps)
       } catch (e) {
         console.error('[calendar-sync] guide', row.guide_id, 'failed:', e instanceof Error ? e.message : 'unknown error')
         summary.failed++
@@ -227,6 +292,7 @@ export async function syncAllCalendars(client: Client, deps: SyncDeps = {}): Pro
       }
       if (outcome.result === 'ok') summary.ok++
       else if (outcome.result === 'stale' || outcome.result === 'no_connection') summary.stale++
+      else if (outcome.result === 'disconnected') summary.disconnected++
       else {
         summary.failed++
         if (outcome.error != null) summary.failures.push({ guideId: row.guide_id, error: outcome.error })
@@ -247,8 +313,10 @@ export interface BusyDay {
 }
 
 export interface CalendarStatus {
+  provider: 'apple_ics' | 'google'
   host: string
-  status: 'ok' | 'error'
+  /** 'disconnected': Google refused the token (consent revoked); busy days stay until the guide disconnects. */
+  status: 'ok' | 'error' | 'disconnected'
   lastSyncedAt: string | null
   lastError: string | null
 }
@@ -290,13 +358,14 @@ export async function calendarStatusByGuide(client: Client, guideIds: string[]):
   if (guideIds.length === 0) return out
   const { data, error } = await client
     .from('guide_calendar_connections')
-    .select('guide_id, link_host, status, last_synced_at, last_error')
+    .select('guide_id, provider, link_host, status, last_synced_at, last_error')
     .in('guide_id', guideIds)
   if (error != null) throw new Error(`calendar status read failed: ${error.message}`)
   for (const row of data ?? []) {
     out.set(row.guide_id, {
+      provider: row.provider === 'google' ? 'google' : 'apple_ics',
       host: row.link_host,
-      status: row.status === 'error' ? 'error' : 'ok',
+      status: row.status === 'error' || row.status === 'disconnected' ? row.status : 'ok',
       lastSyncedAt: row.last_synced_at,
       lastError: row.last_error,
     })

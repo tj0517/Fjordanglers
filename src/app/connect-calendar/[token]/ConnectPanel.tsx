@@ -1,8 +1,9 @@
 'use client'
 
 /**
- * The "Connect your calendar" panel (FA-M.09, mock-up Connect.dc.html). Google is disabled with
- * "Soon" until FA-M.10; Apple takes the calendar's share link, which the server validates and
+ * The "Connect your calendar" panel (FA-M.09, mock-up Connect.dc.html). Google (FA-M.10): the button
+ * asks the server for Google's consent URL and sends the browser there; Google sends the guide back to
+ * /connect-calendar/done. Apple takes the calendar's share link, which the server validates and
  * fetches once before storing it (encrypted). The link the guide types never leaves this form
  * except to the server action — it is not put into the URL, storage or analytics.
  */
@@ -10,7 +11,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { CalendarDays, Check, ChevronRight } from 'lucide-react'
-import { connectCalendar, type ConnectPageOutcome } from './actions'
+import { connectCalendar, startGoogleFromLink, type ConnectPageOutcome } from './actions'
 
 const NAVY = '#0A2E4D'
 const MUTED = '#4A5F73'
@@ -51,10 +52,28 @@ function problem(outcome: ConnectPageOutcome): string | null {
   }
 }
 
-export function ConnectPanel({ token, available }: { token: string; available: boolean }) {
+const GOOGLE_PROBLEM = {
+  disabled: 'Google Calendar isn’t available right now. Use the Apple steps below or write to us on WhatsApp.',
+  error: 'Something went wrong on our side. Try again in a minute.',
+} as const
+
+export function ConnectPanel({ token, available, googleAvailable }: { token: string; available: boolean; googleAvailable: boolean }) {
   const [link, setLink] = useState('')
   const [outcome, setOutcome] = useState<ConnectPageOutcome | null>(available ? null : { kind: 'disabled' })
   const [pending, start] = useTransition()
+  const [googlePending, startGoogle] = useTransition()
+  const [googleProblem, setGoogleProblem] = useState<string | null>(null)
+
+  function connectGoogle() {
+    if (googlePending || !googleAvailable) return
+    setGoogleProblem(null)
+    startGoogle(async () => {
+      const res = await startGoogleFromLink(token)
+      if (res.kind === 'redirect') window.location.assign(res.url)
+      else if (res.kind === 'refused') setOutcome({ kind: 'refused', reason: 'not_found' })
+      else setGoogleProblem(GOOGLE_PROBLEM[res.kind])
+    })
+  }
 
   if (outcome?.kind === 'refused') {
     return (
@@ -108,13 +127,21 @@ export function ConnectPanel({ token, available }: { token: string; available: b
         </p>
       </div>
 
-      <button type="button" disabled aria-disabled="true"
-        className="h-14 rounded-2xl px-4 flex items-center gap-3 text-base font-semibold cursor-not-allowed"
-        style={{ border: `1.5px solid ${BORDER}`, background: '#FFFFFF', color: 'rgba(10,46,77,0.45)' }}>
-        <CalendarDays size={22} aria-hidden />
-        <span className="flex-1 text-left">Connect Google Calendar</span>
-        <span className="text-xs font-semibold rounded-full px-2.5 py-1" style={{ background: 'rgba(10,46,77,0.07)', color: MUTED }}>Soon</span>
-      </button>
+      <div className="flex flex-col gap-1.5">
+        <button type="button" onClick={connectGoogle} disabled={!googleAvailable || googlePending}
+          data-testid="connect-google"
+          className="h-14 rounded-2xl px-4 flex items-center gap-3 text-base font-semibold disabled:cursor-not-allowed"
+          style={{ border: `1.5px solid ${googleAvailable ? NAVY : BORDER}`, background: '#FFFFFF', color: googleAvailable ? NAVY : 'rgba(10,46,77,0.45)' }}>
+          <CalendarDays size={22} aria-hidden />
+          <span className="flex-1 text-left">{googlePending ? 'Opening Google…' : 'Connect Google Calendar'}</span>
+          {googleAvailable
+            ? <ChevronRight size={18} aria-hidden />
+            : <span className="text-xs font-semibold rounded-full px-2.5 py-1" style={{ background: 'rgba(10,46,77,0.07)', color: MUTED }}>Unavailable</span>}
+        </button>
+        {googleProblem != null && (
+          <p role="alert" className="text-sm leading-snug" style={{ color: '#9A3F1C' }}>{googleProblem}</p>
+        )}
+      </div>
 
       <form onSubmit={submit} className="rounded-2xl p-4 flex flex-col gap-4"
         style={{ background: '#FFFFFF', border: `1.5px solid ${NAVY}` }}>

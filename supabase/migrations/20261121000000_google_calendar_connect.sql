@@ -107,11 +107,12 @@ GRANT ALL ON TABLE public.guide_calendar_oauth_states TO service_role;
 -- ─── begin_google_calendar_connect ──────────────────────────────────────────
 -- Exactly one of: p_link_token_hash (from the signed link — checked like FA-M.09) or p_guide_id
 -- (from the guide's own session, after requireGuide()). Writes the state; nothing else changes, so no
--- audit row (opening the FA-M.09 page writes nothing either).
+-- audit row (opening the FA-M.09 page writes nothing either). The optional arguments default to NULL
+-- so the app can leave the other one out.
 CREATE FUNCTION public.begin_google_calendar_connect(
-  p_guide_id        uuid,
-  p_link_token_hash text,
-  p_state_hash      text
+  p_state_hash      text,
+  p_guide_id        uuid DEFAULT NULL,
+  p_link_token_hash text DEFAULT NULL
 ) RETURNS TABLE (refusal text, guide_id uuid)
   LANGUAGE plpgsql
   SECURITY INVOKER
@@ -154,7 +155,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.begin_google_calendar_connect(uuid, text, text) IS
+COMMENT ON FUNCTION public.begin_google_calendar_connect(text, uuid, text) IS
   'FA-M.10: start "Connect with Google" from a signed link or the guide''s session; stores the state hash (10 min). service_role only.';
 
 -- ─── take_google_calendar_state ─────────────────────────────────────────────
@@ -194,12 +195,13 @@ COMMENT ON FUNCTION public.take_google_calendar_state(text) IS
 
 -- ─── connect_google_calendar ────────────────────────────────────────────────
 -- Stores (or replaces — D5) the guide's calendar as Google, writes the busy days of the first read,
--- uses the signed link when the guide came from one, audit row — one transaction.
+-- uses the signed link when the guide came from one (p_link_id; NULL = from the guide's session),
+-- audit row — one transaction.
 CREATE FUNCTION public.connect_google_calendar(
   p_guide_id   uuid,
-  p_link_id    uuid,
   p_ciphertext text,
-  p_dates      date[]
+  p_dates      date[],
+  p_link_id    uuid DEFAULT NULL
 ) RETURNS TABLE (refusal text, busy_days integer, previous_provider text)
   LANGUAGE plpgsql
   SECURITY INVOKER
@@ -272,7 +274,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.connect_google_calendar(uuid, uuid, text, date[]) IS
+COMMENT ON FUNCTION public.connect_google_calendar(uuid, text, date[], uuid) IS
   'FA-M.10: store/replace the guide''s calendar as Google (encrypted refresh token), write its busy days, use the signed link, audit_log row. service_role only.';
 
 -- ─── disconnect_calendar ────────────────────────────────────────────────────
@@ -474,15 +476,15 @@ COMMENT ON FUNCTION public.record_calendar_sync(uuid, timestamptz, date[], text)
 
 -- ─── execute: service_role only ─────────────────────────────────────────────
 -- CREATE OR REPLACE keeps the existing ACL of the two FA-M.09 functions; restated for clarity.
-REVOKE ALL ON FUNCTION public.begin_google_calendar_connect(uuid, text, text)                  FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.begin_google_calendar_connect(text, uuid, text)                  FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.take_google_calendar_state(text)                                FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.connect_google_calendar(uuid, uuid, text, date[])               FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.connect_google_calendar(uuid, text, date[], uuid)               FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.disconnect_calendar(uuid, uuid)                                 FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.connect_calendar_with_link(text, text, text, text, date[])      FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.record_calendar_sync(uuid, timestamptz, date[], text)           FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.begin_google_calendar_connect(uuid, text, text)              TO service_role;
+GRANT EXECUTE ON FUNCTION public.begin_google_calendar_connect(text, uuid, text)              TO service_role;
 GRANT EXECUTE ON FUNCTION public.take_google_calendar_state(text)                             TO service_role;
-GRANT EXECUTE ON FUNCTION public.connect_google_calendar(uuid, uuid, text, date[])            TO service_role;
+GRANT EXECUTE ON FUNCTION public.connect_google_calendar(uuid, text, date[], uuid)            TO service_role;
 GRANT EXECUTE ON FUNCTION public.disconnect_calendar(uuid, uuid)                              TO service_role;
 GRANT EXECUTE ON FUNCTION public.connect_calendar_with_link(text, text, text, text, date[])   TO service_role;
 GRANT EXECUTE ON FUNCTION public.record_calendar_sync(uuid, timestamptz, date[], text)        TO service_role;

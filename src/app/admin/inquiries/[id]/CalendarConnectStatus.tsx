@@ -5,6 +5,9 @@
  * the last successful sync, a failing sync, and the one-time "Connect with your calendar" link to
  * copy and send on WhatsApp. The link is shown once, right after it is created — only its sha256
  * is stored; a new link revokes the guide's unused one.
+ *
+ * FA-M.10: a Google calendar shows as "Google Calendar"; "disconnected" means Google refused FA's
+ * access (the guide revoked it, or it expired) — busy days stay until the guide disconnects.
  */
 
 import { useState, useTransition } from 'react'
@@ -22,6 +25,8 @@ const ERROR_TEXT: Record<string, string> = {
   too_many_redirects: 'link redirects too often',
   not_a_calendar:     'link no longer returns a calendar',
   decrypt_failed:     'stored link unreadable — ask the guide to reconnect',
+  insufficient_scope: 'Google calendar permission missing — ask the guide to reconnect',
+  bad_response:       'Google sent an unexpected answer',
 }
 
 function ago(iso: string | null): string {
@@ -65,8 +70,12 @@ export function CalendarConnectStatus({ guideId, calendar }: { guideId: string; 
       <p className="text-[11px] f-body text-primary/55">
         {calendar == null ? (
           <>No calendar connected</>
+        ) : calendar.status === 'disconnected' ? (
+          <span className="text-red-700" data-testid="guide-calendar-disconnected">
+            Google Calendar disconnected — the guide removed FjordAnglers&apos; access · last good sync {ago(calendar.lastSyncedAt)} · busy days kept
+          </span>
         ) : calendar.status === 'ok' ? (
-          <>Calendar · {calendar.host} · synced {ago(calendar.lastSyncedAt)}</>
+          <>Calendar · {calendar.provider === 'google' ? 'Google Calendar' : calendar.host} · synced {ago(calendar.lastSyncedAt)}</>
         ) : (
           <span className="text-red-700">
             Calendar sync failing ({ERROR_TEXT[calendar.lastError ?? ''] ?? calendar.lastError}) · last good sync {ago(calendar.lastSyncedAt)}

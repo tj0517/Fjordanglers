@@ -108,7 +108,7 @@ function wallToInstant(t: ICAL.Time, zone: string): number {
 }
 
 /** `YYYY-MM-DD` of an instant in `zone`. */
-function localDate(ms: number, zone: string): string {
+export function localDate(ms: number, zone: string): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date(ms))
 }
 
@@ -131,14 +131,14 @@ export function horizonInZone(zone: string, now: Date = new Date()): { from: str
   return { from, to: end.toISOString().slice(0, 10) }
 }
 
-function nextDay(iso: string): string {
+export function nextDay(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`)
   d.setUTCDate(d.getUTCDate() + 1)
   return d.toISOString().slice(0, 10)
 }
 
 /** Every day from `first` to `last`, inclusive, clipped to [from, to]. */
-function addDays(out: Set<string>, first: string, last: string, from: string, to: string): void {
+export function addDays(out: Set<string>, first: string, last: string, from: string, to: string): void {
   let day = first < from ? from : first
   const end = last > to ? to : last
   while (day <= end) {
