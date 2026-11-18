@@ -2,7 +2,7 @@
 id: FA-M.10
 title: Kalendarz przewodnika, część 2 — „Connect with Google”: logowanie Google, odczyt zajętości, przechowywanie i odświeżanie dostępu
 stage: M
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -70,3 +70,4 @@ grep -rn "refresh_token" src | grep -v test
 ## Notatki z realizacji
 - **2026-11-10, Claude (wf-plan):** Google traktuje odczyt kalendarza jako zakres wrażliwy — do weryfikacji (do ~10 dni) ekran ostrzegawczy i limit kont; dla ~15 przewodników wystarczy, wniosek składa tj w FA-M.11.
 - **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
+- **2026-11-18, tj (wf-task):** klient OAuth Google skonfigurowany, jego zmienne są w lokalnym env i w Vercelu (część Google z FA-M.11) — FA-M.10 startuje, FA-M.11 zostaje `todo`. Podział z FA-M.13: FA-M.10 = start OAuth z obu wejść (podpisany link i sesja przewodnika) + akcja odłączenia (po stronie serwera, z testami), przycisk tylko na stronie „Connect”; przyciski w panelu konta → FA-M.13.
