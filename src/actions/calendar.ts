@@ -9,9 +9,16 @@
  * Guide side (FA-M.10): start "Connect with Google" from the guide's own session, and disconnect the
  * guide's calendar. Both check the session (requireGuide()) and act only on that guide; the buttons
  * in the account panel come with FA-M.13 (tj 2026-11-18).
+ *
+ * FA-M.13 (tj decision A, 2026-11-18): "Apple Calendar" from the guide's account issues a fresh
+ * one-time connect link for the guide's own listing through the same database function as the admin
+ * (`issue_calendar_connect_link`) and sends the browser to `/connect-calendar/<token>` — the same page
+ * as the link from WhatsApp. The function's `p_admin_id` receives the guide's user id (the name is
+ * misleading — deferred row). Issuing revokes the guide's open unused link (D5).
  */
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { getAppUrl } from '@/lib/app-url'
 import { requireAdmin, requireGuide, UnauthorizedError } from '@/lib/auth/guards'
 import { issueConnectLink } from '@/lib/calendar/connections'
@@ -76,4 +83,23 @@ export async function disconnectCalendar(guideId: unknown): Promise<DisconnectCa
     console.error('[calendar] disconnect failed:', e instanceof Error ? e.message : 'unknown error')
     return { success: false, error: 'Could not disconnect — try again.' }
   }
+}
+
+/**
+ * "Apple Calendar (iCloud)" from the guide's account. `guideId` must be the signed-in guide's own —
+ * anything else is refused before a read or a write. On success the browser goes to the connect page;
+ * the token appears only in that redirect, never in a log or a return value.
+ */
+export async function startAppleCalendarConnect(guideId: unknown): Promise<{ success: false; error: string }> {
+  const { userId, guide } = await requireGuide()
+  if (typeof guideId !== 'string' || guideId !== guide.id) throw new UnauthorizedError('Not your calendar')
+  if (!calendarLinkKey().ok) return { success: false, error: 'Connecting a calendar isn’t available right now.' }
+  let token: string
+  try {
+    ({ token } = await issueConnectLink(createServiceClient(), guide.id, userId))
+  } catch (e) {
+    console.error('[calendar] guide link failed:', e instanceof Error ? e.message : 'unknown error')
+    return { success: false, error: 'Could not start — try again.' }
+  }
+  redirect(`/connect-calendar/${token}`)
 }

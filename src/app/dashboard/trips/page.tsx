@@ -1,13 +1,19 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { getInquiryExperiences } from '@/lib/inquiries/experience-lookup'
+import { guideRequestList, sessionGuide, type GuidePanelRequest } from '@/lib/guide-panel/queries'
+import type { GuideRequestListStatus } from '@/lib/guide-requests/requests'
 
 export const revalidate = 0
 
-export const metadata = { title: 'My Trips — Guide Dashboard' }
+export const metadata = { title: 'Assignments — Guide Dashboard' }
 
-// Country → flag emoji
+/**
+ * FA-M.13 — the guide's requests, newest first (docs/design/fa-m-guide-app/Requests.dc.html):
+ * "Waiting for you" on top, answered below with their status. Source: the request records (FA-M.03)
+ * plus assignments from before them (tj decision B, 2026-11-18). Answering happens on the trip page
+ * through respondToAssignment, as before.
+ */
+
 const COUNTRY_FLAG: Record<string, string> = {
   PL: '🇵🇱', DE: '🇩🇪', FR: '🇫🇷', GB: '🇬🇧', NL: '🇳🇱',
   SE: '🇸🇪', NO: '🇳🇴', FI: '🇫🇮', DK: '🇩🇰', IS: '🇮🇸',
@@ -15,139 +21,163 @@ const COUNTRY_FLAG: Record<string, string> = {
   US: '🇺🇸', CA: '🇨🇦', AU: '🇦🇺',
 }
 
-function fmtDate(iso: string): string {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  })
+const STATUS: Record<GuideRequestListStatus, { label: string; bg: string; fg: string }> = {
+  waiting:     { label: 'New',             bg: 'rgba(230,126,80,0.12)', fg: '#B4532A' },
+  accepted:    { label: 'Accepted',        bg: 'rgba(16,185,129,0.1)',  fg: '#065F46' },
+  other_dates: { label: 'Other dates',     bg: 'rgba(59,130,246,0.1)',  fg: '#1E40AF' },
+  declined:    { label: 'Declined',        bg: 'rgba(10,46,77,0.07)',   fg: 'rgba(10,46,77,0.6)' },
+  withdrawn:   { label: 'Withdrawn',       bg: 'rgba(10,46,77,0.07)',   fg: 'rgba(10,46,77,0.6)' },
+  closed:      { label: 'No longer open',  bg: 'rgba(10,46,77,0.07)',   fg: 'rgba(10,46,77,0.6)' },
+}
+
+function fmtDay(iso: string): string {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
+function fmtDates(dates: string[]): string {
+  if (dates.length === 0) return ''
+  return dates.slice(0, 2).map(fmtDay).join(', ') + (dates.length > 2 ? ` +${dates.length - 2} more` : '')
 }
 
 function timeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime()
-  const days = Math.floor(ms / 86_400_000)
-  if (days === 0) return 'today'
+  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
+  if (minutes < 60) return `${Math.max(minutes, 1)} min ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} h ago`
+  const days = Math.floor(hours / 24)
   if (days === 1) return 'yesterday'
-  if (days < 30)  return `${days}d ago`
-  const months = Math.floor(days / 30)
-  if (months === 1) return '1 month ago'
-  return `${months} months ago`
+  if (days < 30) return `${days} days ago`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function GuideTripsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user == null) redirect('/login')
-
-  const svc = createServiceClient()
-
-  const { data: guide } = await svc
-    .from('guides')
-    .select('id, full_name')
-    .eq('user_id', user.id)
-    .single()
-
+export default async function GuideRequestsPage() {
+  const me = await sessionGuide()
+  if (me.kind === 'signed_out') redirect('/login')
   // The layout shows the no-listing notice before this page renders; this is a fallback.
-  if (guide == null) notFound()
+  if (me.kind === 'no_listing') notFound()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rawTrips } = await (svc as any)
-    .from('inquiries')
-    .select('id, angler_name, angler_country, requested_dates, party_size, assigned_at, trip_id, experience_page_id')
-    .eq('assigned_guide_id', guide.id)
-    .not('status', 'in', '("cancelled","lost")')
-    .order('assigned_at', { ascending: false })
-
-  type TripRow = {
-    id: string
-    angler_name: string
-    angler_country: string | null
-    requested_dates: string[] | null
-    party_size: number
-    assigned_at: string
-    trip_id: string | null
-    experience_page_id: string | null
-  }
-
-  const trips: TripRow[] = rawTrips ?? []
-  const experiences = await getInquiryExperiences(trips)
+  const requests = await guideRequestList(me.guideId)
+  const waiting  = requests.filter(r => r.status === 'waiting')
+  const answered = requests.filter(r => r.status === 'accepted' || r.status === 'declined' || r.status === 'other_dates')
+  const closed   = requests.filter(r => r.status === 'withdrawn' || r.status === 'closed')
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-2xl">
 
-      {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <p className="text-[11px] uppercase tracking-[0.22em] font-semibold f-body mb-1"
            style={{ color: 'rgba(10,46,77,0.38)' }}>
           Guide Dashboard
         </p>
         <h1 className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-          My Trips
+          Assignments
         </h1>
         <p className="text-sm f-body mt-1" style={{ color: 'rgba(10,46,77,0.45)' }}>
-          Enquiries assigned to you by FjordAnglers
+          Trips FjordAnglers asked you about, newest first
         </p>
       </div>
 
-      {/* Trips list */}
-      {trips.length === 0 ? (
-        <div className="rounded-2xl px-6 py-10 text-center"
+      {requests.length === 0 ? (
+        <div className="rounded-2xl px-6 py-10 text-center" data-testid="requests-empty"
           style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-          <p className="text-3xl mb-3">🎣</p>
           <p className="text-base font-semibold f-body" style={{ color: '#0A2E4D' }}>
-            No trips assigned yet
+            No requests yet
           </p>
           <p className="text-sm f-body mt-1 leading-relaxed" style={{ color: 'rgba(10,46,77,0.45)' }}>
-            Tymon will notify you when a new booking comes in.
+            When FjordAnglers asks you about a trip, it shows up here and on WhatsApp.
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {trips.map(trip => {
-            const flag = COUNTRY_FLAG[trip.angler_country ?? ''] ?? ''
-            const dates = (trip.requested_dates ?? [])
-            const experienceName = experiences.get(trip.id)?.name ?? null
-
-            return (
-              <Link
-                key={trip.id}
-                href={`/dashboard/trips/${trip.id}`}
-                style={{ textDecoration: 'none' }}
-              >
-                <div
-                  className="rounded-2xl px-5 py-4 transition-all hover:scale-[1.005]"
-                  style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.08)' }}
-                >
-                  <p className="text-base font-bold f-body truncate mb-0.5" style={{ color: '#0A2E4D' }}>
-                    {flag && <span className="mr-1.5">{flag}</span>}
-                    {trip.angler_name}
-                  </p>
-                  {experienceName != null && (
-                    <p className="text-xs f-body truncate mb-1" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                      {experienceName}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap gap-x-4 gap-y-1">
-                    <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                      {trip.party_size} {trip.party_size === 1 ? 'angler' : 'anglers'}
-                    </span>
-                    {dates.length > 0 && (
-                      <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                        {dates.slice(0, 2).map(fmtDate).join(', ')}
-                        {dates.length > 2 ? ` +${dates.length - 2} more` : ''}
-                      </span>
-                    )}
-                    <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
-                      Assigned {timeAgo(trip.assigned_at)}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            )
-          })}
+        <div className="flex flex-col gap-7">
+          {waiting.length > 0 && (
+            <Section title={`Waiting for you · ${waiting.length}`}>
+              {waiting.map((r, i) => <RequestCard key={r.inquiryId} request={r} primary={i === 0} />)}
+            </Section>
+          )}
+          {answered.length > 0 && (
+            <Section title="Answered">
+              {answered.map(r => <RequestCard key={r.inquiryId} request={r} />)}
+            </Section>
+          )}
+          {closed.length > 0 && (
+            <Section title="No longer open">
+              {closed.map(r => <RequestCard key={r.inquiryId} request={r} />)}
+            </Section>
+          )}
         </div>
       )}
 
     </div>
+  )
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h2 className="text-[11px] uppercase tracking-[0.18em] font-bold f-body mb-2.5"
+        style={{ color: 'rgba(10,46,77,0.45)' }}>
+        {title}
+      </h2>
+      <ul className="flex flex-col gap-3">{children}</ul>
+    </section>
+  )
+}
+
+function RequestCard({ request: r, primary = false }: { request: GuidePanelRequest; primary?: boolean }) {
+  const flag   = COUNTRY_FLAG[r.anglerCountry ?? ''] ?? ''
+  const status = STATUS[r.status]
+  const dates  = fmtDates(r.requestedDates)
+  const body = (
+    <div className="rounded-2xl px-4 py-3.5"
+      style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.08)' }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-base font-bold f-body truncate" style={{ color: '#0A2E4D' }}>
+            {flag !== '' && <span className="mr-1.5">{flag}</span>}
+            {r.anglerName}
+          </p>
+          {r.experienceName != null && (
+            <p className="text-xs f-body truncate" style={{ color: 'rgba(10,46,77,0.5)' }}>{r.experienceName}</p>
+          )}
+        </div>
+        <span data-testid="request-status" data-status={r.status}
+          className="text-[11px] font-bold f-body px-2.5 py-1 rounded-full flex-shrink-0"
+          style={{ background: status.bg, color: status.fg }}>
+          {status.label}
+        </span>
+      </div>
+      <p className="text-xs f-body mt-1.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
+        {[dates, `${r.partySize} ${r.partySize === 1 ? 'angler' : 'anglers'}`].filter(Boolean).join(' · ')}
+      </p>
+      {r.status === 'other_dates' && r.altDates.length > 0 && (
+        <p className="text-xs f-body mt-1" style={{ color: 'rgba(10,46,77,0.6)' }}>
+          You offered {r.altDates.map(fmtDay).join(', ')}
+        </p>
+      )}
+      <div className="flex items-center justify-between gap-3 mt-2.5">
+        <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+          Asked {timeAgo(r.askedAt)}
+        </span>
+        {r.status === 'waiting' && (
+          <span className="text-xs font-bold f-body px-3.5 py-2 rounded-xl"
+            style={primary
+              ? { background: '#E67E50', color: '#0A2E4D' }
+              : { background: 'transparent', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.25)' }}>
+            Answer now
+          </span>
+        )}
+      </div>
+    </div>
+  )
+  return (
+    <li data-testid="request-row" data-inquiry-id={r.inquiryId}>
+      {r.canOpen
+        ? <Link href={`/dashboard/trips/${r.inquiryId}`} style={{ textDecoration: 'none' }}>{body}</Link>
+        : body}
+    </li>
   )
 }
