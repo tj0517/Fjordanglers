@@ -39,7 +39,6 @@ export type HomeData = {
   guides:      FeaturedGuide[]
   testimonial: Testimonial | null
   posts:       BlogPostSummary[]
-  mapboxToken: string | null
 }
 
 type Tile = { slug: string; span: string; tall: boolean; photo: string | null; overlay: string }
@@ -55,13 +54,13 @@ const TILES: Tile[] = [
 ]
 
 /** Where the globe turns for each hub, and which countries it fills (the mockup's coordinates). */
-const GLOBE: Record<string, { center: [number, number]; iso: string[] }> = {
-  iceland:       { center: [-20.5, 64.8], iso: ['IS'] },
-  norway:        { center: [9.5, 61.5],   iso: ['NO'] },
-  sweden:        { center: [15.5, 62.5],  iso: ['SE'] },
-  finland:       { center: [26, 63.5],    iso: ['FI'] },
-  'new-zealand': { center: [172, -41.5],  iso: ['NZ'] },
-  patagonia:     { center: [-70, -44],    iso: ['AR', 'CL'] },
+const GLOBE: Record<string, { center: [number, number]; names: string[] }> = {
+  iceland:       { center: [-20.5, 64.8], names: ['Iceland'] },
+  norway:        { center: [9.5, 61.5],   names: ['Norway'] },
+  sweden:        { center: [15.5, 62.5],  names: ['Sweden'] },
+  finland:       { center: [26, 63.5],    names: ['Finland'] },
+  'new-zealand': { center: [172, -41.5],  names: ['New Zealand'] },
+  patagonia:     { center: [-70, -44],    names: ['Argentina', 'Chile'] },
 }
 
 /** The globe buttons' order, and the order the trip cards take one offer from each hub. */
@@ -540,7 +539,7 @@ function globeDestinations(hubs: Map<string, DestinationHubData>): GlobeDestinat
       slug,
       name:      hubCrumbName(hub.hub),
       center:    geo.center,
-      iso:       geo.iso,
+      countryNames: geo.names,
       tripCount: hub.offers.length,
       priceFrom: price != null ? `from ${price}` : null,
       pins:      hub.offers.flatMap(o => (o.locationLng != null && o.locationLat != null ? [[o.locationLng, o.locationLat] as [number, number]] : [])),
@@ -555,7 +554,7 @@ export default function HomeView({ data }: { data: HomeData }) {
   return (
     <div className="f-body relative min-h-screen overflow-hidden" style={{ background: PAGE_BG, color: NAVY }}>
       <SiteNav overlay />
-      <GlobeHero token={data.mapboxToken} destinations={destinations} initial={destinations.some(d => d.slug === 'iceland') ? 'iceland' : null}>
+      <GlobeHero destinations={destinations} initial={destinations.some(d => d.slug === 'iceland') ? 'iceland' : null}>
         <h1 className={`${s.h1} f-display m-0`} style={{ fontWeight: 700, letterSpacing: '-.02em', color: '#FFFFFF' }}>
           Where do you want to fish next?
         </h1>

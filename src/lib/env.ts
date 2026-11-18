@@ -66,9 +66,6 @@ export const envSchema = z.object({
   // Phone number in E.164 without "+", e.g. "48698936563"
   NEXT_PUBLIC_WHATSAPP_NUMBER: z.string().optional().default('48698936563'),
   NEXT_PUBLIC_FA_EMAIL: z.string().email().optional().default('contact@fjordanglers.com'),
-  // Public Mapbox token (pk.…, URL-restricted) for the home page globe. Optional: without it the
-  // hero renders without the globe.
-  NEXT_PUBLIC_MAPBOX_TOKEN: z.string().optional(),
 
   // Commission rate as a decimal (0.10 = 10%). Defaults to 10%.
   PLATFORM_COMMISSION_RATE: z.coerce.number().min(0).max(1).default(0.1),

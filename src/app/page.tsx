@@ -2,7 +2,6 @@ import { getDestinationHub, getFeaturedGuides, getLatestBlogPosts, type Destinat
 import { getTestimonial } from '@/lib/supabase/testimonials'
 import { COUNTRIES } from '@/lib/countries'
 import { DESTINATION_HUBS } from '@/lib/destinations'
-import { env } from '@/lib/env'
 import { SITE_URL } from '@/lib/site'
 import HomeView from '@/components/home/home-view'
 
@@ -41,7 +40,6 @@ export default async function HomePage() {
         guides,
         testimonial,
         posts,
-        mapboxToken: env.NEXT_PUBLIC_MAPBOX_TOKEN ?? null,
       }}
     />
   )
