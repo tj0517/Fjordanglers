@@ -10,7 +10,7 @@ effort: medium
 agent: fa-core
 branch: feat/fa-m.06-request-reminder
 depends_on: [FA-M.05]
-blocked_by_questions: [O-55]
+blocked_by_questions: []
 touches_db: false
 touches_prod: true
 estimate_h: 4
@@ -66,3 +66,4 @@ grep -n "path" vercel.json
 ## Notatki z realizacji
 - **2026-11-10, tj (wf-plan):** 12 h w sezonie / 24 h poza; ponaglenie do przewodnika i flaga dla admina (O-53 → c).
 - **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
+- **2026-11-17, tj:** O-55 → (a) crony Vercela (sub-daily wymaga planu Pro — tj potwierdza plan przed zmianą `vercel.json`); `blocked_by_questions` wyczyszczone.
