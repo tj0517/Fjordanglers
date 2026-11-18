@@ -2,6 +2,10 @@ import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PasswordResetButton } from './AccountActions'
 import { MarketingConsentToggle } from './MarketingConsentToggle'
+import { CalendarConnectCard } from './CalendarConnectCard'
+import { googleClientFromEnv } from '@/lib/calendar/google'
+import { calendarLinkKey } from '@/lib/calendar/link-crypto'
+import { guideCalendarConnection } from '@/lib/guide-panel/queries'
 import { HelpWidget } from '@/components/ui/help-widget'
 import { Lock, LogOut } from 'lucide-react'
 import { signOut } from '@/actions/auth'
@@ -25,6 +29,11 @@ export default async function AccountPage() {
 
   // The layout shows the no-listing notice before this page renders; this is a fallback.
   if (guide == null) notFound()
+
+  // FA-M.13: the guide's own calendar connection (service_role row, read for this guide only).
+  const connection      = await guideCalendarConnection(guide.id)
+  const appleAvailable  = calendarLinkKey().ok
+  const googleAvailable = appleAvailable && googleClientFromEnv() != null
 
   const email       = user.email ?? '—'
   const provider    = user.app_metadata?.provider ?? 'email'
@@ -94,6 +103,14 @@ export default async function AccountPage() {
             </Row>
           )}
         </Card>
+
+        {/* ── Calendar (FA-M.13) ───────────────────────────────────────────── */}
+        <div id="calendar" className="scroll-mt-20">
+          <Card title="Connect your calendar">
+            <CalendarConnectCard guideId={guide.id} connection={connection}
+              googleAvailable={googleAvailable} appleAvailable={appleAvailable} />
+          </Card>
+        </div>
 
         {/* ── Photo & marketing consent ─────────────────────────────────────── */}
         <Card title="Photo & marketing consent" help={
