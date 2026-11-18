@@ -2,7 +2,7 @@
 id: FA-M.13
 title: Panel przewodnika — jego zlecenia ze statusem, podgląd tego, co FA widzi w jego kalendarzu, „Connect with your calendar” w koncie
 stage: M
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
