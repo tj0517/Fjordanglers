@@ -9,6 +9,7 @@ model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-m.13-guide-panel
+pr: 207
 depends_on: [FA-M.08, FA-M.03, FA-M.09, FA-M.10]
 blocked_by_questions: []
 touches_db: false
