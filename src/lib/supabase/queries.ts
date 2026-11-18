@@ -987,7 +987,7 @@ export function rendersAsV2(pageVersion: number | null | undefined): boolean {
 
 // ─── Country hub v2 (FA-1.65) ─────────────────────────────────────────────────
 
-/** One card of the hub. `page` carries the fields `ExpCard` prints. */
+/** One card of the hub: the page fields the trip card prints (`tripCardFromOffer`). */
 export type HubOffer = {
   id: string
   page: {
