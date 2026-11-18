@@ -1,7 +1,5 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
-import Link from 'next/link'
-import type { CSSProperties } from 'react'
 import { getGuides, getPlatformStats, type GuideRow } from '@/lib/supabase/queries'
 import { COUNTRIES } from '@/lib/countries'
 import { SITE_URL } from '@/lib/site'
@@ -9,6 +7,7 @@ import { GuideLink } from '@/components/guides/guide-link'
 import { guideProfilePath } from '@/lib/guide-url'
 import { listingCanonicalUrl } from '@/lib/listing-canonical'
 import { PhotoHero } from '@/components/site/photo-hero'
+import { FilterRow, Pagination, pageHref } from '@/components/site/listing'
 import {
   Arrow, CREAM, Eyebrow, LINE, MUTED, NAVY, ON_DARK, SALMON_ON_DARK, SecondaryButton, Tag,
   initials, primaryButtonStyle,
@@ -40,76 +39,6 @@ function guidesHref(country: string | undefined, language: string | undefined): 
   if (country)  sp.set('country',  country)
   if (language) sp.set('language', language)
   return `/guides${sp.toString() ? `?${sp.toString()}` : ''}`
-}
-
-const chipBase: CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, padding: '0 16px',
-  borderRadius: 9, fontSize: '14.5px', fontWeight: 600, textDecoration: 'none',
-}
-const chipOn: CSSProperties  = { ...chipBase, background: NAVY, color: '#FFFFFF', border: `1.5px solid ${NAVY}` }
-const chipOff: CSSProperties = { ...chipBase, background: CREAM, color: NAVY, border: `1.5px solid ${LINE}` }
-
-function FilterRow({ label, all, options, value, href }: {
-  label: string
-  all: string
-  options: readonly string[]
-  value: string | undefined
-  href: (option: string | undefined) => string
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-[14px] gap-y-2">
-      <span className="f-body min-w-[84px] text-[12.5px] font-bold uppercase" style={{ letterSpacing: '.12em', color: MUTED }}>{label}</span>
-      <div role="group" aria-label={`Filter by ${label.toLowerCase()}`} className="flex flex-wrap gap-2">
-        <Link href={href(undefined)} className="f-body" style={value ? chipOff : chipOn} aria-current={value ? undefined : 'true'}>{all}</Link>
-        {options.map(option => (
-          <Link key={option} href={href(option)} className="f-body" style={value === option ? chipOn : chipOff} aria-current={value === option ? 'true' : undefined}>
-            {option}
-          </Link>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function Pagination({ page, totalPages, baseParams }: { page: number; totalPages: number; baseParams: string }) {
-  function pageHref(p: number) {
-    const sp = new URLSearchParams(baseParams)
-    sp.set('page', p.toString())
-    return `/guides?${sp.toString()}`
-  }
-
-  const items: (number | '…')[] = []
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) items.push(i)
-  } else {
-    items.push(1)
-    if (page > 3) items.push('…')
-    const start = Math.max(2, page - 1)
-    const end   = Math.min(totalPages - 1, page + 1)
-    for (let i = start; i <= end; i++) items.push(i)
-    if (page < totalPages - 2) items.push('…')
-    items.push(totalPages)
-  }
-
-  const box: CSSProperties = { ...chipBase, minWidth: 44, padding: '0 12px' }
-  const off: CSSProperties = { ...box, background: CREAM, color: NAVY, border: `1.5px solid ${LINE}` }
-  const disabled: CSSProperties = { ...off, opacity: 0.4 }
-
-  return (
-    <nav aria-label="Pagination" className="f-body flex flex-wrap justify-center gap-2">
-      {page > 1 ? <Link href={pageHref(page - 1)} style={off}>← Prev</Link> : <span style={disabled}>← Prev</span>}
-      {items.map((item, idx) =>
-        item === '…' ? (
-          <span key={`e-${idx}`} style={{ ...box, color: MUTED }}>…</span>
-        ) : item === page ? (
-          <span key={item} aria-current="page" style={{ ...box, background: NAVY, color: '#FFFFFF' }}>{item}</span>
-        ) : (
-          <Link key={item} href={pageHref(item)} style={off}>{item}</Link>
-        ),
-      )}
-      {page < totalPages ? <Link href={pageHref(page + 1)} style={off}>Next →</Link> : <span style={disabled}>Next →</span>}
-    </nav>
-  )
 }
 
 function GuideCard({ guide }: { guide: GuideRow }) {
@@ -211,10 +140,6 @@ export default async function GuidesPage({
     getPlatformStats(),
   ])
 
-  const baseParams = new URLSearchParams(
-    Object.entries(params).filter(([k, v]) => k !== 'page' && v != null) as [string, string][]
-  ).toString()
-
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -301,7 +226,7 @@ export default async function GuidesPage({
           )}
 
           {totalPages(total) > 1 && (
-            <Pagination page={currentPage} totalPages={totalPages(total)} baseParams={baseParams} />
+            <Pagination page={currentPage} totalPages={totalPages(total)} href={p => pageHref('/guides', { country: params.country, language: params.language }, p)} />
           )}
 
           <section
