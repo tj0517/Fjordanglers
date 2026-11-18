@@ -27,7 +27,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   try {
     const summary = await syncAllCalendars(createServiceClient())
-    console.log('[calendar-sync cron]', JSON.stringify({ total: summary.total, ok: summary.ok, failed: summary.failed, stale: summary.stale }))
+    console.log('[calendar-sync cron]', JSON.stringify({ total: summary.total, ok: summary.ok, failed: summary.failed, stale: summary.stale, disconnected: summary.disconnected, skipped: summary.skipped }))
     return NextResponse.json(summary)
   } catch (e) {
     if (e instanceof CalendarSyncDisabledError) {

@@ -5,14 +5,15 @@
  * revoked, used, expired) renders the same not-found page, with no guide data.
  *
  * Layout and copy follow docs/design/fa-m-guide-app/Connect.dc.html; where the task differs, the
- * task wins (tj 2026-11-17): Google is shown disabled with "Soon" until FA-M.10, and Mac steps sit
- * next to the iPhone steps. No back arrow: outside the account there is no Calendar screen to go to.
+ * task wins (tj 2026-11-17): Mac steps sit next to the iPhone steps. Google (FA-M.10) is live when
+ * the OAuth client and the calendar key are configured, otherwise shown "Unavailable". No back arrow: outside the account there is no Calendar screen to go to.
  * No third-party script is loaded here (THIRD_PARTY_FREE_ROUTES).
  */
 
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { connectLinkRefusal } from '@/lib/calendar/connections'
+import { googleClientFromEnv } from '@/lib/calendar/google'
 import { calendarLinkKey } from '@/lib/calendar/link-crypto'
 import { createServiceClient } from '@/lib/supabase/server'
 import { ConnectPanel } from './ConnectPanel'
@@ -33,7 +34,8 @@ export default async function ConnectCalendarPage({ params }: { params: Promise<
   return (
     <main className="min-h-screen px-5 py-6" style={{ background: '#F8FAFB' }}>
       <div className="w-full max-w-md mx-auto">
-        <ConnectPanel token={token} available={calendarLinkKey().ok} />
+        <ConnectPanel token={token} available={calendarLinkKey().ok}
+          googleAvailable={calendarLinkKey().ok && googleClientFromEnv() != null} />
       </div>
     </main>
   )

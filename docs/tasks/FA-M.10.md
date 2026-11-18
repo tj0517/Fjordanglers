@@ -2,13 +2,14 @@
 id: FA-M.10
 title: Kalendarz przewodnika, część 2 — „Connect with Google”: logowanie Google, odczyt zajętości, przechowywanie i odświeżanie dostępu
 stage: M
-status: todo
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-m.10-google-calendar
+pr: 206
 depends_on: [FA-M.09, FA-M.11]
 blocked_by_questions: []
 touches_db: true
@@ -44,7 +45,7 @@ Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zam
 ## Gotowe, gdy
 - [ ] Token odświeżania nie jest czytelny dla `anon`/`authenticated`; pokazane na czerwono — **jak sprawdzić:** test sesją seeda + odczyt polityk na prod.
 - [ ] Podmieniony / brakujący `state` w powrocie OAuth → odmowa; pokazane na czerwono — **jak sprawdzić:** test.
-- [ ] Synchronizacja z atrapą free/busy daje oczekiwane zajęte dni — **jak sprawdzić:** test.
+- [ ] Synchronizacja z atrapą listy wydarzeń (zakres `calendar.events.freebusy`) daje oczekiwane zajęte dni — godzinowe zajęte bloki i wydarzenia całodniowe — **jak sprawdzić:** test. *(Zmiana 2026-11-18, tj STOP 1: sam free/busy Google pomija całodniowe oznaczone jako „Available” — domyślne w Google — więc nie spełnia reguły FA-M.09 „całodniowe = zajęte”.)*
 - [ ] Odebrana zgoda (`invalid_grant`) → status „disconnected”, blokady zostają do odłączenia, admin widzi status — **jak sprawdzić:** test.
 - [ ] Odłączenie usuwa token i blokady ze źródła `calendar`, ręczne zostają — **jak sprawdzić:** test.
 - [ ] Przejście na koncie testowym Google tj (aplikacja w trybie przed weryfikacją) — **jak sprawdzić:** zrzuty / nagranie w PR, potwierdza tj.
@@ -70,3 +71,21 @@ grep -rn "refresh_token" src | grep -v test
 ## Notatki z realizacji
 - **2026-11-10, Claude (wf-plan):** Google traktuje odczyt kalendarza jako zakres wrażliwy — do weryfikacji (do ~10 dni) ekran ostrzegawczy i limit kont; dla ~15 przewodników wystarczy, wniosek składa tj w FA-M.11.
 - **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
+- **2026-11-18, tj (wf-task):** klient OAuth Google skonfigurowany, jego zmienne są w lokalnym env i w Vercelu (część Google z FA-M.11) — FA-M.10 startuje, FA-M.11 zostaje `todo`. Podział z FA-M.13: FA-M.10 = start OAuth z obu wejść (podpisany link i sesja przewodnika) + akcja odłączenia (po stronie serwera, z testami), przycisk tylko na stronie „Connect”; przyciski w panelu konta → FA-M.13.
+- **2026-11-18, tj (STOP 1):**
+  - Zakres → **B** `calendar.events.freebusy`. Pobierane wyłącznie początek, koniec, flaga całodniowe i zajęty/wolny (transparency) — nigdy tytuły, opisy, uczestnicy, miejsca; parametr `fields`, w PR pokazać, że żadne inne pole nie jest czytane ani zapisywane. Reguła jak Apple (FA-M.09): całodniowe = zajęte, także „Available”; godzinowe „Available” pomijane. Kryterium „atrapa free/busy” → „atrapa listy wydarzeń w tym zakresie” (zmienione wyżej). Jeśli przejście na żywo pokaże, że zakres nie zwraca całodniowych lub ich flagi — STOP, wrócić z A vs C.
+  - Szyfrowanie tokenu → **(a)** koperta i `CALENDAR_LINK_KEY` z FA-M.09 z osobną etykietą celu; red test: szyfrogram Apple nie odszyfruje się jako token Google i odwrotnie. Token na wierszu `guide_calendar_connections`.
+  - Powrót po połączeniu z podpisanego linku → **(a)** `/connect-calendar/done?status=connected|denied|error`, bez danych przewodnika. Wejście z sesji wraca na `/dashboard/calendar?google=…`. Callback przekierowuje tylko na te dwie stałe ścieżki.
+  - Odłączenie wywołuje też revoke w Google: **tak**; nieudany revoke nie blokuje lokalnego odłączenia, log bez tokenu.
+  - Bez nowej zależności — zwykłe wywołania HTTPS.
+  - Przywrócona notatka FA-M.09 z `f2d6444` zostaje (decyzja tj z 17.11).
+  - Fakty: URI przekierowań zarejestrowane w Google: `http://localhost:3000/api/calendar/google/callback`, `https://www.fjordanglers.com/api/calendar/google/callback`. Wygaśnięcie tokenów po 7 dniach w trybie Testing — znane; przed podłączeniem przewodników tj przełącza na In production (FA-M.11); w PR jako znany limit, nie bloker.
+- **2026-11-18, tj (STOP 3, migracja):** diff względem `20261120000000` zatwierdzony — nowa migracja `20261121000000_google_calendar_connect.sql`, tabela `guide_calendar_oauth_states` i cztery funkcje; zachowania: (1) token czyszczony przy `invalid_grant`, (3) cron pomija wiersze `disconnected`, (4) nazwy audytu `CONNECT` / `DISCONNECT` / `SYNC_DISCONNECTED` / `SYNC_FAILED` / `SYNC_RECOVERED` (tj sprawdził: kod na `main` tylko wstawia do `audit_log`, nic go nie czyta), (5) trzeci stan w adminie.
+  - Zmiana zachowania (2) → (a): revoke w Google unieważnia cały grant konta i projektu, nie jeden token. Revoke przy **odłączeniu** i gdy **Apple zastępuje Google** (best effort); przy zamianie **Google → Google** token nadpisany, **bez** revoke. Testy: Google → Google bez wywołania revoke, Google → Apple z wywołaniem. Znany limit do PR: przewodnik, który przełączy się na inne konto Google, zostawia na starym koncie uśpiony grant, dopóki sam go nie usunie.
+  - Dodatkowo: red test — zalogowany przewodnik B wywołuje odłączenie kalendarza przewodnika A → odmowa, nic się nie zmienia (funkcja tylko dla service_role, więc sprawdzenie własności jest w aplikacji). Wiersz w `docs/deferred-tasks.md`: wygasłe/zużyte wiersze `guide_calendar_oauth_states` nigdy nie są sprzątane.
+  - Fakty (nazwy zmiennych klienta, status publikacji, kategoria zakresu) — w wiadomości tj nadal szablonowe `<NAME>` / `<…>`; dopytane.
+- **2026-11-18, tj:** nazwy zmiennych klienta OAuth (z `.env.development.local`, same nazwy bez wartości): `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET` — zadeklarowane w `src/lib/env.ts` jako opcjonalne. Status publikacji i kategoria zakresu — nadal do potwierdzenia przez tj.
+- **2026-11-18, tj:** status publikacji aplikacji Google: **Testing** (tokeny odświeżania wygasają po 7 dniach; przełączenie na In production przed podłączeniem przewodników — FA-M.11). Kategoria zakresu — tj poda później.
+- **2026-11-18, przejście na żywo (lokalnie, Jon Seed, konto testowe tj):** połączenie OK (`google`, `ok`, 24 dni, przyznany zakres dokładnie `calendar.events.freebusy`, brak e-maila w bazie i w logu). Synchronizacja po dodaniu zdarzeń testowych: 2026-12-05 godzinowe „Busy” → zajęty ✓; 2026-12-12 godzinowe „Available” → wolny ✓; **2026-11-28 całodniowe „Available” → wolny ✗ (oczekiwano zajęty)**. Wg decyzji STOP 1 — stop, A vs C do decyzji tj (propozycja: najpierw 5-minutowy test całodniowego „Busy”).
+- **2026-11-18, tj (korekta):** niezgodność z poprzedniej linii to brak zdarzenia testowego w kalendarzu głównym, nie wynik zakresu — A vs C nie są decydowane. tj dodał całodniowe „Available” w kalendarzu głównym. Ponowna synchronizacja (11:30): 2026-12-05 zajęty ✓, 2026-12-12 wolny ✓, 2026-12-28 zajęty, 2026-12-22 wolny, 2026-11-28 wolny; 26 dni jak po synchronizacji 11:25 (28.12 pojawił się już wtedy). Wiadomość tj podaje datę zdarzenia całodniowego raz jako 22.12, raz jako 28.12 — wynik zależy od daty: 28.12 → wszystkie trzy zgodne; 22.12 → niezgodne, wtedy najpierw test całodniowego „Busy”. Data do potwierdzenia przez tj.
+- **2026-11-18, tj:** zdarzenie całodniowe jest na **2026-12-28** (nie 22.12), w kalendarzu głównym, transparency „transparent” (Available). Synchronizacja 11:35: 2026-12-28 całodniowe „Available” → zajęty ✓; 2026-12-05 godzinowe „Busy” → zajęty ✓; 2026-12-12 godzinowe „Available” → wolny ✓ (status `ok`, 26 dni). Zakres B (`calendar.events.freebusy`) zwraca całodniowe z flagą — potwierdzony, A vs C niepotrzebne.

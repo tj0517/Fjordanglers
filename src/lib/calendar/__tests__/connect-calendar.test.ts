@@ -347,7 +347,7 @@ describe('cron route', () => {
   })
 
   it('with the secret → runs the sync and returns its summary (200)', async () => {
-    const summary = { total: 2, ok: 1, failed: 1, stale: 0, failures: [{ guideId: GUIDE, error: 'not_found' as const }] }
+    const summary = { total: 2, ok: 1, failed: 1, stale: 0, disconnected: 0, skipped: 0, failures: [{ guideId: GUIDE, error: 'not_found' as const }] }
     vi.mocked(syncAllCalendars).mockClear()
     vi.mocked(syncAllCalendars).mockResolvedValueOnce(summary)
     const res = await call('Bearer test-only-cron-secret')
