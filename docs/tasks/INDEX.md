@@ -150,7 +150,7 @@ Zakres: dokument „Aplikacja dla przewodników — zakres MVP” (Claude Docs) 
 | FA-M.10 | Kalendarz 2 — „Connect with Google” (OAuth, odczyt zajętości, tokeny) | L | opus | done (PR #206) | FA-M.09, FA-M.11 |
 | FA-M.11 | Zgłoszenia zewnętrzne — szablon WA w Meta, OAuth Google + weryfikacja, klucze push; robi tj | S | — (człowiek) | todo | — |
 | FA-M.12 | PWA + web push — instalacja, zgoda, push przy nowym zleceniu | L | opus | todo | FA-M.08, FA-M.05, FA-M.11 |
-| FA-M.13 | Panel przewodnika — zlecenia, podgląd kalendarza, „Connect” w koncie | M | sonnet | review (PR #207) | FA-M.08, FA-M.03, FA-M.09, FA-M.10 |
+| FA-M.13 | Panel przewodnika — zlecenia, podgląd kalendarza, „Connect” w koncie | M | sonnet | done (PR #207) | FA-M.08, FA-M.03, FA-M.09, FA-M.10 |
 
 ## Stages 2–8
 
