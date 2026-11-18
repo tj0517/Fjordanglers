@@ -2,7 +2,7 @@
 id: FA-M.10
 title: Kalendarz przewodnika, część 2 — „Connect with Google”: logowanie Google, odczyt zajętości, przechowywanie i odświeżanie dostępu
 stage: M
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
