@@ -2,7 +2,9 @@
  * The trip card — one component for the hub, the home page, the offer page's "More trips" and the
  * guide profile (docs/design/site-2026-11/README.md). Photo with the region tag, name, species, the
  * guide when the caller passes one (the offer page's "More trips", tj 2026-11-17), the price
- * exactly as the offer page prints it, and "View trip".
+ * exactly as the offer page prints it, and "View trip". Every card is the same height (tj,
+ * 2026-11-18): the name is cut at two lines, species, guide and price at one, and the species line
+ * keeps its height when a page lists none.
  *
  * `onClick` is for the caller's analytics (the hub counts `hub_card_click`); a server page leaves it out.
  */
@@ -46,23 +48,22 @@ export function TripCard({ trip, priority = false, onClick }: { trip: TripCardDa
         )}
       </Link>
       <h3
-        className="f-display"
-        style={{ margin: 0, fontWeight: 700, fontSize: 20, lineHeight: 1.22, color: NAVY, minHeight: 49 }}
+        className="f-display line-clamp-2"
+        title={trip.name}
+        style={{ margin: 0, fontWeight: 700, fontSize: 20, lineHeight: 1.22, color: NAVY, height: 49 }}
       >
         {trip.name}
       </h3>
-      {trip.species.length > 0 && (
-        <p className="f-body m-0 text-[14.5px] font-semibold" style={{ color: NAVY }}>
-          {trip.species.join(', ')}
-        </p>
-      )}
+      <p className="f-body m-0 h-[22px] truncate text-[14.5px] font-semibold" style={{ color: NAVY, lineHeight: '22px' }} title={trip.species.join(', ') || undefined}>
+        {trip.species.join(', ')}
+      </p>
       {trip.guideName != null && trip.guideName.trim() !== '' && (
-        <p className="f-body m-0 -mt-2 text-[14.5px]" style={{ color: MUTED }} data-testid="trip-card-guide">
+        <p className="f-body m-0 -mt-2 truncate text-[14.5px]" style={{ color: MUTED }} data-testid="trip-card-guide">
           Guide: {trip.guideName}
         </p>
       )}
       <div className="mt-auto flex items-center justify-between gap-3">
-        <p className="f-body m-0 text-[15px] font-bold" style={{ color: NAVY }} data-testid="hub-card-price">
+        <p className="f-body m-0 min-w-0 truncate text-[15px] font-bold" style={{ color: NAVY }} title={trip.priceText} data-testid="hub-card-price">
           {trip.priceText}
         </p>
         <Link
