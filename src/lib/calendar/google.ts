@@ -47,19 +47,19 @@ export interface GoogleClientConfig {
 const defaultHttp: GoogleHttp = (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS), redirect: 'error' })
 
 /** The redirect URI, from the configured app URL — never from a request header. */
-export function googleRedirectUri(appUrl: string = env.NEXT_PUBLIC_APP_URL): string {
+function googleRedirectUri(appUrl: string = env.NEXT_PUBLIC_APP_URL): string {
   return new URL(GOOGLE_CALLBACK_PATH, appUrl).toString()
 }
 
 /**
- * The OAuth client from the environment, or null when it is not set (the Google button then says
- * "unavailable" and the Apple path is unaffected).
- *
- * PENDING tj: the names of the client id / secret variables (asked at STOP 1 and STOP 3; the answers
- * still carried the `<NAME>` placeholder). Until they are given this returns null.
+ * The OAuth client from the environment, or null when either half is missing (the Google button then
+ * says "Unavailable" and the Apple path is unaffected). Read at call time, like CALENDAR_LINK_KEY.
  */
 export function googleClientFromEnv(): GoogleClientConfig | null {
-  return null
+  const clientId = env.GOOGLE_CALENDAR_CLIENT_ID?.trim()
+  const clientSecret = env.GOOGLE_CALENDAR_CLIENT_SECRET?.trim()
+  if (clientId == null || clientId === '' || clientSecret == null || clientSecret === '') return null
+  return { clientId, clientSecret, redirectUri: googleRedirectUri() }
 }
 
 type Fetched = { ok: true; status: number; json: unknown } | { ok: false; error: GoogleError }
