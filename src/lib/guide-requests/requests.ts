@@ -242,6 +242,96 @@ export async function answerGuideRequestFromDashboard(
   return toResult(data?.[0], 'answerGuideRequestFromDashboard')
 }
 
+// ─── the guide's own list (FA-M.13) ───────────────────────────────────────────
+
+/**
+ * `waiting`: not answered yet and the trip is still assigned to this guide (answerable from the
+ * dashboard — expiry blocks only the link). `closed`: not answered, not withdrawn, but the trip is no
+ * longer assigned to this guide.
+ */
+export type GuideRequestListStatus = GuideAnswer | 'waiting' | 'withdrawn' | 'closed'
+
+export interface GuideRequestListItem {
+  inquiryId:        string
+  /** null for an assignment from before FA-M.03 (no request record). */
+  requestId:        string | null
+  status:           GuideRequestListStatus
+  /** When the guide was asked: the request's sent_at, or the old assignment's assigned_at. */
+  askedAt:          string
+  answeredAt:       string | null
+  altDates:         string[]
+  anglerName:       string
+  anglerCountry:    string | null
+  requestedDates:   string[]
+  partySize:        number
+  tripId:           string | null
+  experiencePageId: string | null
+  /** The trip page (and its Accept / Decline) opens only while the trip is assigned to this guide. */
+  canOpen:          boolean
+}
+
+/** Trips FA cancelled or lost are not shown to the guide (as on the page before FA-M.13). */
+const HIDDEN_INQUIRY_STATUSES = '("cancelled","lost")'
+
+/**
+ * The signed-in guide's requests, newest first (tj 2026-11-18, decision B): every request record sent
+ * to this guide — the latest one per trip — plus assignments from before FA-M.03 that have no request
+ * record (status from the assignment's `guide_acceptance`). Call with the guide id from
+ * requireGuide() / the session only; the service client sees every guide.
+ */
+export async function listGuideRequestsForGuide(client: Client, guideId: string): Promise<GuideRequestListItem[]> {
+  const { data: requests, error: requestsError } = await client
+    .from('guide_requests')
+    .select(`id, inquiry_id, sent_at, answer, answered_at, alt_dates, withdrawn_at,
+      inquiries!inner (angler_name, angler_country, requested_dates, party_size, status,
+        assigned_guide_id, trip_id, experience_page_id)`)
+    .eq('guide_id', guideId)
+    .not('inquiries.status', 'in', HIDDEN_INQUIRY_STATUSES)
+    .order('sent_at', { ascending: false })
+  if (requestsError != null) throw new GuideRequestError(`listGuideRequestsForGuide: requests read failed: ${requestsError.message}`)
+
+  const items: GuideRequestListItem[] = []
+  const seen = new Set<string>()
+  for (const r of requests ?? []) {
+    if (seen.has(r.inquiry_id)) continue          // ordered newest first: the latest request per trip wins
+    seen.add(r.inquiry_id)
+    const q = r.inquiries
+    const canOpen = q.assigned_guide_id === guideId
+    const status: GuideRequestListStatus =
+      r.withdrawn_at != null ? 'withdrawn'
+        : isAnswer(r.answer) ? r.answer
+        : canOpen ? 'waiting'
+        : 'closed'
+    items.push({
+      inquiryId: r.inquiry_id, requestId: r.id, status, askedAt: r.sent_at, answeredAt: r.answered_at,
+      altDates: r.alt_dates ?? [], anglerName: q.angler_name, anglerCountry: q.angler_country,
+      requestedDates: q.requested_dates ?? [], partySize: q.party_size,
+      tripId: q.trip_id, experiencePageId: q.experience_page_id, canOpen,
+    })
+  }
+
+  const { data: assigned, error: assignedError } = await client
+    .from('inquiries')
+    .select('id, angler_name, angler_country, requested_dates, party_size, guide_acceptance, assigned_at, created_at, trip_id, experience_page_id')
+    .eq('assigned_guide_id', guideId)
+    .not('status', 'in', HIDDEN_INQUIRY_STATUSES)
+  if (assignedError != null) throw new GuideRequestError(`listGuideRequestsForGuide: assignments read failed: ${assignedError.message}`)
+
+  for (const q of assigned ?? []) {
+    if (seen.has(q.id)) continue                    // has a request record — listed above
+    items.push({
+      inquiryId: q.id, requestId: null,
+      status: isAnswer(q.guide_acceptance) ? q.guide_acceptance : 'waiting',
+      askedAt: q.assigned_at ?? q.created_at, answeredAt: null, altDates: [],
+      anglerName: q.angler_name, anglerCountry: q.angler_country,
+      requestedDates: q.requested_dates ?? [], partySize: q.party_size,
+      tripId: q.trip_id, experiencePageId: q.experience_page_id, canOpen: true,
+    })
+  }
+
+  return items.sort((a, b) => Date.parse(b.askedAt) - Date.parse(a.askedAt))
+}
+
 // ─── withdraw ─────────────────────────────────────────────────────────────────
 
 export type WithdrawOutcome = 'withdrawn' | 'not_found' | 'already_withdrawn'

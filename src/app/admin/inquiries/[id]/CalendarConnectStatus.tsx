@@ -14,6 +14,7 @@ import { useState, useTransition } from 'react'
 import { Check, Copy, Link2, Loader2 } from 'lucide-react'
 import { issueCalendarConnectLink } from '@/actions/calendar'
 import type { CalendarStatus } from '@/lib/calendar/connections'
+import { syncAge } from '@/lib/calendar/sync-age'
 
 const ERROR_TEXT: Record<string, string> = {
   not_found:          'calendar link no longer works',
@@ -27,16 +28,6 @@ const ERROR_TEXT: Record<string, string> = {
   decrypt_failed:     'stored link unreadable — ask the guide to reconnect',
   insufficient_scope: 'Google calendar permission missing — ask the guide to reconnect',
   bad_response:       'Google sent an unexpected answer',
-}
-
-function ago(iso: string | null): string {
-  if (iso == null) return 'never'
-  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes} min ago`
-  const hours = Math.round(minutes / 60)
-  if (hours < 48) return `${hours} h ago`
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
 export function CalendarConnectStatus({ guideId, calendar }: { guideId: string; calendar: CalendarStatus | null }) {
@@ -72,13 +63,13 @@ export function CalendarConnectStatus({ guideId, calendar }: { guideId: string; 
           <>No calendar connected</>
         ) : calendar.status === 'disconnected' ? (
           <span className="text-red-700" data-testid="guide-calendar-disconnected">
-            Google Calendar disconnected — the guide removed FjordAnglers&apos; access · last good sync {ago(calendar.lastSyncedAt)} · busy days kept
+            Google Calendar disconnected — the guide removed FjordAnglers&apos; access · last good sync {syncAge(calendar.lastSyncedAt)} · busy days kept
           </span>
         ) : calendar.status === 'ok' ? (
-          <>Calendar · {calendar.provider === 'google' ? 'Google Calendar' : calendar.host} · synced {ago(calendar.lastSyncedAt)}</>
+          <>Calendar · {calendar.provider === 'google' ? 'Google Calendar' : calendar.host} · synced {syncAge(calendar.lastSyncedAt)}</>
         ) : (
           <span className="text-red-700">
-            Calendar sync failing ({ERROR_TEXT[calendar.lastError ?? ''] ?? calendar.lastError}) · last good sync {ago(calendar.lastSyncedAt)}
+            Calendar sync failing ({ERROR_TEXT[calendar.lastError ?? ''] ?? calendar.lastError}) · last good sync {syncAge(calendar.lastSyncedAt)}
           </span>
         )}
         {' · '}
