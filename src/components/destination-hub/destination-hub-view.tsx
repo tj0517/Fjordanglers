@@ -121,9 +121,9 @@ function Hero({ data, place }: { data: DestinationHubData; place: string }) {
       <section
         data-block="hero"
         className="relative mx-auto mt-3 flex flex-col justify-end overflow-hidden pt-[220px] sm:pt-[120px]"
-        style={{ width: 'calc(100% - 24px)', maxWidth: 1560, minHeight: 640, borderRadius: 28, paddingBottom: 'clamp(28px, 4vw, 48px)', background: NAVY }}
+        style={{ width: 'calc(100% - 24px)', minHeight: 640, borderRadius: 28, paddingBottom: 'clamp(28px, 4vw, 48px)', background: NAVY }}
       >
-        <Image src={hub.heroImageUrl ?? data.ogImage ?? HERO_FALLBACK} alt="" fill priority sizes="(min-width: 1584px) 1560px, 100vw" className="object-cover" />
+        <Image src={hub.heroImageUrl ?? data.ogImage ?? HERO_FALLBACK} alt="" fill priority sizes="100vw" className="object-cover" />
         <span
           aria-hidden="true"
           className="absolute inset-0"
