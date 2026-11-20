@@ -1,5 +1,6 @@
 import { getDestinationHub, getFeaturedGuides, getLatestBlogPosts, type DestinationHubData } from '@/lib/supabase/queries'
 import { getTestimonial } from '@/lib/supabase/testimonials'
+import { JOURNAL_IN_NAV_AND_HOME } from '@/lib/blog/visibility'
 import { COUNTRIES } from '@/lib/countries'
 import { DESTINATION_HUBS } from '@/lib/destinations'
 import { SITE_URL } from '@/lib/site'
@@ -30,7 +31,8 @@ export default async function HomePage() {
     getFeaturedGuides(6),
     // Every country we guide in: the first active testimonial whatever its trip, else a general one (tj, 2026-11-17).
     getTestimonial(COUNTRIES),
-    getLatestBlogPosts(3),
+    // No Journal block on the home page for now (tj, 2026-11-20) — and so no read.
+    JOURNAL_IN_NAV_AND_HOME ? getLatestBlogPosts(3) : [],
   ])
 
   return (
