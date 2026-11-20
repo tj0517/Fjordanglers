@@ -1,8 +1,8 @@
 /**
  * The photo hero of the guides list and the guide profile (docs/design/site-2026-11, "Wspólne
- * zasady"): a photo in a frame 12 px in from the edges, max 1560 px wide, 28 px corners, under a
- * left-to-right dark gradient, with the content pinned to the bottom of a 1200 px column. The
- * fixed site nav floats over the top of it.
+ * zasady"): a photo in a frame 12 px in from the edges at any width (tj, 2026-11-20), 28 px
+ * corners, under a left-to-right dark gradient, with the content pinned to the bottom of a 1200 px
+ * column. The fixed site nav floats over the top of it.
  */
 
 import Image from 'next/image'
@@ -18,10 +18,10 @@ export function PhotoHero({
       <section
         data-block="hero"
         className="relative mx-auto mt-3 flex items-end overflow-hidden pt-[130px]"
-        style={{ width: 'calc(100% - 24px)', maxWidth: 1560, minHeight, borderRadius: 28, paddingBottom: 'clamp(28px, 4vw, 48px)', background: NAVY }}
+        style={{ width: 'calc(100% - 24px)', minHeight, borderRadius: 28, paddingBottom: 'clamp(28px, 4vw, 48px)', background: NAVY }}
       >
         {image != null && (
-          <Image src={image} alt="" fill priority sizes="(min-width: 1584px) 1560px, 100vw" className="object-cover" style={{ objectPosition: 'center 45%' }} />
+          <Image src={image} alt="" fill priority sizes="100vw" className="object-cover" style={{ objectPosition: 'center 45%' }} />
         )}
         <span
           aria-hidden="true"

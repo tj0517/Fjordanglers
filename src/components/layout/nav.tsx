@@ -24,13 +24,14 @@ import { usePathname } from 'next/navigation'
 import { Arrow, CREAM, LINE, NAVY } from '@/components/site/ui'
 import s from '@/components/site/grain.module.css'
 import n from './nav.module.css'
+import { JOURNAL_IN_NAV_AND_HOME } from '@/lib/blog/visibility'
 import b from '@/components/site/buttons.module.css'
 
-const LINKS = [
+const LINKS = ([
   ['/trips', 'Trips'],
   ['/guides', 'Guides'],
   ['/blog', 'Journal'],
-] as const
+] as const).filter(([href]) => href !== '/blog' || JOURNAL_IN_NAV_AND_HOME)
 
 /** Every "Plan your trip" on the site leads to the trip list (tj, 2026-11-17). */
 export const PLAN_YOUR_TRIP_HREF = '/trips'
