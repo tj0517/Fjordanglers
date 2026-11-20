@@ -41,16 +41,20 @@ export type HomeData = {
   posts:       BlogPostSummary[]
 }
 
-type Tile = { slug: string; span: string; tall: boolean; photo: string | null; overlay: string }
+type Tile = {
+  slug: string; span: string; tall: boolean; photo: string | null; overlay: string
+  /** Where the photo is cropped, when its subject is not in the middle. */
+  position?: string
+}
 
 /** The bento, in the mockup's order: three tall tiles, then three short ones. */
 const TILES: Tile[] = [
   { slug: 'iceland',     span: s.s5, tall: true,  photo: '/hub/canyon.jpg',  overlay: s.ovIceland },
-  { slug: 'patagonia',   span: s.s4, tall: true,  photo: null,               overlay: s.ovPatagonia },
-  { slug: 'new-zealand', span: s.s3, tall: true,  photo: '/hub/nzriver.jpg', overlay: s.ovNewZealand },
-  { slug: 'norway',      span: s.s4, tall: false, photo: '/hub/norway.jpg',  overlay: s.ovNorway },
+  { slug: 'patagonia',   span: s.s4, tall: true,  photo: '/hub/patagonia.jpg', overlay: s.ovPatagonia, position: '58% center' },
+  { slug: 'new-zealand', span: s.s3, tall: true,  photo: '/hub/new-zealand-river.jpg', overlay: s.ovNewZealand, position: 'center 70%' },
+  { slug: 'norway',      span: s.s4, tall: false, photo: '/hub/norway-dawn.jpg', overlay: s.ovNorway, position: 'center 52%' },
   { slug: 'sweden',      span: s.s4, tall: false, photo: '/hub/sweden.jpg',  overlay: s.ovSweden },
-  { slug: 'finland',     span: s.s4, tall: false, photo: '/hub/finland.jpg', overlay: s.ovFinland },
+  { slug: 'finland',     span: s.s4, tall: false, photo: '/hub/finland-river.jpg', overlay: s.ovFinland },
 ]
 
 /** Where the globe turns for each hub, and which countries it fills (the mockup's coordinates). */
@@ -142,7 +146,7 @@ function CountryTile({ tile, hub, month }: { tile: Tile; hub: DestinationHubData
   return (
     <Link href={`/${hub.hub.slug}`} className={`${s.tile} ${tile.span} ${tile.tall ? s.tall : s.short}`}>
       {photo != null && (
-        <Image src={photo} alt="" fill sizes="(min-width: 1080px) 520px, 100vw" className="object-cover" />
+        <Image src={photo} alt="" fill sizes="(min-width: 1080px) 520px, 100vw" className="object-cover" style={{ objectPosition: tile.position }} />
       )}
       <span aria-hidden="true" className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(6,20,34,.82) 0%, rgba(6,20,34,0) 58%)' }} />
       {tag != null && (
@@ -296,13 +300,17 @@ function HowItWorks() {
   )
 }
 
-/** The photo with the mock offer card on it — an illustration, labelled "Example offer". */
+/**
+ * The photo with the mock offer card on it — an illustration, labelled "Example offer". The card
+ * sits at the top, over the sky, and the badge bottom left, over the water, so the trout in the net
+ * (bottom right) stays in view.
+ */
 function ExampleOffer() {
   return (
     <div className="relative overflow-hidden" style={{ height: 640, borderRadius: 32 }}>
-      <Image src="/hub/nzangler.jpg" alt="Angler in waders by a New Zealand stream" fill sizes="(min-width: 1080px) 600px, 100vw" className="object-cover" />
-      <span aria-hidden="true" className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(6,20,34,.45) 0%, rgba(6,20,34,0) 50%)' }} />
-      <div className="absolute right-6 top-6 flex items-center gap-[10px]" style={{ background: CREAM, borderRadius: 16, padding: '12px 16px', boxShadow: '0 14px 30px rgba(0,0,0,.18)' }}>
+      <Image src="/hub/nz-trout-net.jpg" alt="Angler netting a brown trout on a New Zealand river" fill sizes="(min-width: 1080px) 600px, 100vw" className="object-cover" style={{ objectPosition: '75% center' }} />
+      <span aria-hidden="true" className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(6,20,34,.4) 0%, rgba(6,20,34,0) 45%)' }} />
+      <div className="absolute bottom-6 left-6 flex items-center gap-[10px]" style={{ background: CREAM, borderRadius: 16, padding: '12px 16px', boxShadow: '0 14px 30px rgba(0,0,0,.18)' }}>
         <span className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: '#E3F2E6' }}>
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F7A3A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
         </span>
@@ -312,7 +320,7 @@ function ExampleOffer() {
         </span>
       </div>
       <div
-        className="absolute bottom-6 left-6 right-6 flex flex-col gap-[14px]"
+        className="absolute left-6 right-6 top-6 flex flex-col gap-[14px]"
         style={{ maxWidth: 380, background: CREAM, borderRadius: 22, padding: 20, boxShadow: '0 24px 50px rgba(0,0,0,.25)', color: NAVY }}
       >
         <div className="flex items-center gap-3">
@@ -356,6 +364,44 @@ function Stars({ rating }: { rating: number }) {
         </svg>
       ))}
     </span>
+  )
+}
+
+// ─── Hero trust row ──────────────────────────────────────────────────────────
+
+function LockIcon() {
+  return (
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4.5" y="10.5" width="15" height="10" rx="2" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+    </svg>
+  )
+}
+
+/**
+ * Under the hero CTA (tj, 2026-11-20): the stars of the review the page shows further down — named
+ * as one angler's rating, not an average, and linking to it — and the deposit going through
+ * Stripe. No review set in admin → the stars are left out.
+ */
+function HeroTrust({ testimonial }: { testimonial: Testimonial | null }) {
+  const rating = testimonial?.rating ?? null
+  return (
+    <ul className="f-body m-0 flex list-none flex-wrap items-center gap-x-6 gap-y-3 p-0 text-[14px]" style={{ color: '#E3EAF0' }} data-testid="hero-trust">
+      {testimonial != null && rating != null && (
+        <li>
+          <a href="#reviews" className="inline-flex items-center gap-2" style={{ color: 'inherit', textDecoration: 'none' }}>
+            <Stars rating={rating} />
+            <span>
+              {Math.round(rating)}/5 from {testimonial.authorName}
+              {testimonial.source === 'trustpilot' && ' on Trustpilot'}
+            </span>
+          </a>
+        </li>
+      )}
+      <li className="inline-flex items-center gap-2">
+        <LockIcon />
+        Deposit paid securely through Stripe
+      </li>
+    </ul>
   )
 }
 
@@ -516,7 +562,7 @@ function ClosingCta() {
               Peak weeks go fast. Write to us before the dates you want are gone.
             </p>
             <div className="flex flex-wrap justify-center gap-3 pt-2">
-              <PrimaryButton href={PLAN_YOUR_TRIP_HREF} size="lg">Explore trips →</PrimaryButton>
+              <PrimaryButton href={PLAN_YOUR_TRIP_HREF} size="lg" dark>Explore trips →</PrimaryButton>
               <ContactExpertButton variant="on-dark" popoverPosition="above" />
             </div>
             <span className="f-body text-[13px]" style={{ color: '#C9D6E2' }}>We reply within 24 hours. In Polish, English or German.</span>
@@ -553,7 +599,7 @@ export default function HomeView({ data }: { data: HomeData }) {
 
   return (
     <div className="f-body relative min-h-screen overflow-hidden" style={{ background: PAGE_BG, color: NAVY }}>
-      <SiteNav overlay />
+      <SiteNav />
       <GlobeHero destinations={destinations} initial={destinations.some(d => d.slug === 'iceland') ? 'iceland' : null}>
         <h1 className={`${s.h1} f-display m-0`} style={{ fontWeight: 700, letterSpacing: '-.02em', color: '#FFFFFF' }}>
           Where do you want to fish next?
@@ -561,7 +607,8 @@ export default function HomeView({ data }: { data: HomeData }) {
         <p className="f-body m-0 max-w-[540px] text-[18px]" style={{ lineHeight: 1.55, color: '#F4F7F9' }}>
           Guided fishing trips with local guides in seven countries. Pick a place, we ask the guide, you get one clear offer.
         </p>
-        <PrimaryButton href={PLAN_YOUR_TRIP_HREF} size="lg">Find your trip →</PrimaryButton>
+        <PrimaryButton href={PLAN_YOUR_TRIP_HREF} size="lg" dark>Find your trip →</PrimaryButton>
+        <HeroTrust testimonial={data.testimonial} />
       </GlobeHero>
       <main>
         <Countries hubs={hubs} />

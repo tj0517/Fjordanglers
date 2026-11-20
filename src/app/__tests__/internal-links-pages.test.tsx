@@ -41,7 +41,7 @@ vi.mock('@/lib/supabase/queries', () => ({
   getFeaturedGuides:        async () => [],
 }))
 vi.mock('@/lib/supabase/testimonials', () => ({ getTestimonial: async () => null }))
-vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND') } }))
+vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND') }, useRouter: () => ({ push: () => {} }) }))
 vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null, PLAN_YOUR_TRIP_HREF: '/trips' }))
 vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
 vi.mock('@/components/ui/contact-expert-button', () => ({ ContactExpertButton: () => null }))

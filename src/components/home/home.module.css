@@ -150,7 +150,3 @@
   .s5, .s4, .s3, .s12 { grid-column: span 12; }
   .trips, .guides { grid-template-columns: minmax(0, 1fr); }
 }
-
-/* The destination buttons under the hero. */
-.chip { transition: background .15s ease, border-color .15s ease; }
-.chip:hover { border-color: #0A2E4D !important; }

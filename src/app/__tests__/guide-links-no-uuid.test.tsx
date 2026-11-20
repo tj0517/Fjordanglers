@@ -26,6 +26,7 @@ vi.mock('@/lib/supabase/testimonials', () => ({ getTestimonial: async () => null
 vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null, PLAN_YOUR_TRIP_HREF: '/trips' }))
 vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
 vi.mock('@/components/ui/contact-expert-button', () => ({ ContactExpertButton: () => null }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: () => {} }), notFound: () => { throw new Error('NEXT_NOT_FOUND') } }))
 
 const hrefs = (html: string) => [...html.matchAll(/href="([^"]*)"/g)].map(m => m[1]!)
 const guideHrefs = (html: string) => hrefs(html).filter(h => h.startsWith('/guides/'))

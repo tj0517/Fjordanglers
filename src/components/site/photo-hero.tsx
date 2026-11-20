@@ -8,25 +8,28 @@
 import Image from 'next/image'
 import type { ReactNode } from 'react'
 import { NAVY } from './ui'
+import { ScrollAway } from './scroll-away'
 
 export function PhotoHero({
   image, minHeight, children,
 }: { image: string | null; minHeight: number; children: ReactNode }) {
   return (
-    <section
-      data-block="hero"
-      className="relative mx-auto mt-3 flex items-end overflow-hidden pt-[130px]"
-      style={{ width: 'calc(100% - 24px)', maxWidth: 1560, minHeight, borderRadius: 28, paddingBottom: 'clamp(28px, 4vw, 48px)', background: NAVY }}
-    >
-      {image != null && (
-        <Image src={image} alt="" fill priority sizes="(min-width: 1584px) 1560px, 100vw" className="object-cover" style={{ objectPosition: 'center 45%' }} />
-      )}
-      <span
-        aria-hidden="true"
-        className="absolute inset-0"
-        style={{ background: 'linear-gradient(100deg, rgba(7,22,36,.86) 0%, rgba(7,22,36,.6) 55%, rgba(7,22,36,.4) 100%)' }}
-      />
-      <div className="relative mx-auto w-full px-6" style={{ maxWidth: 1200 }}>{children}</div>
-    </section>
+    <ScrollAway>
+      <section
+        data-block="hero"
+        className="relative mx-auto mt-3 flex items-end overflow-hidden pt-[130px]"
+        style={{ width: 'calc(100% - 24px)', maxWidth: 1560, minHeight, borderRadius: 28, paddingBottom: 'clamp(28px, 4vw, 48px)', background: NAVY }}
+      >
+        {image != null && (
+          <Image src={image} alt="" fill priority sizes="(min-width: 1584px) 1560px, 100vw" className="object-cover" style={{ objectPosition: 'center 45%' }} />
+        )}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(100deg, rgba(7,22,36,.86) 0%, rgba(7,22,36,.6) 55%, rgba(7,22,36,.4) 100%)' }}
+        />
+        <div className="relative mx-auto w-full px-6" style={{ maxWidth: 1200 }}>{children}</div>
+      </section>
+    </ScrollAway>
   )
 }
