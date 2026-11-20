@@ -41,11 +41,20 @@ function datesFromRange(from: string, to: string): string[] {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
-  /** ISO dates that are BLOCKED (unavailable). Default state = available. */
+  /** ISO dates the guide BLOCKED by hand (source `manual`). Default state = available. */
   initialDates: string[]
+  /**
+   * ISO dates busy in the guide's connected calendar (source `calendar`, FA-M.13). Read-only here:
+   * they come from the sync and are freed in the calendar itself. Shown apart from manual blocks.
+   */
+  calendarDates?: string[]
 }
 
-export function AvailabilityCalendar({ initialDates }: Props) {
+/** Same wording as the server's refusal in setAvailability (FA-M.09 D2 follow-up b). */
+const CALENDAR_DAY_HINT =
+  'This day is busy in your connected calendar, so it stays blocked. Free it in your calendar — FjordAnglers picks that up at the next sync.'
+
+export function AvailabilityCalendar({ initialDates, calendarDates = [] }: Props) {
   const today = useMemo(() => todayISO(), [])
   const now   = new Date()
 
@@ -53,6 +62,7 @@ export function AvailabilityCalendar({ initialDates }: Props) {
   const [viewYear,  setViewYear]  = useState(now.getFullYear())
   const [viewMonth, setViewMonth] = useState(now.getMonth() + 1)
   const [blocked,   setBlocked]   = useState<Set<string>>(() => new Set(initialDates))
+  const calendarBusy              = useMemo(() => new Set(calendarDates), [calendarDates])
   const [selected,  setSelected]  = useState<Set<string>>(new Set())
   const [multiMode, setMultiMode] = useState(false)
   const [pending, start]          = useTransition()
@@ -87,6 +97,7 @@ export function AvailabilityCalendar({ initialDates }: Props) {
       })
       return
     }
+    if (calendarBusy.has(iso)) { setError(CALENDAR_DAY_HINT); return }
     const wasBlocked = blocked.has(iso)
     const snapshot   = new Set(blocked)
     const next       = new Set(blocked)
@@ -167,7 +178,7 @@ export function AvailabilityCalendar({ initialDates }: Props) {
   let blockedThisMonth = 0
   for (let d = 1; d <= numDays; d++) {
     const iso = isoDate(viewYear, viewMonth, d)
-    if (iso >= today && blocked.has(iso)) blockedThisMonth++
+    if (iso >= today && (blocked.has(iso) || calendarBusy.has(iso))) blockedThisMonth++
   }
 
   const canOpen = rangeFrom && rangeTo && rangeFrom <= rangeTo
@@ -328,19 +339,27 @@ export function AvailabilityCalendar({ initialDates }: Props) {
             if (day === null) return <div key={`e-${i}`} />
             const iso       = isoDate(viewYear, viewMonth, day)
             const isPast    = iso < today
-            const isBlocked = blocked.has(iso)
+            const isCal     = calendarBusy.has(iso)
+            const isBlocked = blocked.has(iso) && !isCal   // a day busy in both shows as calendar
             const isSel     = selected.has(iso)
+            const source    = isPast ? undefined : isCal ? 'calendar' : isBlocked ? 'manual' : undefined
 
             return (
               <button
                 key={iso}
                 type="button"
+                data-date={iso}
+                data-source={source}
+                aria-label={source === 'calendar' ? `${day} — busy in your calendar`
+                  : source === 'manual' ? `${day} — blocked by you` : undefined}
                 disabled={isPast || pending}
                 onClick={() => handleDayClick(iso)}
                 className="h-12 w-full flex items-center justify-center rounded-xl text-[15px] f-body transition-all"
                 style={{
                   background: isSel
                     ? 'rgba(230,126,80,0.15)'
+                    : isCal && !isPast
+                    ? 'rgba(10,46,77,0.16)'
                     : isBlocked && !isPast
                     ? 'rgba(10,46,77,0.07)'
                     : 'transparent',
@@ -348,11 +367,15 @@ export function AvailabilityCalendar({ initialDates }: Props) {
                     ? 'rgba(10,46,77,0.13)'
                     : isSel
                     ? '#C05C28'
+                    : isCal
+                    ? 'rgba(10,46,77,0.6)'
                     : isBlocked
                     ? 'rgba(10,46,77,0.28)'
                     : 'rgba(10,46,77,0.72)',
                   border: isSel
                     ? '1.5px solid rgba(230,126,80,0.35)'
+                    : isCal && !isPast
+                    ? '1.5px solid rgba(10,46,77,0.16)'
                     : isBlocked && !isPast
                     ? '1.5px solid rgba(10,46,77,0.1)'
                     : '1.5px solid transparent',
@@ -437,7 +460,7 @@ export function AvailabilityCalendar({ initialDates }: Props) {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-5 mt-3 px-1">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 px-1">
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-4 rounded-lg" style={{
             background: 'transparent',
@@ -450,7 +473,14 @@ export function AvailabilityCalendar({ initialDates }: Props) {
             background: 'rgba(10,46,77,0.07)',
             border: '1.5px solid rgba(10,46,77,0.1)',
           }} />
-          <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>Blocked</span>
+          <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>Blocked here by you</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded-lg" style={{
+            background: 'rgba(10,46,77,0.16)',
+            border: '1.5px solid rgba(10,46,77,0.16)',
+          }} />
+          <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>Busy — from your calendar</span>
         </div>
       </div>
 

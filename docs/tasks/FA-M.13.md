@@ -2,13 +2,14 @@
 id: FA-M.13
 title: Panel przewodnika — jego zlecenia ze statusem, podgląd tego, co FA widzi w jego kalendarzu, „Connect with your calendar” w koncie
 stage: M
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-m.13-guide-panel
+pr: 207
 depends_on: [FA-M.08, FA-M.03, FA-M.09, FA-M.10]
 blocked_by_questions: []
 touches_db: false
@@ -62,3 +63,7 @@ find src/app/dashboard -name page.tsx | sort
 
 ## Notatki z realizacji
 - **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
+- **2026-11-18, tj:** Apple w koncie → **A**: akcja z sesji przewodnika wystawia świeży podpisany link „Connect” dla jego własnego `guide_id` przez istniejącą funkcję FA-M.09 i przekierowuje na `/connect-calendar/<token>`. Bez migracji. Parametr funkcji nazywa się `p_admin_id` — przekazać id użytkownika przewodnika i dodać wiersz w deferred o mylącej nazwie. Wystawienie unieważnia otwarty nieużyty link (D5) — oczekiwane.
+- **2026-11-18, tj:** „Odpowiedź z panelu zapisuje to samo zdarzenie co z linku” (`guide.request_answered`) — prawdziwe od FA-M.03; zostaje jako strażnik regresji: pokazać, że istniejący lub dodany test przechodzi po zmianach. Podobnie nawigacja (Assignments, Calendar, Settings) — prawdziwe od FA-M.08, strażnik regresji: zrzut + grep linków.
+- **2026-11-18, tj:** źródło listy zleceń → **B**: rekordy zleceń (FA-M.03) **plus** przypisania sprzed FA-M.03 bez rekordu zlecenia (status z `guide_acceptance`), scalone po zapytaniu (najnowsze zlecenie wygrywa), sortowane od najnowszych (zlecenie: `sent_at`, stare przypisanie: `assigned_at`). Powód: na produ 0 wierszy `guide_requests`, 27 otwartych przypisań bez zlecenia, 17 z nich u przewodników z kontem — przy samych zleceniach zniknęłyby z panelu. Gałąź „stare przypisania” do usunięcia, gdy opustoszeje (wiersz w deferred).
+- **2026-11-18, tj:** odbiór FA-M.13 — kryteria udowodnione (red proofs: cudze zlecenia, link Apple i odłączenie dla innego przewodnika; strażnicy nawigacji i zdarzenia odpowiedzi), CI 4/4. Do zaplanowania: zaakceptowane wyjazdy blokują daty przewodnika (deferred).
