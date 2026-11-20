@@ -22,7 +22,7 @@ vi.mock('next/cache', () => ({
   revalidateTag:  vi.fn(),
   unstable_cache: <T,>(fn: T) => fn,
 }))
-vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND') } }))
+vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND') }, useRouter: () => ({ push: () => {} }) }))
 // Client islands that need a browser or are irrelevant to links — the pages around them are real.
 vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null, PLAN_YOUR_TRIP_HREF: '/trips' }))
 vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
