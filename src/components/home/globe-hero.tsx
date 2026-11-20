@@ -47,9 +47,9 @@ export function GlobeHero({
       <section
         data-block="hero"
         className="relative mx-auto mt-3 flex items-center overflow-hidden pt-[120px]"
-        style={{ width: 'calc(100% - 24px)', maxWidth: 1560, minHeight: 'calc(100svh - 24px)', borderRadius: 28, paddingBottom: 'clamp(28px, 4vw, 48px)', background: NAVY }}
+        style={{ width: 'calc(100% - 24px)', minHeight: 'calc(100svh - 24px)', borderRadius: 28, paddingBottom: 'clamp(28px, 4vw, 48px)', background: NAVY }}
       >
-        <Image src="/hub/canyon.jpg" alt="" fill priority sizes="(min-width: 1584px) 1560px, 100vw" className="object-cover" style={{ objectPosition: 'center 40%' }} />
+        <Image src="/hub/canyon.jpg" alt="" fill priority sizes="100vw" className="object-cover" style={{ objectPosition: 'center 40%' }} />
         <span
           aria-hidden="true"
           className="absolute inset-0"
