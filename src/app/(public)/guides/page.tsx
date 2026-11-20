@@ -11,7 +11,7 @@ import { PhotoHero } from '@/components/site/photo-hero'
 import { FilterRow, Pagination, pageHref } from '@/components/site/listing'
 import {
   Arrow, CREAM, Eyebrow, LINE, MUTED, NAVY, ON_DARK, SALMON_ON_DARK, SecondaryButton, Tag,
-  initials, primaryButtonStyle,
+  buttonClass, initials, primaryButtonStyle,
 } from '@/components/site/ui'
 import s from '@/components/site/grain.module.css'
 
@@ -246,7 +246,7 @@ export default async function GuidesPage({
                 We send you anglers who have already picked your water and their dates. You set your price; we handle the enquiry and the deposit.
               </p>
             </div>
-            <a href="mailto:contact@fjordanglers.com?subject=Guiding%20with%20FjordAnglers" className="f-body" style={primaryButtonStyle}>
+            <a href="mailto:contact@fjordanglers.com?subject=Guiding%20with%20FjordAnglers" className={buttonClass.primary} style={{ ...primaryButtonStyle, border: '1.5px solid #FFFFFF' }}>
               Become a guide
             </a>
           </section>

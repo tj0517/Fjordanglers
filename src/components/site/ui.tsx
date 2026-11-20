@@ -6,6 +6,7 @@
 
 import Link from 'next/link'
 import type { CSSProperties, ReactNode } from 'react'
+import b from './buttons.module.css'
 
 export const NAVY      = '#0A2E4D'
 export const DEEP_NAVY = '#071C30'
@@ -59,45 +60,54 @@ const buttonLarge: CSSProperties = { minHeight: 54, padding: '0 28px', fontSize:
 /**
  * Salmon fill, beige text, navy outline — the main CTA on every page (README "Wspólne zasady").
  * Exported for a CTA that has to be a plain `<a>` with its own click handler (the offer page's
- * widget opens the inquiry form instead of navigating).
+ * widget opens the inquiry form instead of navigating); such an anchor takes `buttonClass.primary`
+ * for the hover.
  */
 export const primaryButtonStyle: CSSProperties = {
   ...buttonBase, fontWeight: 700, background: SALMON, color: PAGE_BG, border: `1.5px solid ${NAVY}`,
 }
 
-export function PrimaryButton({ href, children, size = 'md' }: { href: string; children: ReactNode; size?: 'md' | 'lg' }) {
+/** On a photo or a dark block the navy outline disappears, so it turns white there (tj, 2026-11-20). */
+const onDarkOutline: CSSProperties = { border: '1.5px solid #FFFFFF' }
+
+/** The hover classes (buttons.module.css) for buttons built outside the components below. */
+export const buttonClass = {
+  primary:   `f-body ${b.btn} ${b.primary}`,
+  secondary: `f-body ${b.btn} ${b.secondary}`,
+  chip:      b.chip,
+} as const
+
+export function PrimaryButton({
+  href, children, size = 'md', dark = false,
+}: { href: string; children: ReactNode; size?: 'md' | 'lg'; dark?: boolean }) {
   return (
     <Link
       href={href}
-      className="f-body"
-      style={{ ...primaryButtonStyle, ...(size === 'lg' ? buttonLarge : {}) }}
+      className={buttonClass.primary}
+      style={{ ...primaryButtonStyle, ...(size === 'lg' ? buttonLarge : {}), ...(dark ? onDarkOutline : {}) }}
     >
       {children}
     </Link>
   )
 }
 
-/** Cream fill, navy outline — the second button on a light surface ("All guides →"). */
+/** Cream fill, navy outline — the second button on a light surface ("All guides →"); navy on hover. */
 export function SecondaryButton({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <Link href={href} className="f-body" style={{ ...buttonBase, background: CREAM, color: NAVY, border: `1.5px solid ${NAVY}` }}>
-      {children}
-    </Link>
-  )
+  return <Link href={href} className={buttonClass.secondary} style={buttonBase}>{children}</Link>
 }
 
 /** White outline on a dark surface. External links (mailto:, wa.me) render a plain anchor. */
 export function GhostButton({ href, children, external = false }: { href: string; children: ReactNode; external?: boolean }) {
-  const style: CSSProperties = { ...buttonBase, color: '#FFFFFF', border: '1.5px solid rgba(255,255,255,.7)' }
+  const className = `f-body ${b.btn} ${b.ghost}`
   if (external) {
     const newTab = href.startsWith('http')
     return (
-      <a href={href} className="f-body" style={style} {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+      <a href={href} className={className} style={buttonBase} {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
         {children}
       </a>
     )
   }
-  return <Link href={href} className="f-body" style={style}>{children}</Link>
+  return <Link href={href} className={className} style={buttonBase}>{children}</Link>
 }
 
 export function Arrow() {

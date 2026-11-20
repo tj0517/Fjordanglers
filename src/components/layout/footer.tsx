@@ -1,6 +1,7 @@
 /**
- * The public site's footer (2026-11 redesign, docs/design/blog-hubs-2026-11): full width, on a
- * darker grain block.
+ * The public site's footer (2026-11 redesign, docs/design/blog-hubs-2026-11): a darker grain block
+ * framed like the photo heroes — 12 px in from the edges and the bottom, max 1560 px wide, 28 px
+ * corners (tj, 2026-11-20).
  *
  * The blog has no category pages yet, so the Journal column links to the blog itself; links the
  * mockup has with no page behind them ("About", "Become a guide") are left out. Kept from the old
@@ -39,7 +40,10 @@ function FooterLink({ href, children }: { href: string; children: ReactNode }) {
 
 export function SiteFooter() {
   return (
-    <footer className={`${s.blur} ${s.foot} mt-24`}>
+    <footer
+      className={`${s.blur} ${s.foot} mx-auto mb-3 mt-24 overflow-hidden`}
+      style={{ width: 'calc(100% - 24px)', maxWidth: 1560, borderRadius: 28 }}
+    >
       <div className="mx-auto flex flex-col gap-14 px-6" style={{ maxWidth: 1200, paddingTop: 'clamp(44px, 6vw, 80px)', paddingBottom: 36 }}>
         <div className="flex flex-wrap justify-between gap-x-16 gap-y-10">
           <div className="flex max-w-[460px] flex-[1_1_320px] flex-col gap-[22px]">
@@ -50,7 +54,7 @@ export function SiteFooter() {
               You talk to the guide who takes you out.
             </p>
             <div className="flex flex-wrap gap-3">
-              <PrimaryButton href={PLAN_YOUR_TRIP_HREF}>Plan your trip</PrimaryButton>
+              <PrimaryButton href={PLAN_YOUR_TRIP_HREF} dark>Plan your trip</PrimaryButton>
             </div>
           </div>
           <div className="flex flex-wrap gap-x-14 gap-y-9">

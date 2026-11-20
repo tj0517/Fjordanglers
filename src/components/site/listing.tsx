@@ -6,7 +6,7 @@
 
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
-import { CREAM, LINE, MUTED, NAVY } from './ui'
+import { CREAM, LINE, MUTED, NAVY, buttonClass } from './ui'
 
 const chipBase: CSSProperties = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, padding: '0 16px',
@@ -27,9 +27,9 @@ export function FilterRow({ label, all, options, value, href }: {
     <div className="flex flex-wrap items-center gap-x-[14px] gap-y-2">
       <span className="f-body min-w-[84px] text-[12.5px] font-bold uppercase" style={{ letterSpacing: '.12em', color: MUTED }}>{label}</span>
       <div role="group" aria-label={`Filter by ${label.toLowerCase()}`} className="flex flex-wrap gap-2">
-        <Link href={href(undefined)} className="f-body" style={value ? chipOff : chipOn} aria-current={value ? undefined : 'true'}>{all}</Link>
+        <Link href={href(undefined)} className={`f-body ${buttonClass.chip}`} style={value ? chipOff : chipOn} aria-current={value ? undefined : 'true'}>{all}</Link>
         {options.map(option => (
-          <Link key={option} href={href(option)} className="f-body" style={value === option ? chipOn : chipOff} aria-current={value === option ? 'true' : undefined}>
+          <Link key={option} href={href(option)} className={`f-body ${buttonClass.chip}`} style={value === option ? chipOn : chipOff} aria-current={value === option ? 'true' : undefined}>
             {option}
           </Link>
         ))}
@@ -59,17 +59,17 @@ export function Pagination({ page, totalPages, href }: { page: number; totalPage
 
   return (
     <nav aria-label="Pagination" className="f-body flex flex-wrap justify-center gap-2">
-      {page > 1 ? <Link href={href(page - 1)} style={off}>← Prev</Link> : <span style={disabled}>← Prev</span>}
+      {page > 1 ? <Link href={href(page - 1)} className={buttonClass.chip} style={off}>← Prev</Link> : <span style={disabled}>← Prev</span>}
       {items.map((item, idx) =>
         item === '…' ? (
           <span key={`e-${idx}`} style={{ ...box, color: MUTED }}>…</span>
         ) : item === page ? (
           <span key={item} aria-current="page" style={{ ...box, background: NAVY, color: '#FFFFFF' }}>{item}</span>
         ) : (
-          <Link key={item} href={href(item)} style={off}>{item}</Link>
+          <Link key={item} href={href(item)} className={buttonClass.chip} style={off}>{item}</Link>
         ),
       )}
-      {page < totalPages ? <Link href={href(page + 1)} style={off}>Next →</Link> : <span style={disabled}>Next →</span>}
+      {page < totalPages ? <Link href={href(page + 1)} className={buttonClass.chip} style={off}>Next →</Link> : <span style={disabled}>Next →</span>}
     </nav>
   )
 }

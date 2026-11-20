@@ -1,0 +1,39 @@
+/*
+ * Hover for the site's buttons, links that look like buttons and filter chips (tj, 2026-11-20).
+ * The salmon CTA's fill stays inline (primaryButtonStyle, spread by plain anchors), so its hover
+ * works through what an inline style leaves alone: lift, shadow and brightness. The other buttons
+ * keep their colours here, so hover can swap them.
+ */
+.btn {
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease, background-color .18s ease, color .18s ease, border-color .18s ease;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+
+.primary:hover { filter: brightness(1.07) saturate(1.05); box-shadow: 0 10px 24px rgba(230, 126, 80, .34); }
+
+.secondary { background: #FDFAF7; color: #0A2E4D; border: 1.5px solid #0A2E4D; }
+.secondary:hover { background: #0A2E4D; color: #FFFFFF; }
+
+.ghost { color: #FFFFFF; border: 1.5px solid rgba(255, 255, 255, .7); }
+.ghost:hover { background: rgba(255, 255, 255, .14); border-color: #FFFFFF; }
+
+/* The nav's dark "Plan your trip" pill. */
+.pill:hover { filter: brightness(1.2); box-shadow: 0 8px 20px rgba(10, 46, 77, .28); }
+
+/* Text links in the nav bar and its menu. */
+.navLink { transition: background-color .15s ease; }
+.navLink:hover { background: rgba(10, 46, 77, .07); }
+
+/* Round icon button (the menu). */
+.icon { transition: background-color .15s ease, border-color .15s ease; }
+.icon:hover { background: rgba(10, 46, 77, .07); }
+
+/* Filter chips and page numbers: the outline darkens (an inset ring, so the inline border can stay). */
+.chip { transition: box-shadow .15s ease, background-color .15s ease; }
+.chip:hover { box-shadow: inset 0 0 0 1px #0A2E4D; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .navLink, .icon, .chip { transition: none; }
+  .btn:hover { transform: none; }
+}

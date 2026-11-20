@@ -39,7 +39,7 @@ import { MAX_BRIEF_DAYS } from '@/lib/inquiries/brief'
 import { useCurrency } from './currency-context'
 import { useInquiryWizardOptional } from '@/components/inquiry-wizard/inquiry-wizard'
 import { DateRangeCalendar, SegmentedControl } from '@/components/inquiry-wizard/wizard-fields'
-import { CREAM, LINE, MUTED, ON_DARK_SOFT, SALMON_ON_DARK, primaryButtonStyle } from '@/components/site/ui'
+import { CREAM, LINE, MUTED, ON_DARK_SOFT, SALMON_ON_DARK, buttonClass, primaryButtonStyle } from '@/components/site/ui'
 import grain from '@/components/site/grain.module.css'
 import { cardShadow } from './offer-box'
 
@@ -391,9 +391,9 @@ const mutedStyle = { color: MUTED }
 const fieldStyle = { borderColor: LINE, color: 'var(--fa-navy)' }
 const labelClass = 'text-[11px] font-semibold uppercase tracking-[0.12em]'
 // The site's main CTA (src/components/site/ui.tsx) as a plain <a>: it opens the form, not a page.
-const ctaClass   = 'w-full transition-transform duration-150 hover:-translate-y-px'
+const ctaClass   = `${buttonClass.primary} w-full`
 const ctaStyle   = { ...primaryButtonStyle, minHeight: 52 }
-const compactCtaClass = 'flex-none'
+const compactCtaClass = `${buttonClass.primary} flex-none`
 const compactCtaStyle = { ...primaryButtonStyle, minHeight: 44, padding: '0 16px' }
 
 /** The grain header: "From", the amount, and what it covers. */

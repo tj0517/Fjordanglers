@@ -12,7 +12,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { HubOffer } from '@/lib/supabase/queries'
-import { CREAM, MUTED, NAVY, PAGE_BG, SALMON, Tag } from './ui'
+import { CREAM, MUTED, NAVY, PAGE_BG, SALMON, Tag, buttonClass } from './ui'
 
 export type TripCardData = {
   slug:      string
@@ -69,7 +69,7 @@ export function TripCard({ trip, priority = false, onClick }: { trip: TripCardDa
         <Link
           href={href}
           onClick={onClick}
-          className="f-body inline-flex min-h-[44px] flex-none items-center px-4 text-[14px] font-bold"
+          className={`${buttonClass.primary} inline-flex min-h-[44px] flex-none items-center px-4 text-[14px] font-bold`}
           style={{ borderRadius: 9, border: `1.5px solid ${NAVY}`, color: PAGE_BG, background: SALMON, textDecoration: 'none' }}
         >
           View trip

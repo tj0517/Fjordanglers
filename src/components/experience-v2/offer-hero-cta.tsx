@@ -8,7 +8,7 @@
  */
 
 import { useInquiryWizardOptional } from '@/components/inquiry-wizard/inquiry-wizard'
-import { primaryButtonStyle } from '@/components/site/ui'
+import { buttonClass, primaryButtonStyle } from '@/components/site/ui'
 
 export default function OfferHeroCta({ href, children }: { href: string; children: React.ReactNode }) {
   const wizard = useInquiryWizardOptional()
@@ -21,7 +21,7 @@ export default function OfferHeroCta({ href, children }: { href: string; childre
         event.preventDefault()
         wizard.openAt(1)
       }}
-      className="mt-5 !flex w-full md:!hidden"
+      className={`${buttonClass.primary} mt-5 !flex w-full md:!hidden`}
       style={{ ...primaryButtonStyle, minHeight: 52, fontSize: 16 }}
       data-testid="offer-hero-cta"
     >

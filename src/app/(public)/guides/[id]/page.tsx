@@ -15,7 +15,7 @@ import { retiredGuideTarget } from '@/lib/guide-redirects'
 import { PhotoHero } from '@/components/site/photo-hero'
 import { TripCard } from '@/components/site/trip-card'
 import {
-  CREAM, Eyebrow, INK, LINE, MUTED, NAVY, ON_DARK_SOFT, SALMON_ON_DARK, SAND, Tag, initials, primaryButtonStyle,
+  CREAM, Eyebrow, INK, LINE, MUTED, NAVY, ON_DARK_SOFT, SALMON_ON_DARK, SAND, Tag, buttonClass, initials, primaryButtonStyle,
 } from '@/components/site/ui'
 import s from '@/components/site/grain.module.css'
 
@@ -417,10 +417,14 @@ export default async function GuideProfilePage({
               {/* One trip → its page only; several → the list and the newest; none → the list link alone (tj, 2026-11-18). */}
               <div className="flex flex-col gap-[10px]" data-testid="guide-card-buttons">
                 {guideExperiences.length !== 1 && (
-                  <Link href="#experiences" className="f-body" style={{ ...primaryButtonStyle, minHeight: 50 }}>View trips</Link>
+                  <Link href="#experiences" className={buttonClass.primary} style={{ ...primaryButtonStyle, minHeight: 50 }}>View trips</Link>
                 )}
                 {newestTrip != null && (
-                  <Link href={`/experiences/${newestTrip.slug}`} className="f-body" style={{ ...primaryButtonStyle, minHeight: 50, background: CREAM, color: NAVY }}>
+                  <Link
+                    href={`/experiences/${newestTrip.slug}`}
+                    className={buttonClass.secondary}
+                    style={{ ...primaryButtonStyle, minHeight: 50, background: undefined, color: undefined, border: undefined }}
+                  >
                     Show the trip
                   </Link>
                 )}
