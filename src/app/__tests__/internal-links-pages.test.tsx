@@ -5,7 +5,7 @@
  *
  *   /blog/<norway post> → ≥ 2 /experiences/, ≥ 1 /guides/, exactly 1 hub link (/norway)
  *   /norway             → ≥ 1 /blog/
- *   /                   → ≥ 1 /blog/
+ *   /                   → no /blog/ while the Journal is hidden (src/lib/blog/visibility.ts)
  */
 import { vi, describe, it, expect } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -81,8 +81,8 @@ describe('FA-1.90 link counts inside <main> (fixtures)', () => {
     expect(linksInMain(html).blog).toEqual(['/blog/fishing-regulations-norway-2026'])
   })
 
-  it('home: ≥ 1 /blog/ — the three newest posts', async () => {
+  it('home: no /blog/ while the Journal is hidden from it (tj, 2026-11-20; was ≥ 1, the three newest posts)', async () => {
     const html = renderToStaticMarkup(await HomePage())
-    expect(linksInMain(html).blog).toEqual(['/blog/a', '/blog/b', '/blog/c'])
+    expect(linksInMain(html).blog).toEqual([])
   })
 })
