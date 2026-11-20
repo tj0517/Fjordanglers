@@ -9,7 +9,21 @@ import ExpPageMapWrapper from './exp-page-map-wrapper'
 import { fetchGeoExpPages } from './exp-page-geo-action'
 import type { MapBounds } from './exp-page-map-view'
 import { formatPrice } from '@/lib/format-price'
-import { ExpCard, type ExpPage } from '@/components/trips/exp-card'
+import type { ExpPage } from '@/components/trips/exp-page'
+import { TripCard, type TripCardData } from '@/components/site/trip-card'
+
+/** A page as the site's one trip card draws it: the first gallery photo, else the hero (as on the hub). */
+function tripCard(page: ExpPage): TripCardData {
+  const gallery = (page.gallery_image_urls as string[] | null) ?? []
+  return {
+    slug:      page.slug,
+    name:      page.experience_name,
+    region:    page.region,
+    cover:     gallery[0] ?? page.hero_image_url,
+    species:   (page.target_species as string[] | null) ?? [],
+    priceText: formatPrice({ priceFrom: page.price_from, priceType: page.price_type, currency: page.currency }),
+  }
+}
 
 // ─── Bounds helper ────────────────────────────────────────────────────────────
 
@@ -292,15 +306,16 @@ export default function ExpPageMapSection({
               <EmptyState isFiltered={isFiltered} onClear={() => setBounds(null)} />
             ) : (
               <>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-x-7 gap-y-10 xl:grid-cols-2">
                   {visiblePages.map((page, idx) => (
-                    <ExpCard
+                    <div
                       key={page.id}
-                      page={page}
+                      className="flex min-w-0 flex-col"
                       onMouseEnter={() => setHoveredPageId(page.id)}
                       onMouseLeave={() => setHoveredPageId(null)}
-                      priority={idx < 4}
-                    />
+                    >
+                      <TripCard trip={tripCard(page)} priority={idx < 4} />
+                    </div>
                   ))}
                 </div>
                 {!isFiltered && paginationNode}
@@ -458,9 +473,9 @@ export default function ExpPageMapSection({
         <EmptyState isFiltered={false} onClear={() => {}} />
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-x-7 gap-y-10 sm:grid-cols-2">
             {initialPages.map((page, idx) => (
-              <ExpCard key={page.id} page={page} priority={idx < 3} />
+              <TripCard key={page.id} trip={tripCard(page)} priority={idx < 3} />
             ))}
           </div>
           {paginationNode}

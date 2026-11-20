@@ -19,20 +19,14 @@ vi.mock('@/lib/supabase/queries', () => ({
   getGuides: async () => ({ guides: [guideRow(SLUGGED), guideRow(NO_SLUG)], total: 2 }),
   getPlatformStats: async () => ({ guideCount: 2, countryCount: 1, languageCount: 1 }),
   getFeaturedGuides: async () => [guideRow(SLUGGED), guideRow(NO_SLUG)],
-  getFeaturedExperiencePages: async () => [],
-  getSpeciesCounts: async () => ({}),
   getLatestBlogPosts: async () => [],
+  getDestinationHub: async () => null,
 }))
 vi.mock('@/lib/supabase/testimonials', () => ({ getTestimonial: async () => null }))
-vi.mock('@/app/(public)/guides/guides-filters', () => ({ GuidesFilters: () => null }))
-vi.mock('./guides-filters', () => ({ GuidesFilters: () => null }))
 vi.mock('@/components/layout/nav', () => ({ SiteNav: () => null, PLAN_YOUR_TRIP_HREF: '/trips' }))
 vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
-vi.mock('@/components/home/species-slider', () => ({ SpeciesSlider: () => null }))
-vi.mock('@/components/home/experiences-slider', () => ({ ExperiencesSlider: () => null }))
-vi.mock('@/components/home/bg-video', () => ({ BgVideo: () => null }))
 vi.mock('@/components/ui/contact-expert-button', () => ({ ContactExpertButton: () => null }))
-vi.mock('@/components/testimonial-banner', () => ({ default: () => null }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: () => {} }), notFound: () => { throw new Error('NEXT_NOT_FOUND') } }))
 
 const hrefs = (html: string) => [...html.matchAll(/href="([^"]*)"/g)].map(m => m[1]!)
 const guideHrefs = (html: string) => hrefs(html).filter(h => h.startsWith('/guides/'))

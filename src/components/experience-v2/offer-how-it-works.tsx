@@ -12,7 +12,7 @@
  */
 
 import OfferSection from './offer-section'
-import { cardShadow } from './offer-box'
+import { CREAM, LINE, MUTED, NAVY, ON_DARK_SOFT, SALMON } from '@/components/site/ui'
 
 export type OfferHowItWorksProps = {
   offerEtaText: string | null
@@ -53,36 +53,38 @@ export default function OfferHowItWorks({ offerEtaText, feePct }: OfferHowItWork
 
   return (
     <OfferSection section="S8" anchor="jak-dziala" eyebrow="Booking" title="How booking works" accordion={{ defaultOpen: false }}>
-      <StepCards steps={steps} className="sm:grid-cols-2 xl:grid-cols-4" />
+      <StepCards steps={steps} />
     </OfferSection>
   )
 }
 
 type Step = { title: string; body: string; highlight?: boolean }
 
-/** The numbered step cards, without the section frame. */
-function StepCards({ steps, className = '' }: { steps: Step[]; className?: string }) {
+/**
+ * The numbered steps, one under the other (2026-11 mockup): cream rows, the deposit step navy —
+ * it is the one where money moves.
+ */
+function StepCards({ steps }: { steps: Step[] }) {
   return (
-    <ol className={`grid grid-cols-1 gap-3 ${className}`}>
+    <ol className="m-0 flex list-none flex-col gap-2.5 p-0">
       {steps.map((step, i) => (
         <li
           key={step.title}
           data-step={i + 1}
-          className="rounded-2xl p-5"
+          className="flex gap-4 rounded-[14px] px-5 py-[18px]"
           style={step.highlight
-            ? { background: 'var(--fa-navy)', color: '#fff' }
-            : { background: '#fff', boxShadow: cardShadow }}
+            ? { background: NAVY, color: '#FFFFFF' }
+            : { background: CREAM, border: `1px solid ${LINE}`, color: NAVY }}
         >
-          <b
-            className="f-display block text-[32px] font-bold leading-none"
-            style={{ color: step.highlight ? 'rgba(255,255,255,0.45)' : 'rgba(10,46,77,0.28)' }}
-          >
+          <b aria-hidden className="f-display w-9 flex-none text-[26px] font-bold leading-none" style={{ color: SALMON }}>
             {String(i + 1).padStart(2, '0')}
           </b>
-          <p className="mt-3 text-[15px] font-semibold leading-snug">{step.title}</p>
-          <p className="mt-1.5 text-sm leading-relaxed" style={{ color: step.highlight ? 'rgba(255,255,255,0.78)' : 'rgba(10,46,77,0.7)' }}>
-            {step.body}
-          </p>
+          <span className="flex min-w-0 flex-col gap-1">
+            <span className="text-[16.5px] font-bold">{step.title}</span>
+            <span className="text-[15px] leading-[1.55]" style={{ color: step.highlight ? ON_DARK_SOFT : MUTED }}>
+              {step.body}
+            </span>
+          </span>
         </li>
       ))}
     </ol>

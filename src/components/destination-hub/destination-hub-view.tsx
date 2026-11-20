@@ -6,7 +6,7 @@
  * and hub.dc.html — the source of truth for layout, colours, type and spacing). Order: hero →
  * trips (species filter above the grid, no map) → season → guides → how it works → angler quote →
  * articles → FAQ → more destinations → plan-your-trip block. The site's nav sits on the hero photo
- * here (`SiteNav overlay`), which is why the hub renders it itself rather than under the (public) layout.
+ * here, which is why the hub renders it itself rather than under the (public) layout.
  *
  * A section with no data is not rendered at all — no empty heading. The sections the hub funnel
  * measures (`HUB_SECTIONS`: season, trips, faq, reviews) carry `data-section`; the rest carry
@@ -31,11 +31,13 @@ import type { DestinationHubData } from '@/lib/supabase/queries'
 import HubTrips from './hub-trips'
 import { SiteNav, PLAN_YOUR_TRIP_HREF } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
+import { FaqList } from '@/components/site/faq'
+import { ScrollAway } from '@/components/site/scroll-away'
 import {
   CREAM, DEEP_NAVY, Eyebrow, GhostButton, HeadingLink, MUTED, NAVY, ON_DARK, PrimaryButton,
-  SALMON, SALMON_ON_DARK, SectionHeading, Tag,
-} from './hub-ui'
-import s from './hub.module.css'
+  SALMON_ON_DARK, SectionHeading, Tag, initials,
+} from '@/components/site/ui'
+import s from '@/components/site/grain.module.css'
 
 /** Where every "Plan your trip" button leads — the site-wide one (tj, 2026-11-17). */
 const PLAN_HREF = PLAN_YOUR_TRIP_HREF
@@ -95,10 +97,6 @@ function speciesSentence(species: readonly string[]): string {
   return `${species.slice(0, -1).join(', ')} and ${species[species.length - 1]}.`
 }
 
-function initials(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('')
-}
-
 /** The hub's short name ("Iceland", "Patagonia") — the same one its breadcrumb uses. */
 function placeName(slug: string, fallback: string): string {
   const skeleton = getHubForSlug(slug)
@@ -119,59 +117,61 @@ function Hero({ data, place }: { data: DestinationHubData; place: string }) {
   }
 
   return (
-    <section
-      data-block="hero"
-      className="relative mx-auto mt-3 flex flex-col justify-end overflow-hidden pt-[220px] sm:pt-[120px]"
-      style={{ width: 'calc(100% - 24px)', maxWidth: 1560, minHeight: 640, borderRadius: 28, paddingBottom: 'clamp(28px, 4vw, 48px)', background: NAVY }}
-    >
-      <Image src={hub.heroImageUrl ?? data.ogImage ?? HERO_FALLBACK} alt="" fill priority sizes="(min-width: 1584px) 1560px, 100vw" className="object-cover" />
-      <span
-        aria-hidden="true"
-        className="absolute inset-0"
-        style={{ background: 'linear-gradient(180deg, rgba(7,22,36,.18) 0%, rgba(7,22,36,.22) 38%, rgba(7,22,36,.84) 100%)' }}
-      />
-      <div className="relative mx-auto flex w-full flex-col gap-6 px-6" style={{ maxWidth: 1200 }}>
-        <nav aria-label="Breadcrumb" className="f-body flex flex-wrap items-center gap-2 text-[14px]">
-          <Link href="/" style={{ color: '#E3EAF0', textDecoration: 'none' }}>Home</Link>
-          <Chevron />
-          <Link href="/trips" style={{ color: '#E3EAF0', textDecoration: 'none' }}>All destinations</Link>
-          <Chevron />
-          <span aria-current="page" style={{ color: '#FFFFFF' }}>{place}</span>
-        </nav>
-        <div className="flex flex-wrap items-end justify-between gap-8">
-          <div className="flex max-w-[660px] flex-[1_1_420px] flex-col gap-5">
-            <h1
-              className="f-display"
-              style={{ margin: 0, fontWeight: 700, fontSize: 'clamp(44px, 6vw, 76px)', lineHeight: 1, letterSpacing: '-.02em', color: '#FFFFFF' }}
-            >
-              {hub.h1}
-            </h1>
-            <p className="f-body m-0 text-[18px]" style={{ lineHeight: 1.55, color: '#F4F7F9' }}>{hub.intro}</p>
-            <div className="flex flex-wrap gap-3">
-              <PrimaryButton href={PLAN_HREF}>Plan your trip</PrimaryButton>
-              {data.offers.length > 0 && <GhostButton href="#trips">Browse trips</GhostButton>}
+    <ScrollAway>
+      <section
+        data-block="hero"
+        className="relative mx-auto mt-3 flex flex-col justify-end overflow-hidden pt-[220px] sm:pt-[120px]"
+        style={{ width: 'calc(100% - 24px)', maxWidth: 1560, minHeight: 640, borderRadius: 28, paddingBottom: 'clamp(28px, 4vw, 48px)', background: NAVY }}
+      >
+        <Image src={hub.heroImageUrl ?? data.ogImage ?? HERO_FALLBACK} alt="" fill priority sizes="(min-width: 1584px) 1560px, 100vw" className="object-cover" />
+        <span
+          aria-hidden="true"
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(180deg, rgba(7,22,36,.18) 0%, rgba(7,22,36,.22) 38%, rgba(7,22,36,.84) 100%)' }}
+        />
+        <div className="relative mx-auto flex w-full flex-col gap-6 px-6" style={{ maxWidth: 1200 }}>
+          <nav aria-label="Breadcrumb" className="f-body flex flex-wrap items-center gap-2 text-[14px]">
+            <Link href="/" style={{ color: '#E3EAF0', textDecoration: 'none' }}>Home</Link>
+            <Chevron />
+            <Link href="/trips" style={{ color: '#E3EAF0', textDecoration: 'none' }}>All destinations</Link>
+            <Chevron />
+            <span aria-current="page" style={{ color: '#FFFFFF' }}>{place}</span>
+          </nav>
+          <div className="flex flex-wrap items-end justify-between gap-8">
+            <div className="flex max-w-[660px] flex-[1_1_420px] flex-col gap-5">
+              <h1
+                className="f-display"
+                style={{ margin: 0, fontWeight: 700, fontSize: 'clamp(44px, 6vw, 76px)', lineHeight: 1, letterSpacing: '-.02em', color: '#FFFFFF' }}
+              >
+                {hub.h1}
+              </h1>
+              <p className="f-body m-0 text-[18px]" style={{ lineHeight: 1.55, color: '#F4F7F9' }}>{hub.intro}</p>
+              <div className="flex flex-wrap gap-3">
+                <PrimaryButton href={PLAN_HREF} dark>Plan your trip</PrimaryButton>
+                {data.offers.length > 0 && <GhostButton href="#trips">Browse trips</GhostButton>}
+              </div>
             </div>
+            {facts.length > 0 && (
+              <dl className="m-0 flex flex-[0_1_320px] flex-col gap-[10px]" data-testid="hub-facts">
+                {facts.map(fact => (
+                  <div key={fact.label} className={`${s.fq} flex flex-col gap-[3px]`} style={{ padding: '13px 18px' }}>
+                    <dt className="f-body text-[11.5px] font-bold uppercase" style={{ letterSpacing: '.1em', color: SALMON_ON_DARK }}>{fact.label}</dt>
+                    <dd
+                      className={fact.big ? 'f-display' : 'f-body'}
+                      style={fact.big
+                        ? { margin: 0, fontWeight: 700, fontSize: 26, color: '#FFFFFF' }
+                        : { margin: 0, fontSize: '15.5px', fontWeight: 600, lineHeight: 1.35, color: '#FFFFFF' }}
+                    >
+                      {fact.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </div>
-          {facts.length > 0 && (
-            <dl className="m-0 flex flex-[0_1_320px] flex-col gap-[10px]" data-testid="hub-facts">
-              {facts.map(fact => (
-                <div key={fact.label} className={`${s.fq} flex flex-col gap-[3px]`} style={{ padding: '13px 18px' }}>
-                  <dt className="f-body text-[11.5px] font-bold uppercase" style={{ letterSpacing: '.1em', color: SALMON_ON_DARK }}>{fact.label}</dt>
-                  <dd
-                    className={fact.big ? 'f-display' : 'f-body'}
-                    style={fact.big
-                      ? { margin: 0, fontWeight: 700, fontSize: 26, color: '#FFFFFF' }
-                      : { margin: 0, fontSize: '15.5px', fontWeight: 600, lineHeight: 1.35, color: '#FFFFFF' }}
-                  >
-                    {fact.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          )}
         </div>
-      </div>
-    </section>
+      </section>
+    </ScrollAway>
   )
 }
 
@@ -425,24 +425,7 @@ function Faq({ data, place }: { data: DestinationHubData; place: string }) {
           <div><GhostButton href={`mailto:${contact.email}`} external>Ask us directly</GhostButton></div>
         )}
       </div>
-      <div className="flex min-w-0 flex-[999_1_420px] flex-col gap-3">
-        {faq.map((entry, i) => (
-          <details key={entry.question} className={s.fq} open={i === 0}>
-            <summary className="flex min-h-[76px] items-center gap-[18px]" style={{ padding: '14px 18px 14px 24px' }}>
-              <span aria-hidden="true" className="f-display w-[34px] flex-none" style={{ fontWeight: 600, fontSize: 20, color: SALMON }}>
-                {String(i + 1).padStart(2, '0')}
-              </span>
-              <span className="f-display flex-[1_1_auto]" style={{ fontWeight: 600, fontSize: 20, lineHeight: 1.25 }}>{entry.question}</span>
-              <span aria-hidden="true" className={`${s.fqIcon} flex h-[42px] w-[42px] flex-none items-center justify-center rounded-full`}>
-                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M12 5v14" /><path d="M5 12h14" />
-                </svg>
-              </span>
-            </summary>
-            <p className={`${s.fqAnswer} f-body m-0 text-[16.5px]`} style={{ padding: '0 76px 24px 76px', lineHeight: 1.65 }}>{entry.answer}</p>
-          </details>
-        ))}
-      </div>
+      <FaqList entries={faq} />
     </section>
   )
 }
@@ -498,7 +481,7 @@ function PlanYourTrip({ data, place }: { data: DestinationHubData; place: string
         </p>
       </div>
       <div className="flex flex-wrap gap-3">
-        <PrimaryButton href={PLAN_HREF}>Plan your trip</PrimaryButton>
+        <PrimaryButton href={PLAN_HREF} dark>Plan your trip</PrimaryButton>
         {whatsapp !== '' && <GhostButton href={`https://wa.me/${whatsapp}`} external>Message us on WhatsApp</GhostButton>}
       </div>
     </section>
@@ -511,7 +494,7 @@ export default function DestinationHubView({ data }: { data: DestinationHubData 
   return (
     <HubFunnelProvider slug={data.hub.slug}>
       <div className="f-body relative min-h-screen" style={{ background: '#F3EDE4', color: NAVY }}>
-        <SiteNav overlay />
+        <SiteNav />
         <Hero data={data} place={place} />
         <main className="mx-auto flex flex-col gap-20 px-6 pt-[72px]" style={{ maxWidth: 1200 }}>
           <HubTrips offers={data.offers} species={data.species} place={place} />

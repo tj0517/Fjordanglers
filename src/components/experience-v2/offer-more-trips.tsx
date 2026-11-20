@@ -4,16 +4,15 @@
  * part of the world, anywhere) and the heading says which, so "More trips in Otago" is
  * never a lie and "More places we guide" is never a dead end.
  *
- * Cards are the home page's: photo, flag, name, guide and the "from" price.
+ * Cards are the site's one trip card (src/components/site/trip-card.tsx, 2026-11 mockup): photo
+ * with the region tag, name, the guide and the "from" price — the hub and the home page use the
+ * same card without the guide line.
  */
 
-import Image from 'next/image'
-import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
-import { CountryFlag } from '@/components/ui/country-flag'
 import { formatPrice } from '@/lib/format-price'
 import type { RelatedExperiencePages } from '@/lib/supabase/queries'
-import { mutedStyle, hairline } from './offer-box'
+import { NAVY, SecondaryButton } from '@/components/site/ui'
+import { TripCard } from '@/components/site/trip-card'
 
 export type OfferMoreTripsProps = {
   related: RelatedExperiencePages
@@ -34,65 +33,31 @@ export default function OfferMoreTrips({ related, country, region }: OfferMoreTr
   if (related.pages.length === 0) return null
 
   return (
-    <section
-      data-section="more-trips"
-      className="mt-14 border-t pt-10 sm:mt-16 sm:pt-12"
-      style={{ borderColor: hairline }}
-    >
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: 'rgba(10,46,77,0.5)' }}>
-            Keep exploring
-          </p>
-          <h2 className="f-display text-[26px] font-bold leading-[1.1] tracking-[-0.01em] sm:text-[32px]">
-            {heading(related.tier, country, region)}
-          </h2>
-        </div>
-        <Link
-          href="/trips"
-          className="inline-flex items-center gap-1.5 text-[15px] font-semibold underline decoration-[rgba(10,46,77,0.3)] underline-offset-4 hover:decoration-current"
-        >
-          All trips <ArrowRight aria-hidden size={15} strokeWidth={2.25} />
-        </Link>
+    <section data-section="more-trips" className="mt-14 flex flex-col gap-7">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <h2 className="f-display text-[28px] font-bold leading-[1.12] tracking-[-0.01em] sm:text-[34px]" style={{ color: NAVY }}>
+          {heading(related.tier, country, region)}
+        </h2>
+        <SecondaryButton href="/trips">All trips</SecondaryButton>
       </div>
 
       <ul
-        className="-mx-4 mt-6 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3"
+        className="m-0 grid list-none gap-x-7 gap-y-10 p-0 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]"
         data-testid="offer-more-trips"
       >
         {related.pages.map(page => (
-          <li key={page.id} className="w-[280px] flex-none snap-start sm:w-auto">
-            <Link href={`/experiences/${page.slug}`} className="group block">
-              <div
-                className="relative h-[240px] overflow-hidden rounded-2xl sm:h-[260px]"
-                style={{ background: '#1a3a5c', boxShadow: '0 12px 32px -12px rgba(10,46,77,0.25)' }}
-              >
-                {page.hero_image_url != null && (
-                  <Image
-                    src={page.hero_image_url}
-                    alt={page.experience_name}
-                    fill
-                    sizes="(min-width: 1024px) 380px, (min-width: 640px) 50vw, 280px"
-                    className="object-cover transition-transform duration-700 group-hover:scale-[1.05]"
-                  />
-                )}
-                <div
-                  className="absolute inset-0"
-                  style={{ background: 'linear-gradient(to top, rgba(5,10,20,0.78) 0%, rgba(5,10,20,0.1) 55%, transparent 100%)' }}
-                />
-                <div className="absolute inset-x-4 bottom-4 text-white">
-                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                    <CountryFlag country={page.country} size={12} />
-                    {page.country}{page.region !== '' && ` · ${page.region}`}
-                  </p>
-                  <h3 className="f-display text-[18px] font-bold leading-tight">{page.experience_name}</h3>
-                </div>
-              </div>
-              <p className="mt-2.5 px-1 text-[13px]" style={mutedStyle}>
-                {page.guide?.full_name != null && <>{page.guide.full_name} · </>}
-                {formatPrice({ priceFrom: page.price_from, priceType: page.price_type, currency: page.currency })}
-              </p>
-            </Link>
+          <li key={page.id} className="min-w-0">
+            <TripCard
+              trip={{
+                slug:      page.slug,
+                name:      page.experience_name,
+                region:    page.region,
+                cover:     page.hero_image_url,
+                species:   [],
+                guideName: page.guide?.full_name ?? null,
+                priceText: formatPrice({ priceFrom: page.price_from, priceType: page.price_type, currency: page.currency }),
+              }}
+            />
           </li>
         ))}
       </ul>

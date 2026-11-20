@@ -77,7 +77,7 @@ export default function OfferReviewCard({ review }: { review: ExperienceV2Review
     <div
       data-testid="review-card"
       data-orientation={orientation}
-      className={`flex w-[280px] flex-none snap-start rounded-2xl bg-white p-5 md:w-auto ${
+      className={`flex w-[280px] flex-none snap-start rounded-2xl bg-[#FDFAF7] p-5 md:w-auto ${
         vertical ? 'min-h-[220px] flex-row items-stretch gap-4' : 'flex-col'
       }`}
       style={{ color: 'var(--fa-navy)', boxShadow: '0 12px 32px -12px rgba(0,0,0,0.35)' }}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Mail, MessageCircle } from 'lucide-react'
+import { Mail } from 'lucide-react'
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '48698936563'
 const FA_EMAIL        = process.env.NEXT_PUBLIC_FA_EMAIL        ?? 'contact@fjordanglers.com'
@@ -33,9 +33,9 @@ export function ContactExpertButton({
   const btnStyle =
     variant === 'on-dark'
       ? {
-          background: 'rgba(255,255,255,0.1)',
+          background: 'rgba(255,255,255,0.14)',
           color: '#fff',
-          border: '1.5px solid rgba(255,255,255,0.22)',
+          border: '1.5px solid rgba(255,255,255,0.6)',
         }
       : {
           background: 'transparent',
@@ -48,11 +48,10 @@ export function ContactExpertButton({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold f-body transition-all hover:brightness-110 active:scale-[0.98]"
-        style={btnStyle}
+        className="inline-flex min-h-[54px] items-center px-7 text-[16.5px] font-semibold f-body transition-all hover:brightness-110 active:scale-[0.98]"
+        style={{ ...btnStyle, borderRadius: 10 }}
       >
-        <MessageCircle size={15} strokeWidth={2} />
-        Talk to an Expert
+        Talk to an expert
       </button>
 
       {open && (

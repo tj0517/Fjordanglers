@@ -1,0 +1,4 @@
+/* The bar sits 6 px from the top; on a page that opens on a framed photo hero (`data-block="hero"`:
+   home, hubs, guides) it starts further down, over the photo, until the page scrolls and it shrinks. */
+.header { padding-top: 6px; }
+:global(body:has([data-block="hero"])) .header:not([data-compact]) { padding-top: clamp(16px, 2vw, 28px); }

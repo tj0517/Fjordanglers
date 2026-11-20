@@ -39,6 +39,9 @@ import { MAX_BRIEF_DAYS } from '@/lib/inquiries/brief'
 import { useCurrency } from './currency-context'
 import { useInquiryWizardOptional } from '@/components/inquiry-wizard/inquiry-wizard'
 import { DateRangeCalendar, SegmentedControl } from '@/components/inquiry-wizard/wizard-fields'
+import { CREAM, LINE, MUTED, ON_DARK_SOFT, SALMON_ON_DARK, buttonClass, primaryButtonStyle } from '@/components/site/ui'
+import grain from '@/components/site/grain.module.css'
+import { cardShadow } from './offer-box'
 
 type OfferWidgetGuide = {
   fullName:          string
@@ -143,6 +146,9 @@ export default function OfferWidget({
   // underneath a visitor who leaves the page open across midnight.
   const months = useMemo(() => nextTwelveMonths(new Date()), [])
   const [flexMonth, setFlexMonth] = useState(() => months[2]?.value ?? '')
+  // The "When" picker starts as one summary row and opens on a click: open, it is ~130 px, and
+  // with it the sticky card no longer fits a 768 px laptop screen (tj, 2026-11-17).
+  const [whenOpen, setWhenOpen] = useState(false)
 
   // Null when the widget is rendered outside a v2 page's provider: the CTA is then just the
   // anchor it has always been.
@@ -184,45 +190,41 @@ export default function OfferWidget({
         }
       : null
 
-    return (
-      <div data-testid="offer-widget" data-mode="custom" className={compact ? '' : cardClass} style={compact ? undefined : cardStyle}>
-        <div className={compact ? '' : 'flex items-start justify-between gap-3'}>
+    if (compact) {
+      return (
+        <div data-testid="offer-widget" data-mode="custom" className="flex w-full items-center justify-between gap-3">
           <div className="min-w-0">
-            {rangeMoney != null ? (
-              <>
-                <p className={compact ? 'text-base font-bold leading-tight' : 'f-display text-[26px] font-bold leading-none tracking-[-0.01em]'}>
-                  {rangeMoney.to != null ? `${rangeMoney.from.main}–${rangeMoney.to.main}` : `from ${rangeMoney.from.main}`}
-                </p>
-                <p className={compact ? 'text-xs opacity-90' : 'mt-1.5 text-sm'} style={compact ? undefined : mutedStyle}>
-                  {rangeMoney.from.sub != null
-                    ? `${rangeMoney.to?.sub != null ? `${rangeMoney.from.sub}–${rangeMoney.to.sub}` : rangeMoney.from.sub} · indicative rate`
-                    : 'indicative · the offer is built around your dates'}
-                </p>
-              </>
-            ) : (
-              <p className={compact ? 'text-base font-bold' : 'f-display text-[26px] font-bold leading-none'}>Price on request</p>
-            )}
+            <p className="truncate text-base font-bold leading-tight">
+              {rangeMoney == null ? 'Price on request' : rangeMoney.to != null ? `${rangeMoney.from.main}–${rangeMoney.to.main}` : `from ${rangeMoney.from.main}`}
+            </p>
+            <p className="text-xs opacity-90">
+              {rangeMoney?.from.sub != null
+                ? `${rangeMoney.to?.sub != null ? `${rangeMoney.from.sub}–${rangeMoney.to.sub}` : rangeMoney.from.sub} · indicative rate`
+                : 'indicative · the offer is built around your dates'}
+            </p>
           </div>
-          {!compact && <CurrencyPicker />}
+          <a href={inquiryHref} onClick={openWizard} className={compactCtaClass} style={compactCtaStyle}>Plan your trip</a>
         </div>
+      )
+    }
 
-        {!compact && <GuideLine guide={guide} />}
+    return (
+      <div data-testid="offer-widget" data-mode="custom" className={cardClass} style={cardStyle}>
+        <PriceHeader
+          label={rangeMoney != null && rangeMoney.to == null ? 'From' : 'Indicative'}
+          amount={rangeMoney == null ? 'Price on request' : rangeMoney.to != null ? `${rangeMoney.from.main}–${rangeMoney.to.main}` : rangeMoney.from.main}
+          sub={rangeMoney?.from.sub != null
+            ? `${rangeMoney.to?.sub != null ? `${rangeMoney.from.sub}–${rangeMoney.to.sub}` : rangeMoney.from.sub} · indicative rate`
+            : 'the offer is built around your dates'}
+        />
 
-        <a href={inquiryHref} onClick={openWizard} className={compact ? compactCtaClass : ctaClass} style={compact ? compactCtaStyle : ctaStyle}>
-          Plan your trip
-        </a>
-
-        {!compact && (
-          <>
-            <p className="mt-2.5 text-center text-xs" style={mutedStyle}>
-              Free · no obligation · deposit only after you accept the offer
-            </p>
-            <p className="mt-1 text-center text-xs" style={mutedStyle}>
-              We answer within {responseSlaHours} h
-            </p>
-            <WhatsAppLine url={whatsappUrl} />
-          </>
-        )}
+        <div className={bodyClass}>
+          <GuideLine guide={guide} />
+          <a href={inquiryHref} onClick={openWizard} className={ctaClass} style={ctaStyle}>Plan your trip</a>
+          <Notes responseSlaHours={responseSlaHours} />
+          <CurrencyPicker />
+          <WhatsAppLine url={whatsappUrl} />
+        </div>
       </div>
     )
   }
@@ -247,58 +249,76 @@ export default function OfferWidget({
 
   return (
     <div data-testid="offer-widget" data-mode="fixed" className={cardClass} style={cardStyle}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="f-display text-[28px] font-bold leading-none tracking-[-0.01em]" data-testid="offer-from-price">{fromLine}</p>
-          <p className="mt-1.5 text-sm" style={mutedStyle}>
-            {fromMoney?.sub != null ? `${fromMoney.sub} · ` : ''}
-            {anglersPerGuideLabel(maxAnglersPerGuide)}
-          </p>
-        </div>
-        <CurrencyPicker />
-      </div>
+      <PriceHeader
+        label={fromMoney != null ? 'From' : null}
+        amount={fromMoney?.main ?? 'Price on request'}
+        amountTestId="offer-from-price"
+        sub={`${fromMoney?.sub != null ? `${fromMoney.sub} · ` : ''}${anglersPerGuideLabel(maxAnglersPerGuide)}`}
+      />
 
-      <GuideLine guide={guide} />
+      <div className={bodyClass}>
+        <GuideLine guide={guide} />
 
-      {/* ── when / anglers / days ── */}
-      <div className="mt-3 flex flex-col gap-2">
-        <div className="rounded-xl border p-2.5" style={fieldStyle}>
-          <p className={`${labelClass} mb-2`} style={mutedStyle}>When</p>
-          <SegmentedControl
-            name="widget-when"
-            compact
-            options={[{ value: 'exact', label: 'Exact dates' }, { value: 'flexible', label: 'Flexible' }]}
-            value={whenMode}
-            onChange={value => { touched(); setWhenMode(value === 'exact' ? 'exact' : 'flexible') }}
-          />
-
-          {whenMode === 'exact' ? (
-            <div className="mt-2.5">
-              <DateRangeCalendar
+        {/* ── when / anglers / days ── */}
+        <div className="flex flex-col gap-3">
+          {whenOpen ? (
+            <div className="rounded-xl border p-2.5" style={fieldStyle}>
+              <p className={`${labelClass} mb-2`} style={mutedStyle}>When</p>
+              <SegmentedControl
+                name="widget-when"
                 compact
-                dateFrom={exactDate}
-                days={days}
-                minDays={minDays}
-                maxDays={MAX_BRIEF_DAYS}
-                onChange={(from, n) => { touched(); setExactDate(from); setDays(n) }}
+                options={[{ value: 'exact', label: 'Exact dates' }, { value: 'flexible', label: 'Flexible' }]}
+                value={whenMode}
+                onChange={value => { touched(); setWhenMode(value === 'exact' ? 'exact' : 'flexible') }}
               />
+
+              {whenMode === 'exact' ? (
+                <div className="mt-2.5">
+                  <DateRangeCalendar
+                    compact
+                    dateFrom={exactDate}
+                    days={days}
+                    minDays={minDays}
+                    maxDays={MAX_BRIEF_DAYS}
+                    onChange={(from, n) => { touched(); setExactDate(from); setDays(n) }}
+                  />
+                </div>
+              ) : (
+                <label className="mt-2 block">
+                  <span className="sr-only">Month</span>
+                  <select
+                    value={flexMonth}
+                    onChange={e => { touched(); setFlexMonth(e.target.value) }}
+                    className="w-full rounded-lg border bg-white px-2.5 text-sm"
+                    style={{ ...fieldStyle, minHeight: 40 }}
+                  >
+                    {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                </label>
+              )}
             </div>
           ) : (
-            <label className="mt-2 block">
-              <span className="sr-only">Month</span>
-              <select
-                value={flexMonth}
-                onChange={e => { touched(); setFlexMonth(e.target.value) }}
-                className="w-full rounded-lg border bg-white px-2.5 text-sm"
-                style={{ ...fieldStyle, minHeight: 38 }}
-              >
-                {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
-            </label>
+            <button
+              type="button"
+              onClick={() => setWhenOpen(true)}
+              aria-expanded={false}
+              className="flex min-h-[44px] items-center justify-between gap-3 rounded-xl border px-3 text-left"
+              style={fieldStyle}
+              data-testid="widget-when-summary"
+            >
+              <span className="flex min-w-0 flex-col">
+                <span className={labelClass} style={mutedStyle}>When</span>
+                {/* Closed means untouched, so it is always the default: flexible, the preselected month. */}
+                <span className="truncate text-[14.5px] font-semibold">
+                  Flexible · {months.find(m => m.value === flexMonth)?.label}
+                </span>
+              </span>
+              <span className="flex flex-none items-center gap-1 text-[13px] font-semibold underline underline-offset-[3px]" style={{ textDecorationColor: 'var(--fa-salmon)' }}>
+                Change <ChevronDown aria-hidden size={14} strokeWidth={2.25} />
+              </span>
+            </button>
           )}
-        </div>
 
-        <div className="flex flex-wrap gap-1.5">
           <Stepper
             label="Anglers"
             value={anglers}
@@ -315,73 +335,93 @@ export default function OfferWidget({
             max={MAX_BRIEF_DAYS}
             onChange={n => { touched(); setDays(n) }}
           />
+          {maxDays != null && days > maxDays && (
+            <p className="text-xs" style={mutedStyle}>
+              Usually {minDays === maxDays ? `${maxDays}` : `${minDays}–${maxDays}`} days — longer trips are priced on request.
+            </p>
+          )}
         </div>
-        {maxDays != null && days > maxDays && (
-          <p className="text-xs" style={mutedStyle}>
-            Usually {minDays === maxDays ? `${maxDays}` : `${minDays}–${maxDays}`} days — longer trips are priced on request.
-          </p>
-        )}
-      </div>
 
-      {/* ── the price ── */}
-      <div className="mt-3" data-testid="offer-totals">
-        {q.priced ? (
-          <>
-            <Row label="Total" {...moneyProps(money(q.totalCents, q.currency))} strong />
-            {converted && (
-              <p className="mt-1.5 text-xs" style={mutedStyle} data-testid="offer-indicative">
-                ≈ indicative rate · you pay in {baseCurrency}
-              </p>
-            )}
-            {q.onRequest && (
-              <p className="mt-1.5 text-xs" style={mutedStyle} data-testid="offer-on-request">
-                Priced for {q.pricedAnglers} anglers — your exact price comes back on request.
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="border-t pt-2.5 text-sm" style={{ ...mutedStyle, borderColor: 'rgba(10,46,77,0.10)' }} data-testid="offer-on-request">
-            {q.reason === 'no-prices'
-              ? 'On request — we price this trip for your dates.'
-              : `On request for ${days} ${days === 1 ? 'day' : 'days'} × ${anglerLabel(anglers)} ${anglers === 1 ? 'angler' : 'anglers'}.`}
-          </p>
-        )}
-      </div>
+        {/* ── the price ── */}
+        <div data-testid="offer-totals">
+          {q.priced ? (
+            <>
+              <Row label="Total" {...moneyProps(money(q.totalCents, q.currency))} />
+              {converted && (
+                <p className="mt-1.5 text-xs" style={mutedStyle} data-testid="offer-indicative">
+                  ≈ indicative rate · you pay in {baseCurrency}
+                </p>
+              )}
+              {q.onRequest && (
+                <p className="mt-1.5 text-xs" style={mutedStyle} data-testid="offer-on-request">
+                  Priced for {q.pricedAnglers} anglers — your exact price comes back on request.
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="border-t pt-3.5 text-sm" style={{ ...mutedStyle, borderColor: LINE }} data-testid="offer-on-request">
+              {q.reason === 'no-prices'
+                ? 'On request — we price this trip for your dates.'
+                : `On request for ${days} ${days === 1 ? 'day' : 'days'} × ${anglerLabel(anglers)} ${anglers === 1 ? 'angler' : 'anglers'}.`}
+            </p>
+          )}
+        </div>
 
-      <a href={inquiryHref} onClick={openWizard} className={ctaClass} style={ctaStyle}>Check availability</a>
-      <p className="mt-2.5 text-center text-xs" style={mutedStyle}>
-        Free · no obligation · deposit only after you accept the offer
-      </p>
-      <p className="mt-1 text-center text-xs" style={mutedStyle}>
-        We answer within {responseSlaHours} h
-      </p>
-      <WhatsAppLine url={whatsappUrl} />
+        <a href={inquiryHref} onClick={openWizard} className={ctaClass} style={ctaStyle}>Check availability</a>
+        <Notes responseSlaHours={responseSlaHours} />
+        <CurrencyPicker />
+        <WhatsAppLine url={whatsappUrl} />
+      </div>
     </div>
   )
 }
 
 // ─── small pieces, local on purpose: nothing outside this widget uses them ───
 
-const cardClass  = 'rounded-2xl bg-white px-5 py-4'
+// The 2026-11 mockup's card: cream, a sand hairline, a soft lift; the price sits on a grain header.
+const cardClass  = 'rounded-[20px]'
 const cardStyle  = {
-  boxShadow: '0 1px 2px rgba(10,46,77,0.06), 0 20px 48px -16px rgba(10,46,77,0.22)',
-  border:    '1px solid rgba(10,46,77,0.08)',
-  color:     'var(--fa-navy)',
+  background: CREAM,
+  border:     `1px solid ${LINE}`,
+  boxShadow:  cardShadow,
+  color:      'var(--fa-navy)',
 }
-const mutedStyle = { color: 'rgba(10,46,77,0.62)' }
-const fieldStyle = { borderColor: 'rgba(10,46,77,0.14)', color: 'var(--fa-navy)' }
+const bodyClass  = 'flex flex-col gap-4 px-6 pb-6 pt-5'
+const mutedStyle = { color: MUTED }
+const fieldStyle = { borderColor: LINE, color: 'var(--fa-navy)' }
 const labelClass = 'text-[11px] font-semibold uppercase tracking-[0.12em]'
-// The one salmon moment on the page (CLAUDE.md brand rule): navy text on salmon passes AA,
-// white on salmon does not.
-const ctaClass   = 'mt-3.5 block w-full rounded-xl px-4 py-3.5 text-center text-base font-bold transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[0_8px_20px_-6px_rgba(230,126,80,0.6)]'
-const ctaStyle   = { background: 'var(--fa-salmon)', color: 'var(--fa-navy)' }
-const compactCtaClass = 'flex-none rounded-xl px-4 py-3 text-sm font-bold'
-const compactCtaStyle = { background: 'var(--fa-salmon)', color: 'var(--fa-navy)', minHeight: 44 }
+// The site's main CTA (src/components/site/ui.tsx) as a plain <a>: it opens the form, not a page.
+const ctaClass   = `${buttonClass.primary} w-full`
+const ctaStyle   = { ...primaryButtonStyle, minHeight: 52 }
+const compactCtaClass = `${buttonClass.primary} flex-none`
+const compactCtaStyle = { ...primaryButtonStyle, minHeight: 44, padding: '0 16px' }
+
+/** The grain header: "From", the amount, and what it covers. */
+function PriceHeader({ label, amount, amountTestId, sub }: { label: string | null; amount: string; amountTestId?: string; sub: string }) {
+  return (
+    <div className={`${grain.blur} ${grain.nz} flex flex-col gap-1 rounded-t-[19px] px-6 py-[22px]`}>
+      {label != null && (
+        <span className="text-[12.5px] font-bold uppercase tracking-[0.1em]" style={{ color: SALMON_ON_DARK }}>{label}</span>
+      )}
+      <span className="f-display text-[32px] font-bold leading-none text-white" data-testid={amountTestId}>{amount}</span>
+      <span className="mt-1 text-[14px] font-medium" style={{ color: ON_DARK_SOFT }}>{sub}</span>
+    </div>
+  )
+}
+
+function Notes({ responseSlaHours }: { responseSlaHours: number }) {
+  return (
+    <div className="-mt-1.5 text-center text-[12.5px] leading-relaxed" style={mutedStyle}>
+      <p>Free · no obligation · deposit only after you accept the offer</p>
+      <p>We answer within {responseSlaHours} h</p>
+    </div>
+  )
+}
 
 /**
- * Lives in the card, next to the number it changes. Its own menu rather than a native
- * `<select>`: the native one paints itself from the OS theme and looked black on the
- * light card.
+ * Under the CTA, as the mockup's "Show prices in NZD · change currency" line. Its own menu
+ * rather than a native `<select>`: the native one paints itself from the OS theme and looked
+ * black on the light card. The menu opens upwards, over the card.
  */
 function CurrencyPicker() {
   const { display, setDisplay, available } = useCurrency()
@@ -403,26 +443,26 @@ function CurrencyPicker() {
   if (available.length < 2) return null
 
   return (
-    <div ref={ref} className="relative flex-none">
+    <div ref={ref} className="relative -mt-1.5 self-center">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`Show prices in ${display} — change currency`}
-        className="flex items-center gap-1 rounded-full border bg-white py-1 pl-3 pr-2 text-xs font-semibold"
-        style={fieldStyle}
+        className="flex min-h-[32px] items-center gap-1 text-[13.5px] underline underline-offset-[3px]"
+        style={{ ...mutedStyle, textDecorationColor: 'var(--fa-salmon)' }}
         data-testid="currency-picker"
       >
-        {display}
+        Show prices in {display} · change currency
         <ChevronDown aria-hidden size={14} strokeWidth={2.25} style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 150ms' }} />
       </button>
       {open && (
         <ul
           role="listbox"
           aria-label="Currency"
-          className="absolute right-0 z-20 mt-1.5 min-w-[112px] overflow-hidden rounded-xl bg-white py-1"
-          style={{ boxShadow: '0 1px 2px rgba(10,46,77,0.08), 0 12px 32px -8px rgba(10,46,77,0.28)', border: '1px solid rgba(10,46,77,0.08)' }}
+          className="absolute bottom-full left-1/2 z-20 mb-1.5 min-w-[112px] -translate-x-1/2 overflow-hidden rounded-xl py-1"
+          style={{ background: CREAM, boxShadow: '0 1px 2px rgba(10,46,77,0.08), 0 12px 32px -8px rgba(10,46,77,0.28)', border: `1px solid ${LINE}` }}
         >
           {available.map(code => {
             const selected = code === display
@@ -449,7 +489,7 @@ function CurrencyPicker() {
 function WhatsAppLine({ url }: { url: string | null }) {
   if (url == null) return null
   return (
-    <p className="mt-3 border-t pt-3 text-center text-xs" style={{ ...mutedStyle, borderColor: 'rgba(10,46,77,0.08)' }}>
+    <p className="border-t pt-3 text-center text-[12.5px]" style={{ ...mutedStyle, borderColor: LINE }}>
       Prefer to talk?{' '}
       <a href={url} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2" style={{ color: 'var(--fa-navy)' }}>
         Write to us on WhatsApp
@@ -461,7 +501,7 @@ function WhatsAppLine({ url }: { url: string | null }) {
 function GuideLine({ guide }: { guide: OfferWidgetGuide | null }) {
   if (guide == null) return null
   return (
-    <div className="mt-3 flex items-center gap-2.5">
+    <div className="flex items-center gap-2.5">
       {guide.avatarUrl != null && (
         <Image
           src={guide.avatarUrl}
@@ -480,53 +520,53 @@ function GuideLine({ guide }: { guide: OfferWidgetGuide | null }) {
 }
 
 function Row({
-  label, value, sub, strong = false,
+  label, value, sub,
 }: {
-  label: string; value: string; strong?: boolean
+  label: string; value: string
   /** The exact page-currency amount, when `value` is a conversion. */
   sub?: string | null
 }) {
   return (
-    <div
-      className="flex items-baseline justify-between gap-3 border-t py-2 text-sm"
-      style={{ borderColor: 'rgba(10,46,77,0.08)' }}
-    >
-      <span className={strong ? 'font-semibold' : undefined}>{label}</span>
+    <div className="flex items-baseline justify-between gap-3 border-t pt-3.5" style={{ borderColor: LINE }}>
+      <span className="text-[15px] font-bold">{label}</span>
       <span className="text-right">
-        <b className={strong ? 'f-display text-xl' : 'tabular-nums'}>{value}</b>
+        <b className="f-display text-[24px]">{value}</b>
         {sub != null && <span className="block text-[11px] tabular-nums" style={mutedStyle}>{sub}</span>}
       </span>
     </div>
   )
 }
 
+/** One full-width row per count: the label on the left, − n + on the right (2026-11 mockup). */
 function Stepper({
   label, value, display, min, max, onChange,
 }: {
   label: string; value: number; display: string; min: number; max: number; onChange: (n: number) => void
 }) {
+  const buttonClass = 'flex h-10 w-10 items-center justify-center rounded-[9px] border-[1.5px] text-lg font-bold leading-none transition-colors hover:bg-[rgba(10,46,77,0.06)] disabled:opacity-30 disabled:hover:bg-transparent'
+  const buttonStyle = { borderColor: LINE, background: CREAM, color: 'var(--fa-navy)' }
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-xl border py-1 pl-2.5 pr-1" style={fieldStyle}>
-      <span className={labelClass} style={mutedStyle}>{label}</span>
-      <span className="flex items-center">
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-[15px] font-semibold">{label}</span>
+      <span className="inline-flex items-center gap-3">
         <button
           type="button"
           onClick={() => onChange(Math.max(min, value - 1))}
           disabled={value <= min}
           aria-label={`One fewer ${label.toLowerCase()}`}
-          className="flex h-7 w-7 items-center justify-center rounded-full border text-base leading-none transition-colors hover:bg-[rgba(10,46,77,0.06)] disabled:opacity-30 disabled:hover:bg-transparent"
-          style={{ borderColor: 'rgba(10,46,77,0.18)' }}
+          className={buttonClass}
+          style={buttonStyle}
         >
           −
         </button>
-        <b className="w-6 text-center text-[15px] tabular-nums" aria-live="polite">{display}</b>
+        <b className="min-w-[18px] text-center text-[16px] tabular-nums" aria-live="polite">{display}</b>
         <button
           type="button"
           onClick={() => onChange(Math.min(max, value + 1))}
           disabled={value >= max}
           aria-label={`One more ${label.toLowerCase()}`}
-          className="flex h-7 w-7 items-center justify-center rounded-full border text-base leading-none transition-colors hover:bg-[rgba(10,46,77,0.06)] disabled:opacity-30 disabled:hover:bg-transparent"
-          style={{ borderColor: 'rgba(10,46,77,0.18)' }}
+          className={buttonClass}
+          style={buttonStyle}
         >
           +
         </button>

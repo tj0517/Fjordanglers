@@ -16,7 +16,8 @@
  */
 
 import OfferSection from './offer-section'
-import { Box, mutedStyle } from './offer-box'
+import { ON_DARK, SALMON_ON_DARK } from '@/components/site/ui'
+import grain from '@/components/site/grain.module.css'
 import { optionPriceText, durationText } from './option-price'
 import type { OfferArchetype } from './offer-day'
 import { quote, customRange, type PriceRow, type Quote } from '@/lib/pricing/experience-price'
@@ -65,15 +66,16 @@ export default function OfferPriceTable(props: OfferPriceTableProps) {
 
   return (
     <OfferSection section="S9" anchor="cena" eyebrow="Money" title="Price" accordion={{ defaultOpen: true }}>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[3fr_2fr]">
+      {/* One grain block, rows on hairlines (2026-11 mockup): the table, then the total. */}
+      <div className={`${grain.blur} ${grain.nz} flex flex-col rounded-[20px] px-5 py-2 text-white sm:px-9 sm:py-3.5 [&>*:last-child]:!border-b-0`}>
         {tableUsable && (
-          <Box>
-            <table className="w-full border-collapse text-[15px]" data-testid="price-table">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[16px]" data-testid="price-table">
               <thead>
-                <tr className="text-left text-[13px]" style={mutedStyle}>
-                  <th scope="col" className="border-b py-2 font-normal" style={rule}><span className="sr-only">Days</span></th>
+                <tr className="text-left text-[13px]" style={{ color: ON_DARK }}>
+                  <th scope="col" className="py-4 font-medium" style={rule}><span className="sr-only">Days</span></th>
                   {anglers.map(a => (
-                    <th key={a} scope="col" className="border-b py-2 font-normal" style={rule}>
+                    <th key={a} scope="col" className="py-4 text-right font-medium" style={rule}>
                       {plural(a, 'angler', 'anglers')}
                     </th>
                   ))}
@@ -82,14 +84,14 @@ export default function OfferPriceTable(props: OfferPriceTableProps) {
               <tbody>
                 {days.map((d, i) => (
                   <tr key={d}>
-                    <th scope="row" className="border-b py-2.5 text-left font-normal" style={ruleSoft}>
+                    <th scope="row" className="py-[18px] text-left font-medium" style={{ ...rule, color: ON_DARK }}>
                       {plural(d, 'day', 'days')}
                     </th>
                     {anglers.map((a, j) => (
                       <td
                         key={a}
-                        className="border-b py-2.5"
-                        style={ruleSoft}
+                        className="py-[18px] text-right font-bold tabular-nums"
+                        style={rule}
                         data-days={d}
                         data-anglers={a}
                       >
@@ -100,81 +102,76 @@ export default function OfferPriceTable(props: OfferPriceTableProps) {
                 ))}
               </tbody>
             </table>
-          </Box>
+          </div>
         )}
 
         {tableUsable && defaultQuote.priced && (
-          <Box>
-            <p className="mb-2 text-[13px]" style={mutedStyle}>
-              For {plural(defaultDays, 'day', 'days')}, {plural(defaultAnglers, 'angler', 'anglers')}
-            </p>
+          <div className="py-5 sm:py-6" style={rule}>
             {/* The price only — no deposit / balance split (tj, FA-1.65, 2026-10-23). */}
-            <Line label="Total" value={formatCents(defaultQuote.totalCents, defaultQuote.currency)} strong />
+            <div className="flex items-baseline justify-between gap-4">
+              <span className="text-[16px] font-bold">
+                Total
+                <span className="ml-2 font-medium" style={{ color: ON_DARK }}>
+                  {plural(defaultDays, 'day', 'days')}, {plural(defaultAnglers, 'angler', 'anglers')}
+                </span>
+              </span>
+              <span className="f-display text-[26px] font-bold sm:text-[28px]" style={{ color: SALMON_ON_DARK }}>
+                {formatCents(defaultQuote.totalCents, defaultQuote.currency)}
+              </span>
+            </div>
             {defaultQuote.onRequest && (
-              <p className="mt-2 text-[13px]" style={mutedStyle}>
+              <p className="mt-2 text-[13px]" style={{ color: ON_DARK }}>
                 Priced for {defaultQuote.pricedAnglers} anglers — your exact price comes back on request.
               </p>
             )}
-          </Box>
+          </div>
         )}
 
         {range != null && (
-          <Box>
-            <p className="mb-1 text-[13px]" style={mutedStyle}>Indicative rate</p>
-            <p className="text-xl font-semibold" data-testid="price-range">
-              {range.toCents != null
-                ? `${formatCents(range.fromCents, range.currency)}–${formatCents(range.toCents, range.currency)}`
-                : `from ${formatCents(range.fromCents, range.currency)}`}
-            </p>
-            <p className="mt-2 text-[13px]" style={mutedStyle}>
+          <div className="py-5 sm:py-6" style={rule}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <span className="text-[16px] font-medium" style={{ color: ON_DARK }}>Indicative rate</span>
+              <span className="f-display text-[26px] font-bold sm:text-[28px]" style={{ color: SALMON_ON_DARK }} data-testid="price-range">
+                {range.toCents != null
+                  ? `${formatCents(range.fromCents, range.currency)}–${formatCents(range.toCents, range.currency)}`
+                  : `from ${formatCents(range.fromCents, range.currency)}`}
+              </span>
+            </div>
+            <p className="mt-2 text-[13.5px]" style={{ color: ON_DARK }}>
               The exact price depends on the trip we plan together; your offer states it.
             </p>
-          </Box>
+          </div>
         )}
 
         {archetypes.length > 0 && (
-          <Box>
-            <p className="mb-2 text-[13px]" style={mutedStyle}>Trip styles</p>
-            <ul className="space-y-2 text-[15px]" data-testid="archetype-prices">
-              {archetypes.map(a => {
-                const length = durationText(a.durationDaysMin, a.durationDaysMax)
-                return (
-                  <li key={a.id} className="flex items-baseline justify-between gap-3">
-                    <span>{a.label}{length != null && <span style={mutedStyle}> · {length}</span>}</span>
-                    <b className="flex-none whitespace-nowrap">{optionPriceText(a.priceFromCents, a.priceToCents, a.currency ?? currency)}</b>
-                  </li>
-                )
-              })}
-            </ul>
-          </Box>
+          <ul className="m-0 list-none p-0" data-testid="archetype-prices">
+            {archetypes.map(a => {
+              const length = durationText(a.durationDaysMin, a.durationDaysMax)
+              return (
+                <li key={a.id} className="flex items-baseline justify-between gap-4 py-[18px] text-[16px]" style={rule}>
+                  <span className="font-medium" style={{ color: ON_DARK }}>{a.label}{length != null && <> · {length}</>}</span>
+                  <b className="flex-none whitespace-nowrap">{optionPriceText(a.priceFromCents, a.priceToCents, a.currency ?? currency)}</b>
+                </li>
+              )
+            })}
+          </ul>
         )}
 
         {weatherPolicyText != null && (
-          <Box className="xl:col-span-2">
-            <p className="text-[15px]" data-testid="weather-policy">
-              <b>Bad weather:</b> {weatherPolicyText}
-            </p>
-          </Box>
+          <p className="py-5 text-[15px]" style={{ ...rule, color: ON_DARK }} data-testid="weather-policy">
+            <b className="text-white">Bad weather:</b> {weatherPolicyText}
+          </p>
         )}
       </div>
     </OfferSection>
   )
 }
 
-const rule     = { borderColor: 'rgba(10,46,77,0.16)' }
-const ruleSoft = { borderColor: 'rgba(10,46,77,0.10)' }
+/** The hairline between rows on the grain block; the block drops it on its last child. */
+const rule = { borderBottom: '1px solid rgba(255,255,255,.22)' }
 
 /** A priced cell shows the total; a cell the table cannot price exactly says so. */
 function cellText(q: Quote | undefined): string {
   if (q == null || !q.priced || q.onRequest) return 'on request'
   return formatCents(q.totalCents, q.currency)
-}
-
-function Line({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 border-t py-1.5 text-sm first:border-t-0" style={ruleSoft}>
-      <span>{label}</span>
-      <b className={strong ? 'text-base' : undefined}>{value}</b>
-    </div>
-  )
 }

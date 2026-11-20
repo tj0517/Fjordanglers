@@ -7,13 +7,14 @@
  *
  * Each chip can be typed in the admin (`hero_facts`, FA-1.63); a typed value is shown as
  * typed, and a chip with nothing typed is computed as before — chip by chip.
+ *
+ * Drawn as the site's uppercase tags (2026-11 mockup): sand, and salmon for "gear included".
  */
 
-import { CalendarDays, MapPin, Package, Sun, Users, type LucideIcon } from 'lucide-react'
 import { seasonLabel } from '@/lib/season-months'
 import type { HeroFacts } from '@/lib/experience-v2-content'
 import type { DayLength } from '@/lib/experiences/v2-editor'
-import { cardShadow } from './offer-box'
+import { Tag } from '@/components/site/ui'
 
 /** Words in `experience_pages.includes` that mean the angler can turn up without tackle. */
 const GEAR_WORDS = /\b(gear|rod|rods|tackle|equipment|flies|fly)\b/i
@@ -40,7 +41,7 @@ const DAY_LENGTH_LABEL: Record<DayLength, string> = {
   multi_day: 'multi-day',
 }
 
-type Chip = { icon: LucideIcon; label: string }
+type Chip = { label: string; gear?: boolean }
 
 export default function OfferChips({
   region,
@@ -65,29 +66,19 @@ export default function OfferChips({
   const gear     = heroFacts?.gearIncluded ?? gearIncluded(includes)
 
   const chips = ([
-    location !== '' ? { icon: MapPin, label: location } : null,
-    {
-      icon:  CalendarDays,
-      label: heroFacts?.dayLength != null ? DAY_LENGTH_LABEL[heroFacts.dayLength] : lengthLabel(minDays, maxDays),
-    },
-    { icon: Users, label: heroFacts?.groupSize ?? anglersLabel(maxAnglersPerGuide) },
-    season != null ? { icon: Sun, label: season } : null,
-    gear ? { icon: Package, label: 'gear included' } : null,
+    location !== '' ? { label: location } : null,
+    { label: heroFacts?.dayLength != null ? DAY_LENGTH_LABEL[heroFacts.dayLength] : lengthLabel(minDays, maxDays) },
+    { label: heroFacts?.groupSize ?? anglersLabel(maxAnglersPerGuide) },
+    season != null ? { label: season } : null,
+    gear ? { label: 'gear included', gear: true } : null,
   ] as (Chip | null)[]).filter((c): c is Chip => c != null)
 
   if (chips.length === 0) return null
 
   return (
     <ul className="flex flex-wrap gap-2" data-testid="offer-chips">
-      {chips.map(({ icon: Icon, label }) => (
-        <li
-          key={label}
-          className="flex items-center gap-1.5 rounded-full bg-white py-1.5 pl-2.5 pr-3.5 text-sm font-medium"
-          style={{ boxShadow: cardShadow, color: 'var(--fa-navy)' }}
-        >
-          <Icon aria-hidden size={15} strokeWidth={2} style={{ color: 'rgba(10,46,77,0.55)' }} />
-          {label}
-        </li>
+      {chips.map(({ label, gear: isGear }) => (
+        <li key={label} className="flex"><Tag tone={isGear === true ? 'salmon' : 'sand'}>{label}</Tag></li>
       ))}
     </ul>
   )
