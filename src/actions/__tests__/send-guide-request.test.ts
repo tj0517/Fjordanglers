@@ -445,6 +445,8 @@ describe('database guards on the two new functions (tj condition 2)', () => {
   it.each(FNS)('%s: anon is denied', async fn => {
     const { error } = await call(anon(), fn, ADMIN_ID)
     expect(error?.code).toBe(PERMISSION_DENIED)
+    // the FUNCTION refuses (EXECUTE revoked) — not merely a table behind it
+    expect(error?.message).toContain(`permission denied for function ${fn}`)
   })
 
   it.each(FNS)('%s: an authenticated (angler) session is denied', async fn => {
@@ -453,6 +455,7 @@ describe('database guards on the two new functions (tj condition 2)', () => {
     expect(signInError).toBeNull()
     const { error } = await call(c, fn, ADMIN_ID)
     expect(error?.code).toBe(PERMISSION_DENIED)
+    expect(error?.message).toContain(`permission denied for function ${fn}`)
   })
 
   it.each(FNS)('%s: NULL admin id raises', async fn => {

@@ -188,7 +188,8 @@ describe('createGuideRequest', () => {
       actor_kind: 'admin', actor_id: ADMIN_ID, channel: 'whatsapp',
       payload: { request_id: created.requestId, guide_id: GUIDE_A, channel: 'whatsapp' },
     })
-    expect(Object.keys(sent.at(-1)!.payload as object).sort()).toEqual(['channel', 'expires_at', 'guide_id', 'request_id'])
+    // FA-M.05 D4: trip_country_set (null here — the inquiry has a country)
+    expect(Object.keys(sent.at(-1)!.payload as object).sort()).toEqual(['channel', 'expires_at', 'guide_id', 'request_id', 'trip_country_set'])
   })
 })
 
@@ -429,16 +430,16 @@ describe('inquiries summary follows the latest request only', () => {
 // ─── withdraw ─────────────────────────────────────────────────────────────────
 
 describe('withdrawGuideRequest', () => {
-  it('kills the link, emits guide.request_withdrawn once, leaves the summary', async () => {
+  // FA-M.05 D2 (a): withdrawing the inquiry's latest request detaches its guide.
+  it('kills the link, emits guide.request_withdrawn once, detaches the guide (latest request)', async () => {
     const created = await create(INQ_NZ, GUIDE_A)
-    const before = await summary(INQ_NZ)
     expect(await withdrawGuideRequest(svc(), { requestId: created.requestId, adminId: ADMIN_ID })).toBe('withdrawn')
     expect(await withdrawGuideRequest(svc(), { requestId: created.requestId, adminId: ADMIN_ID })).toBe('already_withdrawn')
     expect(await findGuideRequestByToken(svc(), created.token)).toEqual({ ok: false, reason: 'withdrawn' })
     const w = (await events(INQ_NZ, 'guide.request_withdrawn')).filter(e => (e.payload as { request_id?: string }).request_id === created.requestId)
     expect(w).toHaveLength(1)
-    expect(w[0]).toMatchObject({ actor_kind: 'admin', actor_id: ADMIN_ID, payload: { guide_id: GUIDE_A, was_answered: false } })
-    expect(await summary(INQ_NZ)).toEqual(before)
+    expect(w[0]).toMatchObject({ actor_kind: 'admin', actor_id: ADMIN_ID, payload: { guide_id: GUIDE_A, was_answered: false, detached: true } })
+    expect(await summary(INQ_NZ)).toMatchObject({ assigned_guide_id: null, guide_acceptance: null, guide_responded_at: null })
   })
 })
 
