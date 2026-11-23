@@ -41,14 +41,20 @@ vi.mock('@/lib/auth/guards', async importOriginal => ({
 vi.mock('@/lib/app-url', () => ({ getAppUrl: async () => 'https://fa.test' }))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 
-import { sendGuideRequest, withdrawGuideRequestAction, saveGuideWhatsAppNumber } from '../guide-requests'
+import {
+  sendGuideRequest, withdrawGuideRequestAction, saveGuideWhatsAppNumber,
+  acceptGuideRequestOnBehalfAction, unassignGuideWithoutRequestAction,
+} from '../guide-requests'
 import { UnauthorizedError } from '@/lib/auth/guards'
 import { listGuideRequestsForInquiry } from '@/lib/guide-requests/requests'
 
 const INQ        = 'f5a00000-0000-4000-8000-000000000001'
 const GUIDE      = 'f5a00000-0000-4000-8000-00000000000a'   // has a number
 const GUIDE_NONE = 'f5a00000-0000-4000-8000-00000000000b'   // no number
+const GUIDE_2    = 'f5a00000-0000-4000-8000-00000000000c'   // second guide, has a number (guide change)
 const PHONE      = '+64211234567'
+const ANGLER     = { email: 'angler@seed.test', password: 'seed-angler-password-2026' }
+const PERMISSION_DENIED = '42501'
 
 let ADMIN_ID = ''
 let logSpies: Array<ReturnType<typeof vi.spyOn>> = []
@@ -87,8 +93,23 @@ async function resetInquiry() {
 async function sweep() {
   const s = svc()
   await s.from('inquiries').delete().eq('id', INQ)
-  await s.from('guide_contacts').delete().in('guide_id', [GUIDE, GUIDE_NONE])
-  await s.from('guides').delete().in('id', [GUIDE, GUIDE_NONE])
+  await s.from('guide_contacts').delete().in('guide_id', [GUIDE, GUIDE_NONE, GUIDE_2])
+  await s.from('guides').delete().in('id', [GUIDE, GUIDE_NONE, GUIDE_2])
+}
+
+async function inquiry() {
+  const { data, error } = await svc().from('inquiries')
+    .select('assigned_guide_id, assigned_at, guide_acceptance, guide_responded_at, trip_country').eq('id', INQ).single()
+  if (error != null) throw new Error(error.message)
+  return data
+}
+
+function anon(): Db {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  )
 }
 
 /** Every argument of every console call so far, as one string. */
@@ -105,6 +126,7 @@ beforeAll(async () => {
   const g = await s.from('guides').insert([
     { id: GUIDE,      full_name: 'Tama Fam05 Ngata', country: 'New Zealand', is_beta_listing: true },
     { id: GUIDE_NONE, full_name: 'Nopho Fam05',      country: 'New Zealand', is_beta_listing: true },
+    { id: GUIDE_2,    full_name: 'Second Fam05',     country: 'Iceland',     is_beta_listing: true },
   ])
   if (g.error != null) throw new Error(g.error.message)
 })
@@ -116,8 +138,10 @@ beforeEach(async () => {
   requireAdmin.mockResolvedValue({ userId: ADMIN_ID })
   logSpies = (['log', 'info', 'warn', 'error', 'debug'] as const).map(m => vi.spyOn(console, m))
   await resetInquiry()
-  await svc().from('guide_contacts').delete().in('guide_id', [GUIDE, GUIDE_NONE])
-  const c = await svc().from('guide_contacts').insert({ guide_id: GUIDE, phone_e164: PHONE })
+  await svc().from('guide_contacts').delete().in('guide_id', [GUIDE, GUIDE_NONE, GUIDE_2])
+  const c = await svc().from('guide_contacts').insert([
+    { guide_id: GUIDE, phone_e164: PHONE }, { guide_id: GUIDE_2, phone_e164: '+3545551234' },
+  ])
   if (c.error != null) throw new Error(c.error.message)
 })
 
@@ -178,28 +202,49 @@ describe('sendGuideRequest', () => {
 
 describe('listGuideRequestsForInquiry (what the card renders after a reload)', () => {
   it('lists two requests after a guide change, newest first, with no token or token hash', async () => {
-    const s = svc()
-    const other = 'f5a00000-0000-4000-8000-00000000000c'
-    await s.from('guides').insert({ id: other, full_name: 'Second Fam05', country: 'New Zealand', is_beta_listing: true })
-    await s.from('guide_contacts').insert({ guide_id: other, phone_e164: '+64219876543' })
-    try {
-      const first = await sendGuideRequest(INQ, GUIDE)
-      const second = await sendGuideRequest(INQ, other)
-      if (!first.success || !second.success) throw new Error('send failed')
-      const list = await listGuideRequestsForInquiry(s, INQ)
-      expect(list.map(r => r.guideName)).toEqual(['Second Fam05', 'Tama Fam05 Ngata'])
-      const rendered = JSON.stringify(list)
-      for (const link of [first.link, second.link]) expect(rendered.includes(link.split('/r/')[1])).toBe(false)
-      expect(rendered.includes('token_hash')).toBe(false)
-      expect(Object.keys(list[0]).sort()).toEqual([
-        'altDates', 'answer', 'answeredAt', 'channel', 'expiresAt', 'firstOpenedAt', 'guideId', 'guideName',
-        'note', 'requestId', 'sentAt', 'withdrawnAt',
-      ])
-    } finally {
-      await s.from('inquiries').delete().eq('id', INQ)
-      await s.from('guide_contacts').delete().eq('guide_id', other)
-      await s.from('guides').delete().eq('id', other)
-    }
+    const first = await sendGuideRequest(INQ, GUIDE)
+    const second = await sendGuideRequest(INQ, GUIDE_2)
+    if (!first.success || !second.success) throw new Error('send failed')
+    const list = await listGuideRequestsForInquiry(svc(), INQ)
+    expect(list.map(r => r.guideName)).toEqual(['Second Fam05', 'Tama Fam05 Ngata'])
+    const rendered = JSON.stringify(list)
+    for (const link of [first.link, second.link]) expect(rendered.includes(link.split('/r/')[1])).toBe(false)
+    expect(rendered.includes('token_hash')).toBe(false)
+    expect(Object.keys(list[0]).sort()).toEqual([
+      'altDates', 'answer', 'answeredAt', 'channel', 'expired', 'expiresAt', 'firstOpenedAt', 'guideId', 'guideName',
+      'note', 'requestId', 'sentAt', 'withdrawnAt',
+    ])
+  })
+})
+
+describe('D5 (a) — a new request withdraws the inquiry’s other open requests', () => {
+  it('guide change: the previous open request is withdrawn (not detached), the new guide is attached, no warning', async () => {
+    const first = await sendGuideRequest(INQ, GUIDE)
+    const second = await sendGuideRequest(INQ, GUIDE_2)
+    expect(first).toMatchObject({ success: true, warning: null })
+    expect(second).toMatchObject({ success: true, warning: null })
+
+    const rows = await requestRows()
+    const byGuide = Object.fromEntries(rows.map(r => [r.guide_id, r]))
+    expect(byGuide[GUIDE].withdrawn_at).not.toBeNull()
+    expect(byGuide[GUIDE_2].withdrawn_at).toBeNull()
+    expect((await inquiry()).assigned_guide_id).toBe(GUIDE_2)
+
+    expect(await events('guide.request_sent')).toHaveLength(2)
+    const withdrawn = await events('guide.request_withdrawn')
+    expect(withdrawn).toHaveLength(1)
+    expect(withdrawn[0].payload).toMatchObject({ request_id: byGuide[GUIDE].id, detached: false })
+  })
+
+  it('sending again to the same guide withdraws the old link; an answered request is left alone', async () => {
+    await sendGuideRequest(INQ, GUIDE)
+    const [old] = await requestRows()
+    await svc().from('guide_requests').update({ answer: 'declined', answered_at: new Date().toISOString() }).eq('id', old.id)
+    await sendGuideRequest(INQ, GUIDE_2)                       // answered → not withdrawn
+    await sendGuideRequest(INQ, GUIDE_2)                       // the first GUIDE_2 request → withdrawn
+    const rows = (await requestRows()).sort((a, b) => a.sent_at.localeCompare(b.sent_at))
+    expect(rows.map(r => r.withdrawn_at != null)).toEqual([false, true, false])
+    expect((await inquiry()).assigned_guide_id).toBe(GUIDE_2)
   })
 })
 
@@ -214,6 +259,44 @@ describe('withdrawGuideRequestAction', () => {
     expect(after.withdrawn_at).not.toBeNull()
     expect(after.withdrawn_by).toBe(ADMIN_ID)
     expect(await events('guide.request_withdrawn')).toHaveLength(1)
+  })
+
+  it('D2 (a): withdrawing the latest request detaches the guide ("No guide") in the same transaction', async () => {
+    await sendGuideRequest(INQ, GUIDE)
+    const [row] = await requestRows()
+    expect((await inquiry()).assigned_guide_id).toBe(GUIDE)
+    expect(await withdrawGuideRequestAction(INQ, row.id)).toEqual({ success: true })
+    expect(await inquiry()).toMatchObject({ assigned_guide_id: null, assigned_at: null, guide_acceptance: null, guide_responded_at: null })
+    const [ev] = await events('guide.request_withdrawn')
+    expect(ev).toMatchObject({ actor_kind: 'admin', actor_id: ADMIN_ID })
+    expect(ev.payload).toMatchObject({ request_id: row.id, guide_id: GUIDE, detached: true })
+  })
+
+  it('withdrawing an older request after a guide change leaves the new guide attached', async () => {
+    await sendGuideRequest(INQ, GUIDE)
+    const [older] = await requestRows()
+    await sendGuideRequest(INQ, GUIDE_2)                       // D5 withdrew `older` already
+    expect(await withdrawGuideRequestAction(INQ, older.id)).toEqual({ success: true })   // already withdrawn → no-op
+    expect((await inquiry()).assigned_guide_id).toBe(GUIDE_2)
+    expect(await events('guide.request_withdrawn')).toHaveLength(1)
+  })
+
+  it('double withdraw: the second call writes nothing (no second event)', async () => {
+    await sendGuideRequest(INQ, GUIDE)
+    const [row] = await requestRows()
+    await withdrawGuideRequestAction(INQ, row.id)
+    const first = await requestRows()
+    expect(await withdrawGuideRequestAction(INQ, row.id)).toEqual({ success: true })
+    expect(await requestRows()).toEqual(first)
+    expect(await events('guide.request_withdrawn')).toHaveLength(1)
+  })
+
+  it('wrong request id → error, nothing written', async () => {
+    await sendGuideRequest(INQ, GUIDE)
+    const res = await withdrawGuideRequestAction(INQ, 'f5a00000-0000-4000-8000-0000000000ff')
+    expect(res).toEqual({ success: false, error: 'Request not found.' })
+    expect(await events('guide.request_withdrawn')).toHaveLength(0)
+    expect((await inquiry()).assigned_guide_id).toBe(GUIDE)
   })
 
   it('non-admin is refused; the request stays open, no event', async () => {
@@ -251,3 +334,132 @@ describe('saveGuideWhatsAppNumber', () => {
     expect(await contact(GUIDE_NONE)).toBeNull()
   })
 })
+
+describe('D4 (a) — trip country from the guide', () => {
+  it('an inquiry with no trip country takes the guide’s; the event says so', async () => {
+    await svc().from('inquiries').update({ trip_country: null }).eq('id', INQ)
+    await sendGuideRequest(INQ, GUIDE_2)
+    expect((await inquiry()).trip_country).toBe('Iceland')
+    const [ev] = await events('guide.request_sent')
+    expect(ev.payload).toMatchObject({ trip_country_set: 'Iceland' })
+  })
+
+  it('a country already on the inquiry is never overwritten', async () => {
+    await sendGuideRequest(INQ, GUIDE_2)                       // inquiry is New Zealand, guide Iceland
+    expect((await inquiry()).trip_country).toBe('New Zealand')
+    const [ev] = await events('guide.request_sent')
+    expect(ev.payload).toMatchObject({ trip_country_set: null })
+  })
+})
+
+describe('D1 (b) — acceptGuideRequestOnBehalfAction', () => {
+  it('records accepted with the ADMIN as the actor; guide_responded_at stays NULL', async () => {
+    await sendGuideRequest(INQ, GUIDE)
+    const [row] = await requestRows()
+    expect(await acceptGuideRequestOnBehalfAction(INQ, row.id)).toEqual({ success: true })
+
+    const [after] = await requestRows()
+    expect(after).toMatchObject({ answer: 'accepted', note: null, alt_dates: [] })
+    expect(after.answered_at).not.toBeNull()
+    expect(await inquiry()).toMatchObject({ assigned_guide_id: GUIDE, guide_acceptance: 'accepted', guide_responded_at: null })
+
+    const answered = await events('guide.request_answered')
+    expect(answered).toHaveLength(1)
+    expect(answered[0]).toMatchObject({ actor_kind: 'admin', actor_id: ADMIN_ID, channel: 'app' })
+    expect(answered[0].payload).toMatchObject({ request_id: row.id, guide_id: GUIDE, answer: 'accepted', on_behalf_of_guide: true })
+
+    // again: no-op, no second event
+    expect(await acceptGuideRequestOnBehalfAction(INQ, row.id)).toEqual({ success: true })
+    expect(await events('guide.request_answered')).toHaveLength(1)
+  })
+
+  it('a request the guide already declined is not overwritten', async () => {
+    await sendGuideRequest(INQ, GUIDE)
+    const [row] = await requestRows()
+    await svc().from('guide_requests').update({ answer: 'declined', answered_at: new Date().toISOString() }).eq('id', row.id)
+    expect(await acceptGuideRequestOnBehalfAction(INQ, row.id)).toEqual({ success: false, error: 'The guide has already answered this request.' })
+    expect((await requestRows())[0].answer).toBe('declined')
+    expect(await events('guide.request_answered')).toHaveLength(0)
+  })
+
+  it('withdrawn request / wrong request id → refused, nothing written', async () => {
+    await sendGuideRequest(INQ, GUIDE)
+    const [row] = await requestRows()
+    await withdrawGuideRequestAction(INQ, row.id)
+    expect(await acceptGuideRequestOnBehalfAction(INQ, row.id)).toEqual({ success: false, error: 'This request was withdrawn.' })
+    expect(await acceptGuideRequestOnBehalfAction(INQ, 'f5a00000-0000-4000-8000-0000000000ff')).toEqual({ success: false, error: 'Request not found.' })
+    expect((await requestRows())[0].answer).toBeNull()
+    expect(await events('guide.request_answered')).toHaveLength(0)
+  })
+
+  it('non-admin is refused; nothing written', async () => {
+    await sendGuideRequest(INQ, GUIDE)
+    const [row] = await requestRows()
+    requireAdmin.mockRejectedValue(new UnauthorizedError('Not authorized — admin role required'))
+    await expect(acceptGuideRequestOnBehalfAction(INQ, row.id)).rejects.toBeInstanceOf(UnauthorizedError)
+    expect((await requestRows())[0].answer).toBeNull()
+    expect(await events('guide.request_answered')).toHaveLength(0)
+  })
+})
+
+describe('D3 (a) — unassignGuideWithoutRequestAction', () => {
+  it('detaches a guide attached without a request (pre-FA-M.03) and emits guide.unassigned', async () => {
+    await svc().from('inquiries').update({ assigned_guide_id: GUIDE, assigned_at: new Date().toISOString(), guide_acceptance: 'accepted', guide_responded_at: new Date().toISOString() }).eq('id', INQ)
+    expect(await unassignGuideWithoutRequestAction(INQ)).toEqual({ success: true })
+    expect(await inquiry()).toMatchObject({ assigned_guide_id: null, assigned_at: null, guide_acceptance: null, guide_responded_at: null })
+    const ev = await events('guide.unassigned')
+    expect(ev).toHaveLength(1)
+    expect(ev[0]).toMatchObject({ actor_kind: 'admin', actor_id: ADMIN_ID, channel: 'app', payload: { guide_id: GUIDE } })
+  })
+
+  it('a guide with an open request → refused (withdraw instead), nothing changed', async () => {
+    await sendGuideRequest(INQ, GUIDE)
+    expect(await unassignGuideWithoutRequestAction(INQ)).toEqual({ success: false, error: 'This guide has an open request — withdraw the request instead.' })
+    expect((await inquiry()).assigned_guide_id).toBe(GUIDE)
+    expect(await events('guide.unassigned')).toHaveLength(0)
+  })
+
+  it('no guide attached → refused', async () => {
+    expect(await unassignGuideWithoutRequestAction(INQ)).toEqual({ success: false, error: 'No guide is attached.' })
+    expect(await events('guide.unassigned')).toHaveLength(0)
+  })
+
+  it('non-admin is refused; nothing changed', async () => {
+    await svc().from('inquiries').update({ assigned_guide_id: GUIDE }).eq('id', INQ)
+    requireAdmin.mockRejectedValue(new UnauthorizedError('Not authorized — admin role required'))
+    await expect(unassignGuideWithoutRequestAction(INQ)).rejects.toBeInstanceOf(UnauthorizedError)
+    expect((await inquiry()).assigned_guide_id).toBe(GUIDE)
+    expect(await events('guide.unassigned')).toHaveLength(0)
+  })
+})
+
+describe('database guards on the two new functions (tj condition 2)', () => {
+  const FNS = ['accept_guide_request_on_behalf', 'unassign_guide_without_request'] as const
+
+  async function call(client: Db, fn: typeof FNS[number], adminId: string | null) {
+    const id = fn === 'accept_guide_request_on_behalf' ? { p_request_id: INQ } : { p_inquiry_id: INQ }
+    // adminId null is passed on purpose (the red case); the generated Args type says string.
+    return client.rpc(fn, { ...id, p_admin_id: adminId as string } as never)
+  }
+
+  it.each(FNS)('%s: anon is denied', async fn => {
+    const { error } = await call(anon(), fn, ADMIN_ID)
+    expect(error?.code).toBe(PERMISSION_DENIED)
+  })
+
+  it.each(FNS)('%s: an authenticated (angler) session is denied', async fn => {
+    const c = anon()
+    const { error: signInError } = await c.auth.signInWithPassword(ANGLER)
+    expect(signInError).toBeNull()
+    const { error } = await call(c, fn, ADMIN_ID)
+    expect(error?.code).toBe(PERMISSION_DENIED)
+  })
+
+  it.each(FNS)('%s: NULL admin id raises', async fn => {
+    await svc().from('inquiries').update({ assigned_guide_id: GUIDE }).eq('id', INQ)
+    const { error } = await call(svc(), fn, null)
+    expect(error?.code).toBe('22004')
+    expect(error?.message).toContain('admin id is required')
+  })
+})
+

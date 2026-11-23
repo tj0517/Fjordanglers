@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { withdrawGuideRequestAction } from '@/actions/guide-requests'
+import { withdrawGuideRequestAction, acceptGuideRequestOnBehalfAction } from '@/actions/guide-requests'
 import type { InquiryGuideRequest } from '@/lib/guide-requests/requests'
 
 /**
@@ -85,8 +85,7 @@ function AnswerStep({ r }: { r: InquiryGuideRequest }) {
     )
   }
   if (r.withdrawnAt != null) return null
-  const expired = Date.parse(r.expiresAt) <= Date.now()
-  return expired
+  return r.expired
     ? <Step testId="answer" tone="muted" label="No answer — link expired" detail={`Expired ${when(r.expiresAt)}`} />
     : <Step testId="answer" tone="wait" label="Waiting for an answer" detail={`Link valid until ${when(r.expiresAt)}`} />
 }
@@ -95,9 +94,22 @@ function RequestCard({ r, inquiryId, current }: { r: InquiryGuideRequest; inquir
   const router = useRouter()
   const [pending, start] = useTransition()
   const [err, setErr] = useState<string | null>(null)
+  const open = r.withdrawnAt == null
+  const canAccept = open && r.answer == null
+
+  // FA-M.05 D1 (b): the trip was agreed outside the link; the event records the admin, not the guide.
+  function acceptOnBehalf() {
+    if (!window.confirm(`Record that ${r.guideName ?? 'the guide'} accepted (agreed outside the link)?`)) return
+    setErr(null)
+    start(async () => {
+      const res = await acceptGuideRequestOnBehalfAction(inquiryId, r.requestId)
+      if (!res.success) setErr(res.error)
+      else router.refresh()
+    })
+  }
 
   function withdraw() {
-    if (!window.confirm('Withdraw this request? The guide’s link stops working.')) return
+    if (!window.confirm('Withdraw this request? The guide’s link stops working; if it is the latest request, the guide is detached from this inquiry.')) return
     setErr(null)
     start(async () => {
       const res = await withdrawGuideRequestAction(inquiryId, r.requestId)
@@ -117,15 +129,27 @@ function RequestCard({ r, inquiryId, current }: { r: InquiryGuideRequest; inquir
     >
       <div className="flex items-center justify-between gap-3 mb-2">
         <p className="text-sm font-bold f-body text-primary">{r.guideName ?? 'Guide removed'}</p>
-        {r.withdrawnAt == null && (
-          <button
-            type="button"
-            onClick={withdraw}
-            disabled={pending}
-            className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body bg-red-500/7 text-red-800 border border-red-500/20 disabled:opacity-60"
-          >
-            {pending ? '…' : 'Withdraw'}
-          </button>
+        {open && (
+          <div className="flex items-center gap-1.5">
+            {canAccept && (
+              <button
+                type="button"
+                onClick={acceptOnBehalf}
+                disabled={pending}
+                className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body bg-emerald-500/10 text-emerald-900 border border-emerald-500/25 disabled:opacity-60"
+              >
+                Mark accepted
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={withdraw}
+              disabled={pending}
+              className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body bg-red-500/7 text-red-800 border border-red-500/20 disabled:opacity-60"
+            >
+              {pending ? '…' : 'Withdraw'}
+            </button>
+          </div>
         )}
       </div>
       <ol className="flex flex-col gap-2">

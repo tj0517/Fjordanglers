@@ -4,8 +4,8 @@ import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { assignGuideSilently, setExternalOffer, unassignGuide } from '@/actions/inquiries'
-import { sendGuideRequest } from '@/actions/guide-requests'
+import { setExternalOffer } from '@/actions/inquiries'
+import { sendGuideRequest, unassignGuideWithoutRequestAction } from '@/actions/guide-requests'
 import type { InquiryGuideRequest } from '@/lib/guide-requests/requests'
 import { GuideRequestTimeline } from './GuideRequestTimeline'
 import type { CalendarStatus } from '@/lib/calendar/connections'
@@ -196,6 +196,7 @@ function GuideCard({
   onUnassigned,
   guideAcceptance,
   guideDeclineReason,
+  hasOpenRequest,
 }: {
   guide:               GuideWithCalendar
   requestedDates:      string[]
@@ -205,12 +206,14 @@ function GuideCard({
   onUnassigned:        () => void
   guideAcceptance?:    string | null
   guideDeclineReason?: string | null
+  /** FA-M.05 D3: an attached guide with an open request is detached by withdrawing it (timeline). */
+  hasOpenRequest:      boolean
 }) {
   const [showCalendar,    setShowCalendar]    = useState(false)
   const [pending,         start]              = useTransition()
   const [unassignPending, startUnassign]      = useTransition()
-  const [lastMode,        setLastMode]        = useState<'send' | 'silent' | null>(null)
   const [err,             setErr]             = useState<string | null>(null)
+  const [warning,         setWarning]         = useState<string | null>(null)
   // FA-M.05 D1 (a): the wa.me link and the request link live only in this state, once, after
   // "Send request" — never in the URL, never re-shown after a reload.
   const [sent,            setSent]            = useState<{ waUrl: string; link: string } | null>(null)
@@ -228,8 +231,8 @@ function GuideCard({
     .toUpperCase()
 
   function handleSend() {
-    setLastMode('send')
     setErr(null)
+    setWarning(null)
     setSent(null)
     setCopied(false)
     start(async () => {
@@ -238,19 +241,7 @@ function GuideCard({
         setErr(res.error)
       } else {
         setSent({ waUrl: res.waUrl, link: res.link })
-        onAssigned(guide.id)
-      }
-    })
-  }
-
-  function handleLinkSilently() {
-    setLastMode('silent')
-    setErr(null)
-    start(async () => {
-      const res = await assignGuideSilently(inquiryId, guide.id)
-      if (!res.success) {
-        setErr(res.error ?? 'Failed to assign')
-      } else {
+        setWarning(res.warning)
         onAssigned(guide.id)
       }
     })
@@ -266,12 +257,14 @@ function GuideCard({
     }
   }
 
+  // FA-M.05 D3 (a): only for a guide attached without an open request (before FA-M.03).
   function handleUnassign() {
+    if (!window.confirm(`Detach ${guide.full_name} from this inquiry?`)) return
     setErr(null)
     startUnassign(async () => {
-      const res = await unassignGuide(inquiryId)
+      const res = await unassignGuideWithoutRequestAction(inquiryId)
       if (!res.success) {
-        setErr(res.error ?? 'Failed to unassign')
+        setErr(res.error)
       } else {
         onUnassigned()
       }
@@ -353,7 +346,7 @@ function GuideCard({
           {isAssigned ? (
             <>
               <span className="text-[10px] font-bold f-body px-3 py-1.5 rounded-xl bg-emerald-500/12 text-emerald-800 border border-emerald-500/25">
-                ✓ {lastMode === 'silent' ? 'Linked' : 'Assigned'}
+                ✓ Assigned
               </span>
               <button
                 type="button"
@@ -361,16 +354,18 @@ function GuideCard({
                 disabled={pending}
                 className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body transition-all whitespace-nowrap bg-primary/[6%] text-primary border border-primary/15 disabled:opacity-60 disabled:cursor-default"
               >
-                {pending && lastMode === 'send' ? '…' : 'Send new request'}
+                {pending ? '…' : 'Send new request'}
               </button>
-              <button
-                type="button"
-                onClick={handleUnassign}
-                disabled={unassignPending}
-                className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body transition-all whitespace-nowrap bg-red-500/7 text-red-800 border border-red-500/20 disabled:opacity-60 disabled:cursor-default"
-              >
-                {unassignPending ? '…' : 'Unassign'}
-              </button>
+              {!hasOpenRequest && (
+                <button
+                  type="button"
+                  onClick={handleUnassign}
+                  disabled={unassignPending}
+                  className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body transition-all whitespace-nowrap bg-red-500/7 text-red-800 border border-red-500/20 disabled:opacity-60 disabled:cursor-default"
+                >
+                  {unassignPending ? '…' : 'Unassign'}
+                </button>
+              )}
             </>
           ) : (
             <>
@@ -380,21 +375,10 @@ function GuideCard({
                 disabled={pending}
                 className={cn(
                   'px-4 py-1.5 rounded-xl text-xs font-bold f-body transition-all whitespace-nowrap bg-primary text-white disabled:cursor-default',
-                  pending && lastMode === 'send' && 'opacity-60',
+                  pending && 'opacity-60',
                 )}
               >
-                {pending && lastMode === 'send' ? '…' : 'Send request'}
-              </button>
-              <button
-                type="button"
-                onClick={handleLinkSilently}
-                disabled={pending}
-                className={cn(
-                  'px-4 py-1.5 rounded-xl text-xs font-semibold f-body transition-all whitespace-nowrap bg-primary/[6%] text-primary/50 border border-primary/10 disabled:cursor-default',
-                  pending && lastMode === 'silent' && 'opacity-60',
-                )}
-              >
-                {pending && lastMode === 'silent' ? '…' : 'Link silently'}
+                {pending ? '…' : 'Send request'}
               </button>
             </>
           )}
@@ -405,6 +389,15 @@ function GuideCard({
       {err && (
         <div className="px-5 pb-3">
           <p role="alert" className="text-xs f-body text-red-600">{err}</p>
+        </div>
+      )}
+
+      {/* ── FA-M.05 D5: the earlier link could not be withdrawn — never a silent success ── */}
+      {warning && (
+        <div className="px-5 pb-3">
+          <p role="alert" data-testid="previous-link-warning" className="text-xs f-body font-semibold text-amber-800 bg-amber-400/15 border border-amber-500/30 rounded-xl px-3 py-2">
+            ⚠ {warning}
+          </p>
         </div>
       )}
 
@@ -576,6 +569,7 @@ export function GuideAttachmentTab({
               onUnassigned={handleUnassigned}
               guideAcceptance={guide.id === assignedGuideId ? guideAcceptance : null}
               guideDeclineReason={guide.id === assignedGuideId ? guideDeclineReason : null}
+              hasOpenRequest={requests.some(r => r.guideId === guide.id && r.withdrawnAt == null)}
             />
           ))}
         </div>

@@ -21,7 +21,6 @@ import { DepositLinkAnglerEmail } from '@/emails/deposit-link-angler'
 import { DepositConfirmedAnglerEmail } from '@/emails/deposit-confirmed-angler'
 import { DepositConfirmedFaEmail } from '@/emails/deposit-confirmed-fa'
 import { BookingConfirmedGuideEmail } from '@/emails/booking-confirmed-guide'
-import { GuideAssignedEmail } from '@/emails/guide-assigned'
 import type { PasswordResetEmailProps } from '@/emails/password-reset'
 import type { InquiryReceivedFaEmailProps } from '@/emails/inquiry-received-fa'
 import type { InquiryReceivedAnglerEmailProps } from '@/emails/inquiry-received-angler'
@@ -29,7 +28,6 @@ import type { DepositLinkAnglerEmailProps } from '@/emails/deposit-link-angler'
 import type { DepositConfirmedAnglerEmailProps } from '@/emails/deposit-confirmed-angler'
 import type { DepositConfirmedFaEmailProps } from '@/emails/deposit-confirmed-fa'
 import type { BookingConfirmedGuideEmailProps } from '@/emails/booking-confirmed-guide'
-import type { GuideAssignedEmailProps } from '@/emails/guide-assigned'
 
 const FROM = env.FA_FROM_EMAIL
 
@@ -205,19 +203,4 @@ export async function sendBookingConfirmedGuideEmail(
 }
 
 // ─── Guide assignment / offer / agent emails ─────────────────────────────────
-
-/**
- * Sent to the guide when FA assigns them to an inquiry.
- * Non-blocking: callers should fire-and-forget with .catch().
- */
-export async function sendGuideAssignedEmail(
-  props: { to: string } & GuideAssignedEmailProps,
-): Promise<void> {
-  const { to, ...templateProps } = props
-  await sendEmail({
-    to,
-    subject: `New trip assigned: ${templateProps.anglerName}`,
-    react:   createElement(GuideAssignedEmail, templateProps),
-  })
-}
 

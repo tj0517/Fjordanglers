@@ -8,6 +8,8 @@
  *   answerGuideRequestFromDashboard the signed-in dashboard (respondToAssignment, D2 b)
  *   withdrawGuideRequest            admin withdraws a request (FA-M.05 calls it)
  *   listGuideRequestsForInquiry     the admin inquiry card's request timeline (FA-M.05)
+ *   acceptGuideRequestOnBehalf      admin records "accepted" for the guide (FA-M.05 D1 b; event actor = admin)
+ *   unassignGuideWithoutRequest     admin detaches a guide attached without an open request (FA-M.05 D3 a)
  *
  * Every write is one database function (supabase/migrations/20261117000000_add_guide_requests.sql)
  * that changes the request, keeps the `inquiries` summary in sync and writes its `inquiry_events`
@@ -343,6 +345,8 @@ export interface InquiryGuideRequest {
   channel:       string
   sentAt:        string
   expiresAt:     string
+  /** The link has expired (computed at read time, on the server). */
+  expired:       boolean
   firstOpenedAt: string | null
   answeredAt:    string | null
   answer:        GuideAnswer | null
@@ -360,6 +364,7 @@ export async function listGuideRequestsForInquiry(client: Client, inquiryId: str
     .eq('inquiry_id', inquiryId)
     .order('sent_at', { ascending: false })
   if (error != null) throw new GuideRequestError(`listGuideRequestsForInquiry failed: ${error.message}`)
+  const now = Date.now()
   return (data ?? []).map(r => ({
     requestId:     r.id,
     guideId:       r.guide_id,
@@ -367,6 +372,7 @@ export async function listGuideRequestsForInquiry(client: Client, inquiryId: str
     channel:       r.channel,
     sentAt:        r.sent_at,
     expiresAt:     r.token_expires_at,
+    expired:       Date.parse(r.token_expires_at) <= now,
     firstOpenedAt: r.first_opened_at,
     answeredAt:    r.answered_at,
     answer:        isAnswer(r.answer) ? r.answer : null,
@@ -392,4 +398,82 @@ export async function withdrawGuideRequest(
   if (error != null) throw new GuideRequestError(`withdrawGuideRequest failed: ${error.message}`)
   if (data === 'withdrawn' || data === 'not_found' || data === 'already_withdrawn') return data
   throw new GuideRequestError(`withdrawGuideRequest: unknown outcome ${String(data)}`)
+}
+
+// ─── admin: accept on the guide's behalf / unassign without a request (FA-M.05) ──
+
+export type AcceptOnBehalfOutcome = 'answered' | 'unchanged' | 'already_answered' | GuideRequestRefusal
+
+/**
+ * Call after requireAdmin(). Records "accepted" for the guide (trip agreed outside the link). The
+ * event names the admin as the actor (on_behalf_of_guide); inquiries.guide_responded_at stays NULL.
+ * Not blocked by expiry; refused when withdrawn / guide removed / not found.
+ */
+export async function acceptGuideRequestOnBehalf(
+  client: Client,
+  params: { requestId: string; adminId: string },
+): Promise<AcceptOnBehalfOutcome> {
+  const { data, error } = await client.rpc('accept_guide_request_on_behalf', {
+    p_request_id: params.requestId,
+    p_admin_id:   params.adminId,
+  })
+  if (error != null) throw new GuideRequestError(`acceptGuideRequestOnBehalf failed: ${error.message}`)
+  const outcome = data?.[0]?.outcome
+  if (outcome === 'answered' || outcome === 'unchanged' || outcome === 'already_answered') return outcome
+  if (outcome != null && isRefusal(outcome)) return outcome
+  throw new GuideRequestError(`acceptGuideRequestOnBehalf: unknown outcome ${String(outcome)}`)
+}
+
+export type UnassignOutcome = 'unassigned' | 'not_found' | 'no_guide' | 'has_open_request'
+
+/**
+ * Call after requireAdmin(). Detaches a guide attached without an open request (assignments from
+ * before FA-M.03); emits guide.unassigned. A guide with an open request is detached by withdrawing it.
+ */
+export async function unassignGuideWithoutRequest(
+  client: Client,
+  params: { inquiryId: string; adminId: string },
+): Promise<UnassignOutcome> {
+  const { data, error } = await client.rpc('unassign_guide_without_request', {
+    p_inquiry_id: params.inquiryId,
+    p_admin_id:   params.adminId,
+  })
+  if (error != null) throw new GuideRequestError(`unassignGuideWithoutRequest failed: ${error.message}`)
+  if (data === 'unassigned' || data === 'not_found' || data === 'no_guide' || data === 'has_open_request') return data
+  throw new GuideRequestError(`unassignGuideWithoutRequest: unknown outcome ${String(data)}`)
+}
+
+/**
+ * FA-M.05 D5 (a): after a new request is created, withdraw the inquiry's other open requests
+ * (not withdrawn, not answered) — their links stop working. Runs after the create, so none of them
+ * is the latest and none detaches the guide. Returns how many could not be withdrawn.
+ */
+export async function withdrawOtherOpenRequests(
+  client: Client,
+  params: { inquiryId: string; keepRequestId: string; adminId: string },
+): Promise<{ withdrawn: number; failed: number }> {
+  const { data, error } = await client
+    .from('guide_requests')
+    .select('id')
+    .eq('inquiry_id', params.inquiryId)
+    .neq('id', params.keepRequestId)
+    .is('withdrawn_at', null)
+    .is('answered_at', null)
+  if (error != null) {
+    console.error('[guide-requests] withdrawOtherOpenRequests: read failed:', error.message)
+    return { withdrawn: 0, failed: 1 }
+  }
+  let withdrawn = 0
+  let failed = 0
+  for (const row of data ?? []) {
+    try {
+      const outcome = await withdrawGuideRequest(client, { requestId: row.id, adminId: params.adminId })
+      if (outcome === 'withdrawn' || outcome === 'already_withdrawn') withdrawn++
+      else failed++
+    } catch (e) {
+      console.error('[guide-requests] withdrawOtherOpenRequests: withdraw failed:', e instanceof Error ? e.message : e)
+      failed++
+    }
+  }
+  return { withdrawn, failed }
 }

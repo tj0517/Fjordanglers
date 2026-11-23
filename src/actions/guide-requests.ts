@@ -3,9 +3,12 @@
 /**
  * Admin actions for guide requests and guide WhatsApp numbers (FA-M.05).
  *
- *   sendGuideRequest        create a request (channel whatsapp) and return the wa.me link — once
- *   withdrawGuideRequestAction  withdraw a request (its link stops working)
- *   saveGuideWhatsAppNumber store / clear the guide's number in guide_contacts
+ *   sendGuideRequest                     create a request (channel whatsapp), withdraw the inquiry's other
+ *                                        open requests (D5), return the wa.me link — once
+ *   withdrawGuideRequestAction           withdraw a request; the latest one also detaches the guide (D2)
+ *   acceptGuideRequestOnBehalfAction     record "accepted" for the guide; event actor = admin (D1)
+ *   unassignGuideWithoutRequestAction    detach a guide attached without an open request (D3)
+ *   saveGuideWhatsAppNumber              store / clear the guide's number in guide_contacts
  *
  * Every action runs requireAdmin() before any service-role read or write. The request token is in
  * the return value of sendGuideRequest only — it is never logged, stored or put in a URL here.
@@ -17,13 +20,18 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { getAppUrl } from '@/lib/app-url'
 import { parseGuidePhone, setGuidePhone } from '@/lib/guide-contacts'
 import { sendGuideRequestByWhatsApp } from '@/lib/guide-requests/send'
-import { withdrawGuideRequest } from '@/lib/guide-requests/requests'
+import {
+  withdrawGuideRequest, acceptGuideRequestOnBehalf, unassignGuideWithoutRequest,
+} from '@/lib/guide-requests/requests'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export type SendGuideRequestActionResult =
-  | { success: true; waUrl: string; link: string }
+  /** warning: the request was created, but an earlier link could not be withdrawn (D5, tj condition 3). */
+  | { success: true; waUrl: string; link: string; warning: string | null }
   | { success: false; error: string }
+
+const PREVIOUS_STILL_ACTIVE = 'Previous link still active — withdraw it manually.'
 
 const SEND_ERRORS = {
   no_whatsapp_number: 'This guide has no WhatsApp number. Add it on the guide’s edit page first.',
@@ -42,7 +50,7 @@ export async function sendGuideRequest(inquiryId: string, guideId: string): Prom
 
   revalidatePath(`/admin/inquiries/${inquiryId}`)
   revalidatePath('/admin/inquiries')
-  return { success: true, waUrl: result.waUrl, link: result.link }
+  return { success: true, waUrl: result.waUrl, link: result.link, warning: result.previousStillActive ? PREVIOUS_STILL_ACTIVE : null }
 }
 
 export type SimpleActionResult = { success: true } | { success: false; error: string }
@@ -53,6 +61,44 @@ export async function withdrawGuideRequestAction(inquiryId: string, requestId: s
 
   const outcome = await withdrawGuideRequest(createServiceClient(), { requestId, adminId: userId })
   if (outcome === 'not_found') return { success: false, error: 'Request not found.' }
+
+  revalidatePath(`/admin/inquiries/${inquiryId}`)
+  revalidatePath('/admin/inquiries')
+  return { success: true }
+}
+
+const ACCEPT_ERRORS: Record<string, string> = {
+  already_answered: 'The guide has already answered this request.',
+  not_found:        'Request not found.',
+  guide_removed:    'The guide was removed.',
+  withdrawn:        'This request was withdrawn.',
+  expired:          'This request has expired.',
+}
+
+export async function acceptGuideRequestOnBehalfAction(inquiryId: string, requestId: string): Promise<SimpleActionResult> {
+  const { userId } = await requireAdmin()
+  if (!UUID.test(inquiryId) || !UUID.test(requestId)) return { success: false, error: 'Invalid id.' }
+
+  const outcome = await acceptGuideRequestOnBehalf(createServiceClient(), { requestId, adminId: userId })
+  if (outcome !== 'answered' && outcome !== 'unchanged') return { success: false, error: ACCEPT_ERRORS[outcome] }
+
+  revalidatePath(`/admin/inquiries/${inquiryId}`)
+  revalidatePath('/admin/inquiries')
+  return { success: true }
+}
+
+const UNASSIGN_ERRORS: Record<string, string> = {
+  not_found:        'Inquiry not found.',
+  no_guide:         'No guide is attached.',
+  has_open_request: 'This guide has an open request — withdraw the request instead.',
+}
+
+export async function unassignGuideWithoutRequestAction(inquiryId: string): Promise<SimpleActionResult> {
+  const { userId } = await requireAdmin()
+  if (!UUID.test(inquiryId)) return { success: false, error: 'Invalid id.' }
+
+  const outcome = await unassignGuideWithoutRequest(createServiceClient(), { inquiryId, adminId: userId })
+  if (outcome !== 'unassigned') return { success: false, error: UNASSIGN_ERRORS[outcome] }
 
   revalidatePath(`/admin/inquiries/${inquiryId}`)
   revalidatePath('/admin/inquiries')

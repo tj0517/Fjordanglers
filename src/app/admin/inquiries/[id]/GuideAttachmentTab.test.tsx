@@ -14,13 +14,15 @@ const withdrawGuideRequestAction = vi.fn()
 const refresh = vi.fn()
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }))
+const acceptGuideRequestOnBehalfAction = vi.fn()
+const unassignGuideWithoutRequestAction = vi.fn()
 vi.mock('@/actions/guide-requests', () => ({
   sendGuideRequest: (i: string, g: string) => sendGuideRequest(i, g),
   withdrawGuideRequestAction: (i: string, r: string) => withdrawGuideRequestAction(i, r),
+  acceptGuideRequestOnBehalfAction: (i: string, r: string) => acceptGuideRequestOnBehalfAction(i, r),
+  unassignGuideWithoutRequestAction: (i: string) => unassignGuideWithoutRequestAction(i),
 }))
-vi.mock('@/actions/inquiries', () => ({
-  assignGuideSilently: vi.fn(), setExternalOffer: vi.fn(), unassignGuide: vi.fn(),
-}))
+vi.mock('@/actions/inquiries', () => ({ setExternalOffer: vi.fn() }))
 vi.mock('@/actions/calendar', () => ({ issueCalendarConnectLink: vi.fn() }))
 
 import { GuideAttachmentTab, type GuideWithCalendar } from './GuideAttachmentTab'
@@ -35,13 +37,13 @@ const FUTURE = '2099-01-01T00:00:00Z'
 
 const OTHER_DATES: InquiryGuideRequest = {
   requestId: 'r-2', guideId: GUIDE.id, guideName: 'Tama Ngata', channel: 'whatsapp',
-  sentAt: '2026-11-22T09:00:00Z', expiresAt: FUTURE, firstOpenedAt: '2026-11-22T10:15:00Z',
+  sentAt: '2026-11-22T09:00:00Z', expiresAt: FUTURE, expired: false, firstOpenedAt: '2026-11-22T10:15:00Z',
   answeredAt: '2026-11-22T11:00:00Z', answer: 'other_dates', altDates: ['2027-01-20', '2027-01-21'],
   note: 'River is high that week', withdrawnAt: null,
 }
 const EARLIER_DECLINED: InquiryGuideRequest = {
   requestId: 'r-1', guideId: 'g-old', guideName: 'Old Guide', channel: 'whatsapp',
-  sentAt: '2026-11-20T09:00:00Z', expiresAt: FUTURE, firstOpenedAt: '2026-11-20T09:30:00Z',
+  sentAt: '2026-11-20T09:00:00Z', expiresAt: FUTURE, expired: false, firstOpenedAt: '2026-11-20T09:30:00Z',
   answeredAt: '2026-11-20T12:00:00Z', answer: 'declined', altDates: [], note: 'Fully booked', withdrawnAt: null,
 }
 
@@ -116,7 +118,7 @@ describe('Send request', () => {
   it('shows "Open WhatsApp" with the wa.me link and the plain link once the request is created', async () => {
     const waUrl = 'https://wa.me/64211234567?text=Hi%20Tama'
     const link = `https://fa.test/r/${'A'.repeat(43)}`
-    sendGuideRequest.mockResolvedValue({ success: true, waUrl, link })
+    sendGuideRequest.mockResolvedValue({ success: true, waUrl, link, warning: null })
     tab()
     fireEvent.click(screen.getByRole('button', { name: 'Send request' }))
 
@@ -128,6 +130,20 @@ describe('Send request', () => {
     expect(screen.getByText(link)).toBeTruthy()
     expect(sendGuideRequest).toHaveBeenCalledWith(INQ, GUIDE.id)
     expect(refresh).toHaveBeenCalled()
+    expect(screen.queryByTestId('previous-link-warning')).toBeNull()
+  })
+
+  it('D5: the previous link could not be withdrawn → a visible warning next to Open WhatsApp', async () => {
+    sendGuideRequest.mockResolvedValue({
+      success: true, waUrl: 'https://wa.me/64211234567?text=x', link: `https://fa.test/r/${'B'.repeat(43)}`,
+      warning: 'Previous link still active — withdraw it manually.',
+    })
+    tab()
+    fireEvent.click(screen.getByRole('button', { name: 'Send request' }))
+    const warning = await screen.findByTestId('previous-link-warning')
+    expect(warning.textContent).toContain('Previous link still active — withdraw it manually.')
+    expect(warning.getAttribute('role')).toBe('alert')
+    expect(screen.getByRole('link', { name: 'Open WhatsApp' })).toBeTruthy()
   })
 
   it('no WhatsApp number → the error in red, no WhatsApp button', async () => {
@@ -140,3 +156,36 @@ describe('Send request', () => {
     expect(screen.queryByRole('link', { name: 'Open WhatsApp' })).toBeNull()
   })
 })
+
+describe('legacy assign replaced (D1, D3)', () => {
+  it('no "Link silently" / "Assign & notify" anywhere', () => {
+    tab({ currentAssignedGuideId: GUIDE.id })
+    expect(screen.queryByRole('button', { name: /Link silently|Assign & notify/ })).toBeNull()
+  })
+
+  it('"Unassign" shows only for a guide attached without an open request, and calls the D3 action', async () => {
+    unassignGuideWithoutRequestAction.mockResolvedValue({ success: true })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    tab({ currentAssignedGuideId: GUIDE.id, guideAcceptance: 'accepted', requests: [] })
+    fireEvent.click(screen.getByRole('button', { name: 'Unassign' }))
+    await vi.waitFor(() => expect(unassignGuideWithoutRequestAction).toHaveBeenCalledWith(INQ))
+    cleanup()
+
+    const open: InquiryGuideRequest = { ...OTHER_DATES, requestId: 'r-9', answer: null, answeredAt: null, altDates: [], note: null }
+    tab({ currentAssignedGuideId: GUIDE.id, requests: [open] })
+    expect(screen.queryByRole('button', { name: 'Unassign' })).toBeNull()
+  })
+
+  it('"Mark accepted" on an open unanswered request calls the D1 action; not shown once answered', async () => {
+    acceptGuideRequestOnBehalfAction.mockResolvedValue({ success: true })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const open: InquiryGuideRequest = { ...OTHER_DATES, requestId: 'r-9', answer: null, answeredAt: null, altDates: [], note: null }
+    tab({ currentAssignedGuideId: GUIDE.id, requests: [open, EARLIER_DECLINED] })
+    const [latest, earlier] = screen.getAllByTestId('guide-request')
+    expect(within(earlier).queryByRole('button', { name: 'Mark accepted' })).toBeNull()
+    fireEvent.click(within(latest).getByRole('button', { name: 'Mark accepted' }))
+    await vi.waitFor(() => expect(acceptGuideRequestOnBehalfAction).toHaveBeenCalledWith(INQ, 'r-9'))
+    expect(refresh).toHaveBeenCalled()
+  })
+})
+

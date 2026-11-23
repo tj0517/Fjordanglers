@@ -14,7 +14,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 import { getGuidePhone } from '@/lib/guide-contacts'
 import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
-import { createGuideRequest } from './requests'
+import { createGuideRequest, withdrawOtherOpenRequests } from './requests'
 
 type Client = SupabaseClient<Database>
 
@@ -87,13 +87,15 @@ export function waMeUrl(phoneE164: string, text: string): string {
 // ─── send ─────────────────────────────────────────────────────────────────────
 
 export type SendGuideRequestResult =
-  | { ok: true; requestId: string; waUrl: string; link: string }
+  /** previousStillActive: an earlier open request could not be withdrawn (D5) — its link still works. */
+  | { ok: true; requestId: string; waUrl: string; link: string; previousStillActive: boolean }
   | { ok: false; reason: 'no_whatsapp_number' | 'guide_not_found' | 'inquiry_not_found' }
 
 /**
  * Call after requireAdmin(); `adminId` is the caller's uid, `appUrl` the site origin. Checks the
  * guide's number first — no number, no request. Then creates the request (one row + one
  * guide.request_sent event, channel whatsapp, in one transaction) and returns the wa.me link.
+ * Then (D5 a) withdraws the inquiry's other open requests; a failure there is reported, not hidden.
  */
 export async function sendGuideRequestByWhatsApp(
   client: Client,
@@ -132,6 +134,10 @@ export async function sendGuideRequestByWhatsApp(
     adminId:   params.adminId,
   })
 
+  const previous = await withdrawOtherOpenRequests(client, {
+    inquiryId: params.inquiryId, keepRequestId: created.requestId, adminId: params.adminId,
+  })
+
   const link = `${params.appUrl.replace(/\/+$/, '')}/r/${created.token}`
   const text = buildGuideRequestMessage({
     guideFirstName: guide.full_name.trim().split(/\s+/)[0] ?? null,
@@ -140,5 +146,5 @@ export async function sendGuideRequestByWhatsApp(
     dates:          inquiry.requested_dates ?? [],
     link,
   })
-  return { ok: true, requestId: created.requestId, waUrl: waMeUrl(phone, text), link }
+  return { ok: true, requestId: created.requestId, waUrl: waMeUrl(phone, text), link, previousStillActive: previous.failed > 0 }
 }
