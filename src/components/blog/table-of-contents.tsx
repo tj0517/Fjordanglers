@@ -1,6 +1,17 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { LINE, MUTED, NAVY, SALMON } from '@/components/site/ui'
+
+/**
+ * "In this article" (FA-1.97, docs/design/blog-2026-11/article.dc.html).
+ *
+ * From `lg` up it is a column beside the article: the `aside` is as tall as the article (it is a flex
+ * item that stretches), and the list inside it is `position: sticky` below the site's nav, so it
+ * starts under the hero and stops where the article ends — it never floats over the hero, the
+ * sections below the article or the footer. Below `lg` it is the collapsible card at the top of the
+ * article column. Nothing here is `position: fixed`.
+ */
 
 interface Section {
   id: string
@@ -10,6 +21,9 @@ interface Section {
 interface Props {
   sections: readonly Section[]
 }
+
+/** The fixed nav is ~72 px tall plus its offset; the list sticks a little below it. */
+const STICKY_TOP = 96
 
 export function TableOfContents({ sections }: Props) {
   const [activeId, setActiveId] = useState<string>(sections[0]?.id ?? '')
@@ -31,7 +45,8 @@ export function TableOfContents({ sections }: Props) {
           ticking.current = false
         })
       },
-      { rootMargin: '-10% 0px -70% 0px' },
+      // The top edge is where the sticky list starts, under the nav.
+      { rootMargin: `-${STICKY_TOP}px 0px -65% 0px` },
     )
 
     sections.forEach(s => {
@@ -47,101 +62,68 @@ export function TableOfContents({ sections }: Props) {
     setOpen(false)
   }
 
-  const activeIndex = sections.findIndex(s => s.id === activeId)
-
   return (
-    <>
-      {/* ── Desktop: fixed left sidebar ─────────────────────────── */}
-      <aside
-        className="hidden xl:block"
+    <aside className="w-full lg:w-[240px] lg:flex-none lg:self-stretch">
+      {/* ── lg and up: sticky list in a column as tall as the article ── */}
+      <div
+        className="hidden lg:flex"
         style={{
-          position: 'fixed',
-          // Right edge sits ~34px left of the 752px article column (article left = 50% - 376px),
-          // so the labels never run over the body text at 1280px and up.
-          left: 'max(1.5rem, calc(50% - 560px))',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: '150px',
-          zIndex: 40,
+          position: 'sticky', top: STICKY_TOP, flexDirection: 'column', gap: 14,
+          maxHeight: `calc(100vh - ${STICKY_TOP + 24}px)`, overflowY: 'auto',
         }}
       >
-        <p style={{
-          fontSize: '10px', fontWeight: 700, color: 'rgba(10,46,77,0.35)',
-          textTransform: 'uppercase', letterSpacing: '0.18em', marginBottom: '1rem',
-        }}>
-          Contents
+        <p className="f-body" style={{ margin: 0, fontSize: '12.5px', fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: MUTED }}>
+          In this article
         </p>
+        <nav aria-label="Table of contents">
+          {sections.map(s => {
+            const isActive = s.id === activeId
+            return (
+              <a
+                key={s.id}
+                href={`#${s.id}`}
+                title={s.label}
+                aria-current={isActive ? 'location' : undefined}
+                onClick={e => {
+                  e.preventDefault()
+                  scrollTo(s.id)
+                }}
+                className="f-body"
+                style={{
+                  display: 'block', padding: '9px 0 9px 14px', textDecoration: 'none',
+                  borderLeft: `2px solid ${isActive ? SALMON : LINE}`,
+                  fontSize: '14.5px', lineHeight: 1.35,
+                  fontWeight: isActive ? 600 : 400,
+                  color: isActive ? NAVY : MUTED,
+                }}
+              >
+                {/* Long headings: two lines, then an ellipsis (full text on hover via title).
+                    The clamp is on the span: on the link, its padding would show a third line. */}
+                <span style={{
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden', overflowWrap: 'anywhere',
+                }}>
+                  {s.label}
+                </span>
+              </a>
+            )
+          })}
+        </nav>
+      </div>
 
-        {/* Track + dots */}
-        <div style={{ display: 'flex', gap: '12px' }}>
-          {/* Vertical line with progress fill */}
-          <div style={{ position: 'relative', width: '2px', flexShrink: 0 }}>
-            {/* Background track */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'rgba(10,46,77,0.1)', borderRadius: '99px',
-            }} />
-            {/* Active fill */}
-            <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0,
-              height: `${((activeIndex + 1) / sections.length) * 100}%`,
-              background: '#E67E50', borderRadius: '99px',
-              transition: 'height 0.35s ease',
-            }} />
-          </div>
-
-          {/* Section links */}
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0', minWidth: 0 }}>
-            {sections.map((s, i) => {
-              const isActive = s.id === activeId
-              const isPast = i < activeIndex
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => scrollTo(s.id)}
-                  title={s.label}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    textAlign: 'left', padding: '5px 0',
-                    fontSize: '12px', lineHeight: 1.4,
-                    fontWeight: isActive ? 700 : 400,
-                    color: isActive
-                      ? '#E67E50'
-                      : isPast
-                        ? 'rgba(10,46,77,0.55)'
-                        : 'rgba(10,46,77,0.35)',
-                    transition: 'color 0.2s, font-weight 0.2s',
-                  }}
-                >
-                  {/* Long headings: two lines, then an ellipsis (full text on hover via title).
-                      The clamp is on the span: on the button, its padding would show a third line. */}
-                  <span style={{
-                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden', overflowWrap: 'anywhere',
-                  }}>
-                    {s.label}
-                  </span>
-                </button>
-              )
-            })}
-          </nav>
-        </div>
-      </aside>
-
-      {/* ── Mobile / tablet: inline collapsible card ────────────── */}
+      {/* ── Below lg: inline collapsible card ──────────────────────── */}
       <div
-        className="xl:hidden"
+        className="lg:hidden"
         style={{
           background: '#FDFAF7',
           border: '1px solid rgba(10,46,77,0.09)',
           borderRadius: '14px',
-          marginBottom: '2.5rem',
           overflow: 'hidden',
         }}
       >
-        {/* Header / toggle */}
         <button
           onClick={() => setOpen(v => !v)}
+          aria-expanded={open}
           style={{
             width: '100%', background: 'none', border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -149,7 +131,7 @@ export function TableOfContents({ sections }: Props) {
           }}
         >
           <span style={{ fontSize: '12px', fontWeight: 700, color: '#0A2E4D', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-            Contents
+            In this article
           </span>
           <span style={{
             fontSize: '12px', color: 'rgba(10,46,77,0.4)',
@@ -161,9 +143,8 @@ export function TableOfContents({ sections }: Props) {
           </span>
         </button>
 
-        {/* Section list */}
         {open && (
-          <nav style={{ borderTop: '1px solid rgba(10,46,77,0.07)', padding: '0.5rem 0 0.75rem' }}>
+          <nav aria-label="Table of contents" style={{ borderTop: '1px solid rgba(10,46,77,0.07)', padding: '0.5rem 0 0.75rem' }}>
             {sections.map((s, i) => {
               const isActive = s.id === activeId
               return (
@@ -176,11 +157,11 @@ export function TableOfContents({ sections }: Props) {
                     display: 'flex', alignItems: 'center', gap: '0.75rem',
                     fontSize: '13px', lineHeight: 1.4,
                     fontWeight: isActive ? 600 : 400,
-                    color: isActive ? '#E67E50' : 'rgba(10,46,77,0.6)',
+                    color: isActive ? SALMON : 'rgba(10,46,77,0.6)',
                   }}
                 >
                   <span style={{
-                    fontSize: '10px', fontWeight: 600, color: isActive ? '#E67E50' : 'rgba(10,46,77,0.25)',
+                    fontSize: '10px', fontWeight: 600, color: isActive ? SALMON : 'rgba(10,46,77,0.25)',
                     minWidth: '14px',
                   }}>
                     {String(i + 1).padStart(2, '0')}
@@ -192,6 +173,6 @@ export function TableOfContents({ sections }: Props) {
           </nav>
         )}
       </div>
-    </>
+    </aside>
   )
 }
