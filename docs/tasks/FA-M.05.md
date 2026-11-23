@@ -11,7 +11,7 @@ agent: fa-admin
 branch: feat/fa-m.05-send-guide-request
 depends_on: [FA-M.03, FA-M.04]
 blocked_by_questions: []
-touches_db: false
+touches_db: true
 touches_prod: true
 estimate_h: 8
 owner: tj
@@ -92,3 +92,14 @@ grep -rn "guide_private" src --include=*.ts --include=*.tsx | grep -v database.t
 - **2026-11-23, tj — D4 (a):** pole numeru WhatsApp na stronie edycji przewodnika w adminie, w tym zadaniu.
 - **2026-11-23, tj — D5 (b):** wszystkie trzy wiersze deferred z FA-M.03 w zakresie, łącznie z zastąpieniem starego assign/unassign przez send/withdraw i usunięciem starych akcji.
 - **2026-11-23 (agent):** kryteria „szablon/okno 24 h” i „fake WhatsApp” usunięte — w wariancie A nie ma wysyłki przez API; zrzut na danych seeda zastąpiony lokalnie utworzonymi danymi (seed nie ma zleceń); dodane kryteria ścieżki oferty, pola numeru i usunięcia starych akcji (D4/D5). Model/effort: opus · high (prompt tj).
+- **2026-11-23, tj — STOP przed usunięciem starych akcji (mapa + D1–D5 z PR):**
+  - **D1 (b):** „Send request” + akcja admina „Mark accepted on the guide's behalf”. Zdarzenie zapisuje admina jako aktora (`actor_kind admin`), nigdy przewodnika. `requireAdmin()` + red proof.
+  - **D2 (a):** wycofanie najnowszego zlecenia odpina też przewodnika od zapytania (z powrotem „No guide”), ze zdarzeniem w tej samej transakcji.
+  - **D3 (a):** ta sama migracja pozwala odpiąć przewodnika bez zlecenia (43 stare przypisania na prod), ze zdarzeniem.
+  - **D4 (a):** utworzenie zlecenia uzupełnia kraj wyprawy zapytania z kraju przewodnika, gdy jest pusty, w tej samej transakcji.
+  - **D5 (a):** wysłanie do nowego przewodnika automatycznie wycofuje poprzednie otwarte zlecenie (dwa zdarzenia). Bez migracji.
+  - Format `guide_contacts.phone_e164` na poziomie bazy → `docs/deferred-tasks.md`, nie ten PR.
+  - D1–D4 w JEDNEJ nowej migracji (`supabase migration new …`); zastosowanej `20261117000000` nie edytować — nowe funkcje albo `CREATE OR REPLACE` w nowym pliku. `touches_db: true`.
+  - STOP przed napisaniem migracji: diff każdej zmienianej funkcji względem `20261117000000` + odczyt definicji z prod; czekać na zgodę.
+  - STOP przed merge: migracja trafia na prod wyłącznie przez `deploy-db.yml`, uruchamia tj; nie mergować ani nie prosić o merge przed potwierdzeniem tj.
+  - Po zgodzie przy pierwszym STOP wolno usunąć `assignGuideToInquiry`, `assignGuideSilently`, `unassignGuide` i `sendGuideAssignedEmail`.
