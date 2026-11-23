@@ -338,8 +338,11 @@ describe('saveGuideWhatsAppNumber', () => {
 describe('D4 (a) — trip country from the guide', () => {
   it('an inquiry with no trip country takes the guide’s; the event says so', async () => {
     await svc().from('inquiries').update({ trip_country: null }).eq('id', INQ)
-    await sendGuideRequest(INQ, GUIDE_2)
+    const res = await sendGuideRequest(INQ, GUIDE_2)
     expect((await inquiry()).trip_country).toBe('Iceland')
+    // the message names the same area the inquiry now has
+    if (!res.success) throw new Error('send failed')
+    expect(new URL(res.waUrl).searchParams.get('text')).toContain('New request · Iceland, 14–15 Jan')
     const [ev] = await events('guide.request_sent')
     expect(ev.payload).toMatchObject({ trip_country_set: 'Iceland' })
   })

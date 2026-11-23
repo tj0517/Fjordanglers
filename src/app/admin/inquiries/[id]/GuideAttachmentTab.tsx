@@ -476,17 +476,13 @@ export function GuideAttachmentTab({
   requests,
 }: Props) {
   const router = useRouter()
-  const [assignedGuideId, setAssignedGuideId] = useState(currentAssignedGuideId)
+  // FA-M.05: the attached guide comes from the server on every refresh — a withdraw in the timeline
+  // (D2) or a send to another guide changes it there, and a local copy would go stale.
+  const assignedGuideId = currentAssignedGuideId
   const [extOffer, setExtOffer]               = useState(externalOfferSent)
   const [extPending, startExt]                = useTransition()
 
-  function handleAssigned(guideId: string) {
-    setAssignedGuideId(guideId)
-    router.refresh()
-  }
-
-  function handleUnassigned() {
-    setAssignedGuideId(null)
+  function refresh() {
     router.refresh()
   }
 
@@ -565,8 +561,8 @@ export function GuideAttachmentTab({
               requestedDates={requestedDates}
               isAssigned={guide.id === assignedGuideId}
               inquiryId={inquiryId}
-              onAssigned={handleAssigned}
-              onUnassigned={handleUnassigned}
+              onAssigned={refresh}
+              onUnassigned={refresh}
               guideAcceptance={guide.id === assignedGuideId ? guideAcceptance : null}
               guideDeclineReason={guide.id === assignedGuideId ? guideDeclineReason : null}
               hasOpenRequest={requests.some(r => r.guideId === guide.id && r.withdrawnAt == null)}

@@ -189,3 +189,18 @@ describe('legacy assign replaced (D1, D3)', () => {
   })
 })
 
+describe('attached guide follows the server (FA-M.05 walk finding)', () => {
+  it('after a refresh with no guide attached, no card says Assigned', () => {
+    const { rerender } = tab({ currentAssignedGuideId: GUIDE.id, guideAcceptance: 'accepted' })
+    expect(screen.getAllByText('Assigned').length).toBeGreaterThan(0)
+    rerender(
+      <GuideAttachmentTab
+        inquiryId={INQ} currentAssignedGuideId={null} guides={[GUIDE]} requestedDates={[]} tripCountry="New Zealand"
+        guideAcceptance={null} guideDeclineReason={null} externalOfferSent={false} requests={[]}
+      />,
+    )
+    expect(screen.queryByText('Assigned')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Unassign' })).toBeNull()
+  })
+})
+

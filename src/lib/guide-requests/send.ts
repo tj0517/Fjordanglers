@@ -106,7 +106,7 @@ export async function sendGuideRequestByWhatsApp(
 
   const { data: guide, error: guideError } = await client
     .from('guides')
-    .select('full_name')
+    .select('full_name, country')
     .eq('id', params.guideId)
     .maybeSingle()
   if (guideError != null) throw new Error(`sendGuideRequestByWhatsApp: guide read failed: ${guideError.message}`)
@@ -125,7 +125,8 @@ export async function sendGuideRequestByWhatsApp(
     trip_id:            inquiry.trip_id,
   })
   const region = experience?.region.trim() ?? ''
-  const country = inquiry.trip_country?.trim() ?? ''
+  // An inquiry without a country takes the guide's in create_guide_request (D4) — say the same here.
+  const country = inquiry.trip_country?.trim() || guide.country?.trim() || ''
 
   const created = await createGuideRequest(client, {
     inquiryId: params.inquiryId,
