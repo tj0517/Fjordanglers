@@ -2,7 +2,7 @@
 id: FA-1.97
 title: Blog w nowym stylu — strona artykułu i lista wg makiety (grain), spis treści sticky zamiast fixed, FAQ jako sekcja + `FAQPage`
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
@@ -94,3 +94,137 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
   5. `blog/[slug]/page.tsx` w kolejności makiety: hero (okruszki, tagi, H1, lead, meta, zdjęcie 5:4) → TOC + artykuł (treść, FAQ w miejscu, stopka „Written by FjordAnglers · Published …”) → „Fish it with a guide” (`TripCard`, `relatedTripsHeading`, link „All {kraj} trips” → `/trips?country=`) → CTA huba (grain, gdy jest hub) → „More from the Journal” (do 3 innych wpisów, bez bieżącego). JSON-LD: Article + Breadcrumb jak dziś + `FAQPage`, gdy jest FAQ. Jeden `<main>`.
   6. `blog/page.tsx` (force-dynamic, filtr początkowy z `searchParams`) + klientowy `BlogList`: nagłówek, wyróżniony najnowszy na grainie, „Topic hubs” (T3), „All articles” z chipami (T4/T5) i „Load more” > 12, kafle destynacji (`DESTINATION_HUBS`, Patagonia granatowa bez zdjęcia), CTA „Plan your trip”.
   7. Testy: dyrektywy (+ red proof `::quote` bez `text`), FAQ + `FAQPage` (+ red proof bez FAQ), filtr listy (bez wielkości liter), aktualizacja testów TOC / ArticleRelated / internal-links.
+
+- **2026-11-23, agent — raport (status `review`; `done` ustawia tj):**
+
+  ## Report — FA-1.97 Blog redesign: article and list (grain), sticky table of contents, FAQ section + `FAQPage`
+  
+  Task: `docs/tasks/FA-1.97.md` · branch `feat/fa-1.97-blog-redesign` · tj decisions T1–T8 and the plan are in the task's "Notatki z realizacji".
+  Proof files are in `.fa-proofs/FA-1.97/` (untracked, on tj's machine).
+  
+  ### Done
+  - **Article page `/blog/[slug]` follows `article.dc.html`, in the mockup's order:**
+    - hero: breadcrumb Home › Journal › country (a link to the hub) › title, tags, H1, lead, "FjordAnglers · date · N min read", 5:4 photo;
+    - "In this article" + the body;
+    - FAQ, in place in the body;
+    - "Written by FjordAnglers · Published …";
+    - "Fish it with a guide" (`TripCard`);
+    - the hub's CTA on grain;
+    - "More from the Journal".
+    - Evidence: `compare-article-desktop.png`, `compare-article-mobile.png`, and crops `article-faq-desktop.png`, `article-stat-desktop.png`, `article-table-desktop.png`, `m-article-*.png`.
+    - Blocks with no data are hidden, not filled: the hero badge, the guide quote and "In short" (neither post uses the directive), "Last checked", "Report an outdated rule", "Ask us directly". None of the mockup's `[X]` / `[DATE]` / `[GUIDE…` / `[PHOTO…` placeholders appears in the HTML (regex check on both articles: `False`).
+  - **List `/blog` follows `list.dc.html`:**
+    - newest post featured on grain;
+    - "Topic hubs" only for categories that have posts (T3) — today one tile, Seasons;
+    - "All articles" with chips from the data (T4), a grid of the full list (T5), and "Load more" only above 12 posts;
+    - destination tiles (Patagonia navy, no photo);
+    - "Plan your trip" on grain.
+    - Evidence: `compare-blog-desktop.png`, `compare-blog-mobile.png`.
+  - **Table of contents is `position: sticky` in a column as tall as the article, not `fixed`.** Measured at 1440×900 (`toc-positions.json`, shots `toc-1-hero.png` … `toc-4-footer.png`):
+    - top of page: TOC top 663, below the hero's bottom (591) — it does not sit on the hero;
+    - mid-article: TOC top 96, stuck under the nav;
+    - end of the article: TOC bottom 349 = article bottom 349, and "Fish it with a guide" starts at 421 — it stops with the article;
+    - footer in view: TOC at −1644…−1251, off-screen — not over the footer.
+    - Mobile: the collapsible card as before (`m-article-2-toc-card-open.png`). Horizontal overflow at 390 px is 0 px on both pages.
+  - **Existing blocks render without any change to `body_md`.**
+    - Local Norway body md5 = prod `1d885e79f52ae3f2c036786a4597ad4e`.
+    - Rendered from the local copy: 3 × `::photo` (Atlantic cod, Brown trout, Atlantic salmon — all images load), `:::info` → "Good to know.", `:::warning` → "Important.", `:::stat` "15 kg / marine fish per person", and the table (4 rows).
+    - `article-body.test.tsx`: 25/25.
+  - **New directives `:::summary` ("In short") and `::quote{text guide region}`** are covered by tests. Red proof below.
+  - **FAQ section is cut from the body and rendered as the grain block.** Answers are rendered as Markdown (T2). The `FAQPage` answer is plain text with list items on their own lines.
+    - The heading IDs after the FAQ are unchanged: `useful-links-official-resources` is present.
+    - Norway: 6 `###` in the FAQ section = 6 questions in `FAQPage`. NZ: 6 = 6.
+  - **`buildFaqPageJsonLd` is shared by the hub and the article.** `hub-jsonld.test.ts` is unchanged and green (5/5).
+  - **`/blog?category=seasons` shows only the Seasons post; canonical is `/blog`.**
+  - **Removed (rule 9):** `ReadingProgress` (T7); the guides part of `getArticleRelated`, plus its type and tests (T8 — the trip card prints "Guide: …").
+  
+  ### Not done
+  - **Local `pnpm build`.** Not run. Per `docs/05-agent-operations.md` §9, the build is proven by the CI `check` job on this PR (link below), so the local stack did not have to be stopped.
+  - **`pnpm test` is not fully green locally.** 2 tests in `src/lib/guide-requests/__tests__/guide-requests.test.ts` fail.
+    - They fail identically on a clean `origin/main` worktree (`6379dcb`) against the same local DB.
+    - Cause: the local DB has migration `20261122000000` applied (FA-M.05, PR #211, not on `main`).
+    - This is environment, not this diff. CI `db` resets from `main`'s migrations.
+  
+  ### Noticed, not touched (→ docs/deferred-tasks.md)
+  - The footer's Journal column links every topic to `/blog`. It could now use `?category=` (the site footer is out of scope).
+  - The admin editor preview does not pass the post's country to `ArticleBody`, so the FAQ fallback intro line is missing there (FA-1.98).
+  - The untracked `.fa-proofs/FA-1.92/*.cjs` scripts make a local `pnpm lint` exit 1 (10 `no-require-imports`). CI does not see them.
+  
+  ### Needs a decision
+  - **Norway is categorised "Planning", not "Regulations"** (the mockup shows Regulations). So the "Regulations" topic tile is hidden today (T3). Recategorising is a data change in the editor, on prod, by tj — not done here.
+  - **Small calls the implementer made that the plan did not settle** (each easy to change):
+    - the topic tile says "See the articles", not "Open the hub" (there is no hub page);
+    - the TOC entry for the FAQ reads "FAQ", as in the mockup;
+    - country chips have no "All" chip — clicking the active chip clears it;
+    - "Load more" keeps the mockup's salmon border.
+  - **Test assertions changed beyond the T1 list.** Each is a look-only value from the mockup:
+    - lead `font-size:20px` → `21px`;
+    - warning accent `#E67E50` → `#C4561F`;
+    - `'Important: '` → `'Important. '` (also in `blog-post-form.test.tsx`).
+    - The behaviour assertions are unchanged.
+  
+  ### Verification
+  ```
+  $ pnpm typecheck
+  $ tsc --noEmit                                   → exit 0
+  
+  $ pnpm lint --ignore-pattern '.fa-proofs/**'      (what CI sees; plain `pnpm lint` errors only in untracked .fa-proofs/FA-1.92/*.cjs)
+  ✖ 91 problems (0 errors, 91 warnings)            → exit 0
+  $ eslint <every file changed on this branch>      → no output, exit 0
+  
+  $ pnpm vitest run   (full suite, local)
+  Test Files  1 failed | 184 passed (185)
+   FAIL guide-requests.test.ts > createGuideRequest > sets the inquiries summary …      (same 2 on clean origin/main, see "Not done")
+   FAIL guide-requests.test.ts > withdrawGuideRequest > kills the link …
+  
+  $ pnpm vitest run <blog, seo, internal-links, blog pages, blog-post-form>   (blog-tests.log)
+  Test Files  15 passed (15)
+       Tests  152 passed (152)
+  
+  $ pnpm knip                                       → exit 0, no findings
+  
+  $ pnpm build                                      → CI `check` job on this PR (link in PR checks)
+  ```
+  
+  Red proof — `::quote` without `text` (guard `child.name === 'quote' && quote !== ''` → `child.name === 'quote'`):
+  ```
+   FAIL  article-body.test.tsx > … > a ::quote without text does not throw and shows what was typed — it is not a quote block
+  AssertionError: expected '<div class="_body_11d61d"><figure cla…' to contain 'quote{guide='
+        Tests  1 failed | 24 passed (25)
+  restored → Tests  25 passed (25)
+  ```
+  
+  Red proof — no FAQ → no `FAQPage` (removed `if (entries.length === 0) return null` in `faq-jsonld.ts`):
+  ```
+   FAIL  article-faq.test.tsx > the FAQPage built from it > a body without FAQ gives no FAQPage   — expected { …(3) } to be null
+   FAIL  faq-jsonld.test.ts > buildFaqPageJsonLd > no entries, no FAQPage …                       — expected { …(3) } to be null
+   FAIL  hub-jsonld.test.ts > buildHubJsonLd (FA-1.82) > FAQPage only when the hub has FAQ       — expected { …(3) } to be null
+        Tests  3 failed | 21 passed (24)
+  restored → Tests  24 passed (24)
+  ```
+  
+  `/blog?category=seasons` (local dev on the local stack; both prod rows copied there, body md5s equal to prod):
+  ```
+  status: 200
+  canonical: ['https://www.fjordanglers.com/blog']
+  All articles cards: ['/blog/best-time-to-fly-fish-new-zealand']
+  pressed chips: ['Seasons']
+  /blog (no filter) All articles: ['/blog/best-time-to-fly-fish-new-zealand', '/blog/fishing-regulations-norway-2026'], canonical /blog
+  ```
+  
+  JSON-LD on `/blog/fishing-regulations-norway-2026`: types `WebSite, Organization+LocalBusiness, Article, BreadcrumbList, FAQPage`. The full `FAQPage` is in `norway-faqpage.json`; it begins:
+  ```json
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question",
+        "name": "Exactly how many kilograms of fish can I export from Norway in 2026?",
+        "acceptedAnswer": { "@type": "Answer", "text": "In 2026, the tourist limit is exactly 15 kg of marine fish or processed products (e.g., fillets) per person. … drop to 10 kg!" } },
+      …6 questions in total; the list answer reads:
+      "Yes, Norway has exceptions to protect specific populations:\nCod in the Oslofjord: There is a total, year-round ban …\nHalibut: Any specimen measuring over 2 meters …\nKing crab and bluefin tuna: …"
+    ]
+  }
+  ```
+  
+  Database: no writes to production. Prod reads (SELECT): the published rows, their bodies and their md5s (Norway `1d885e79…`, NZ `56e0bfe4…`). The NZ row was copied into the **local** DB only, for the screenshots (`INSERT 0 1`, md5 checked equal before the insert). Trackers in the browser were blocked (`ERR_BLOCKED_BY_CLIENT` for googletagmanager in the console log).
