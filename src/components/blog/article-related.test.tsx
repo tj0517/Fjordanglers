@@ -1,55 +1,56 @@
 /**
  * FA-1.90 — the block below an article and the home page's journal block, from fixtures.
- * Headings follow the tier the data layer chose (tj D3); every part hides when it is empty.
+ * FA-1.97: the guides part is gone (an offer card names its guide) and the hub link became its own
+ * block (`ArticleHubCta`). Headings follow the tier the data layer chose (tj D3); the block hides when empty.
  */
-import { describe, it, expect } from 'vitest'
+import { vi, describe, it, expect } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import ArticleRelated, { relatedTripsHeading } from './article-related'
+import { ArticleHubCta } from './article-hub-cta'
 import { LatestArticles } from '@/components/home/latest-articles'
 import type { ArticleRelated as Related, FeaturedExperiencePage } from '@/lib/supabase/queries'
 import type { BlogPostSummary } from '@/lib/blog/post'
 
-const page = (n: number, country: string): FeaturedExperiencePage => ({
+vi.mock('@/components/layout/nav', () => ({ PLAN_YOUR_TRIP_HREF: '/trips' }))
+
+const page = (n: number, country: string, guide: string | null = null): FeaturedExperiencePage => ({
   id: `p${n}`, slug: `trip-${n}`, experience_name: `Trip ${n}`, country, region: '',
-  price_from: 100, price_type: 'per_person', currency: 'EUR', hero_image_url: null, guide: null,
+  price_from: 100, price_type: 'per_person', currency: 'EUR', hero_image_url: null,
+  guide: guide == null ? null : { id: `g${n}`, full_name: guide },
 })
-const GUIDE = { id: 'g1', slug: 'nor-guide', name: 'Nor Guide', avatarUrl: null, tagline: 'Sea trout on the fjord.' }
 const HUB = { slug: 'norway', label: 'Guided Fishing Trips in Norway' }
 
 const render = (related: Related, country: string | null) => renderToStaticMarkup(<ArticleRelated related={related} country={country} />)
-const hrefs = (html: string) => [...html.matchAll(/<a\b[^>]*?\shref="([^"]*)"/g)].map(m => m[1])
+/** Unique hrefs, in order — a trip card links its photo and its button to the same page. */
+const hrefs = (html: string) => [...new Set([...html.matchAll(/<a\b[^>]*?\shref="([^"]*)"/g)].map(m => m[1]))]
 const h2s = (html: string) => [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map(m => m[1]!.replace(/<!-- -->/g, ''))
 
 describe('ArticleRelated', () => {
-  it('country tier: "Trips in Norway", the trips, the guide and the hub link', () => {
-    const html = render({ offers: { tier: 'country', pages: [page(1, 'Norway'), page(2, 'Norway')] }, guides: [GUIDE], hub: HUB }, 'Norway')
-    expect(h2s(html)).toEqual(['Trips in Norway', 'Guides in Norway'])
-    expect(hrefs(html)).toEqual(['/experiences/trip-1', '/experiences/trip-2', '/guides/nor-guide', '/norway'])
-    expect(html).toContain('Guided Fishing Trips in Norway')
-  })
-
-  it('group fallback: "Trips near Norway" — the heading never claims Swedish trips are in Norway', () => {
-    const html = render({ offers: { tier: 'group', pages: [page(1, 'Sweden')] }, guides: [], hub: HUB }, 'Norway')
-    expect(h2s(html)[0]).toBe('Trips near Norway')
-  })
-
-  it('NULL country: "Trips we guide", no guides part, no hub link', () => {
-    const html = render({ offers: { tier: 'anywhere', pages: [page(1, 'Iceland'), page(2, 'Sweden')] }, guides: [], hub: null }, null)
-    expect(h2s(html)).toEqual(['Trips we guide'])
-    expect(html).not.toContain('data-part="guides"')
-    expect(html).not.toContain('data-part="hub"')
-    expect(hrefs(html)).toEqual(['/experiences/trip-1', '/experiences/trip-2'])
-  })
-
-  it('no guides in the country: the guides part is hidden, trips and hub stay', () => {
-    const html = render({ offers: { tier: 'country', pages: [page(1, 'Norway')] }, guides: [], hub: HUB }, 'Norway')
+  it('country tier: "Trips in Norway", the trip cards with their guide, "All Norway trips"', () => {
+    const html = render({ offers: { tier: 'country', pages: [page(1, 'Norway', 'Nor Guide'), page(2, 'Norway')] }, hub: HUB }, 'Norway')
+    expect(h2s(html)).toEqual(['Trips in Norway'])
+    expect(hrefs(html)).toEqual(['/trips?country=Norway', '/experiences/trip-1', '/experiences/trip-2'])
+    expect(html).toContain('Guide: Nor Guide')
+    expect(html).toContain('All Norway trips')
     expect(html).not.toContain('data-part="guides"')
     expect(html).not.toContain('Guides in')
-    expect(hrefs(html)).toEqual(['/experiences/trip-1', '/norway'])
   })
 
-  it('nothing at all: no block', () => {
-    expect(render({ offers: { tier: 'anywhere', pages: [] }, guides: [], hub: null }, null)).toBe('')
+  it('group fallback: "Trips near Norway" — the heading never claims Swedish trips are in Norway, and the link is not "All Norway trips"', () => {
+    const html = render({ offers: { tier: 'group', pages: [page(1, 'Sweden')] }, hub: HUB }, 'Norway')
+    expect(h2s(html)[0]).toBe('Trips near Norway')
+    expect(hrefs(html)).toContain('/trips')
+    expect(html).not.toContain('All Norway trips')
+  })
+
+  it('NULL country: "Trips we guide", all trips', () => {
+    const html = render({ offers: { tier: 'anywhere', pages: [page(1, 'Iceland'), page(2, 'Sweden')] }, hub: null }, null)
+    expect(h2s(html)).toEqual(['Trips we guide'])
+    expect(hrefs(html)).toEqual(['/trips', '/experiences/trip-1', '/experiences/trip-2'])
+  })
+
+  it('no trips: no block, whatever the hub', () => {
+    expect(render({ offers: { tier: 'anywhere', pages: [] }, hub: HUB }, 'Norway')).toBe('')
   })
 
   it('heading per tier', () => {
@@ -57,6 +58,23 @@ describe('ArticleRelated', () => {
     expect(relatedTripsHeading('group', 'Iceland')).toBe('Trips near Iceland')
     expect(relatedTripsHeading('anywhere', 'Iceland')).toBe('Trips we guide')
     expect(relatedTripsHeading('anywhere', null)).toBe('Trips we guide')
+  })
+})
+
+describe('ArticleHubCta', () => {
+  it('"Norway hub", the hub\'s title, "Open the Norway hub" → /norway and "Plan your trip" → /trips', () => {
+    const html = renderToStaticMarkup(<ArticleHubCta hub={HUB} country="Norway" />)
+    expect(html).toContain('Norway hub')
+    expect(h2s(html)).toEqual(['Guided Fishing Trips in Norway'])
+    expect(html).toContain('Seasons, species and every trip in one place.')
+    expect(hrefs(html)).toEqual(['/norway', '/trips'])
+    expect(html).toContain('Open the Norway hub')
+    expect(html).toContain('Plan your trip')
+  })
+
+  it('no hub for the country (or a general post): no block', () => {
+    expect(renderToStaticMarkup(<ArticleHubCta hub={null} country="Norway" />)).toBe('')
+    expect(renderToStaticMarkup(<ArticleHubCta hub={null} country={null} />)).toBe('')
   })
 })
 

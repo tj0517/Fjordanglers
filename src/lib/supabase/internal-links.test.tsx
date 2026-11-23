@@ -3,9 +3,9 @@
  * in-memory database (`src/tests/fake-supabase.ts`), so they do not depend on what the local seed
  * holds (it has no Norway offers or guides) and survive a `db reset`.
  *
- *   article  — offers widen by tier (country → region group → anywhere, tj D3); guides are active,
- *              visible and from the post's country; the hub is the country's; a general post (NULL
- *              country) starts at "anywhere" with no guides and no hub
+ *   article  — offers widen by tier (country → region group → anywhere, tj D3); the hub is the
+ *              country's; a general post (NULL country) starts at "anywhere" with no hub. (The
+ *              guides part went in FA-1.97: an offer card names its guide.)
  *   hub      — its articles are the published posts of its countries, newest first (tj D2)
  *   home     — the three newest published posts
  *   fail-soft — a failed blog read hides the home block and the hub section; both pages still render
@@ -59,11 +59,6 @@ const offer = (country: string, over: Record<string, unknown> = {}) => {
   }
 }
 
-const guide = (slug: string | null, over: Record<string, unknown> = {}) => ({
-  id: `guide-${slug ?? Math.random()}`, slug, full_name: `Guide ${slug}`, avatar_url: null, tagline: null,
-  country: 'Norway', status: 'active', is_hidden: false, average_rating: null, ...over,
-})
-
 const post = (slug: string, country: string | null, publishedAt: string, status = 'published') => ({
   id: `post-${slug}`, slug, title: `Title ${slug}`, seo_title: `SEO ${slug}`, description: 'Description.',
   body_md: 'Body text.', image_url: '/fish_catalog/salmon.png', image_alt: 'Salmon', category: 'Planning',
@@ -90,27 +85,22 @@ afterEach(() => errors.mockRestore())
 
 // ─── Article ──────────────────────────────────────────────────────────────────
 
-describe('getArticleRelated (article → offers, guides, hub)', () => {
-  it('country tier: 3 offers from the post\'s country, 2 active visible guides from it, the country\'s hub', async () => {
+describe('getArticleRelated (article → offers, hub)', () => {
+  it('country tier: 3 offers from the post\'s country, the country\'s hub — and no guides read at all', async () => {
     h.db.tables.experience_pages = [offer('Norway'), offer('Norway'), offer('Norway'), offer('Norway'), offer('Sweden'), offer('Norway', { status: 'draft' })]
-    h.db.tables.guides = [
-      guide('nor-a', { average_rating: 4.9 }), guide('nor-b', { average_rating: 4.5 }), guide('nor-c', { average_rating: 4.0 }),
-      guide('nor-hidden', { is_hidden: true, average_rating: 5 }), guide('nor-inactive', { status: 'pending', average_rating: 5 }),
-      guide(null, { average_rating: 5 }), guide('swe', { country: 'Sweden', average_rating: 5 }),
-    ]
 
     const r = await getArticleRelated({ country: 'Norway' })
 
     expect(r.offers.tier).toBe('country')
     expect(r.offers.pages).toHaveLength(3)
     expect(r.offers.pages.every(p => p.country === 'Norway')).toBe(true)
-    expect(r.guides.map(g => g.slug)).toEqual(['nor-a', 'nor-b'])
     expect(r.hub).toEqual({ slug: 'norway', label: 'Guided Fishing Trips in Norway' })
+    expect('guides' in r).toBe(false)
+    expect(h.db.reads).not.toContain('guides')
   })
 
   it('group fallback: no offer in the country → offers from the same part of the world (Nordic), never further', async () => {
     h.db.tables.experience_pages = [offer('Sweden'), offer('Iceland'), offer('New Zealand')]
-    h.db.tables.guides = [guide('nor-a')]
 
     const r = await getArticleRelated({ country: 'Norway' })
 
@@ -120,7 +110,6 @@ describe('getArticleRelated (article → offers, guides, hub)', () => {
 
   it('anywhere: nothing in the country or the group → any active offer', async () => {
     h.db.tables.experience_pages = [offer('New Zealand')]
-    h.db.tables.guides = []
 
     const r = await getArticleRelated({ country: 'Norway' })
 
@@ -128,39 +117,23 @@ describe('getArticleRelated (article → offers, guides, hub)', () => {
     expect(r.offers.pages.map(p => p.country)).toEqual(['New Zealand'])
   })
 
-  it('NULL country (a general post): starts at "anywhere", no guides read, no hub', async () => {
+  it('NULL country (a general post): starts at "anywhere", no hub', async () => {
     h.db.tables.experience_pages = [offer('Norway'), offer('Sweden')]
-    h.db.tables.guides = [guide('nor-a')]
 
     const r = await getArticleRelated({ country: null })
 
     expect(r.offers.tier).toBe('anywhere')
     expect(r.offers.pages).toHaveLength(2)
-    expect(r.guides).toEqual([])
     expect(r.hub).toBeNull()
-    expect(h.db.reads).not.toContain('guides')
     expect(h.db.reads).not.toContain('destination_hubs')
   })
 
-  it('no guides in the country → guides empty (the part hides), offers and hub unaffected', async () => {
-    h.db.tables.experience_pages = [offer('Norway'), offer('Norway')]
-    h.db.tables.guides = [guide('swe', { country: 'Sweden' })]
-
-    const r = await getArticleRelated({ country: 'Norway' })
-
-    expect(r.guides).toEqual([])
-    expect(r.offers.tier).toBe('country')
-    expect(r.hub?.slug).toBe('norway')
-  })
-
-  it('failed offer and guide reads → an empty block, not a failed page', async () => {
+  it('failed offer read → an empty block, not a failed page', async () => {
     h.db.failing.add('experience_pages')
-    h.db.failing.add('guides')
 
     const r = await getArticleRelated({ country: 'Norway' })
 
     expect(r.offers.pages).toEqual([])
-    expect(r.guides).toEqual([])
   })
 })
 

@@ -1601,56 +1601,27 @@ export async function getLatestBlogPosts(limit = 3): Promise<BlogPostSummary[]> 
   return (await publishedPostsOrNone('getLatestBlogPosts')).slice(0, limit)
 }
 
-type ArticleGuide = {
-  id:        string
-  slug:      string
-  name:      string
-  avatarUrl: string | null
-  tagline:   string | null
-}
-
 export type ArticleRelated = {
   /** Offers by tier (D3): same country → same part of the world → anywhere; never 'region' (a post has none). */
   offers: RelatedExperiencePages
-  /** Active, visible guides from the post's country; empty when there are none (the part is hidden). */
-  guides: ArticleGuide[]
   /** The hub that covers the post's country, null for a general post or a country with no hub. */
   hub:    { slug: string; label: string } | null
 }
 
 /**
- * What an article links to below its body: 2–3 offers, 1–2 guides and its hub (FA-1.90). The
- * article itself is read by `getBlogPost`; this reads only offers and guides, cached under their
- * tags and `blog`. Every part degrades to empty on a failed read and logs — the article renders
+ * What an article links to below its body: 2–3 offers and its hub (FA-1.90; the guides part went in
+ * FA-1.97 — an offer card names its guide). The article itself is read by `getBlogPost`; this reads
+ * only offers, cached under their tags and `blog`. A guide's name is printed on the cards, so a guide
+ * edit revalidates this too. A failed read degrades to no offers and logs — the article renders
  * without the block rather than not at all.
  */
 export async function getArticleRelated({ country }: { country: string | null }): Promise<ArticleRelated> {
-  const fromDb = await unstable_cache(
-    async (): Promise<Omit<ArticleRelated, 'hub'>> => {
-      const offers = await relatedPagesByTier('getArticleRelated', { excludeId: null, country, region: '', limit: 3 })
-      if (country == null) return { offers, guides: [] }
-
-      const { data, error } = await createPublicClient()
-        .from('guides')
-        .select('id, slug, full_name, avatar_url, tagline')
-        .eq('country', country)
-        .eq('status', 'active')
-        .eq('is_hidden', false)
-        .not('slug', 'is', null)
-        .order('average_rating', { ascending: false, nullsFirst: false })
-        .order('full_name')
-        .limit(2)
-
-      if (error) console.error('[getArticleRelated] guides', error.message)
-
-      const guides = (data ?? []).flatMap(g => g.slug == null ? [] : [{
-        id: g.id, slug: g.slug, name: g.full_name, avatarUrl: g.avatar_url, tagline: g.tagline,
-      }])
-      return { offers, guides }
-    },
-    ['article-related', country ?? '(none)'],
+  // The key changed with the shape (FA-1.97): an entry cached by the previous deploy is `{ offers, guides }`.
+  const offers = await unstable_cache(
+    () => relatedPagesByTier('getArticleRelated', { excludeId: null, country, region: '', limit: 3 }),
+    ['article-related-offers', country ?? '(none)'],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES, CACHE_TAG_BLOG] },
   )()
 
-  return { ...fromDb, hub: country == null ? null : await getHubCrumbForCountry(country) }
+  return { offers, hub: country == null ? null : await getHubCrumbForCountry(country) }
 }
