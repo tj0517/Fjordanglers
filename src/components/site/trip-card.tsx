@@ -1,7 +1,8 @@
 /**
  * The trip card — one component for the hub, the home page, the offer page's "More trips" and the
  * guide profile (docs/design/site-2026-11/README.md). Photo with the region tag, name, species, the
- * guide when the caller passes one (the offer page's "More trips", tj 2026-11-17), the price
+ * guide when the caller passes one (the offer page's "More trips", tj 2026-11-17) — a link to the
+ * guide's profile only when the caller also passes a checked slug (under a blog article, FA-1.97), the price
  * exactly as the offer page prints it, and "View trip". Every card is the same height (tj,
  * 2026-11-18): the name is cut at two lines, species, guide and price at one, and the species line
  * keeps its height when a page lists none.
@@ -23,6 +24,12 @@ export type TripCardData = {
   priceText: string
   /** Optional: a card without it draws no guide line. */
   guideName?: string | null
+  /**
+   * Optional: the guide's slug when the caller has checked that the profile is public
+   * (`publicGuideSlug`). With it the guide line links to `/guides/<slug>`; without it the line stays
+   * text. Only the cards under a blog article pass it (FA-1.97, tj).
+   */
+  guideSlug?: string | null
 }
 
 export function TripCard({ trip, priority = false, onClick }: { trip: TripCardData; priority?: boolean; onClick?: () => void }) {
@@ -59,7 +66,12 @@ export function TripCard({ trip, priority = false, onClick }: { trip: TripCardDa
       </p>
       {trip.guideName != null && trip.guideName.trim() !== '' && (
         <p className="f-body m-0 -mt-2 truncate text-[14.5px]" style={{ color: MUTED }} data-testid="trip-card-guide">
-          Guide: {trip.guideName}
+          Guide:{' '}
+          {trip.guideSlug != null && trip.guideSlug !== '' ? (
+            <Link href={`/guides/${trip.guideSlug}`} style={{ color: NAVY, textDecoration: 'underline', textDecorationColor: SALMON, textUnderlineOffset: 3 }}>
+              {trip.guideName}
+            </Link>
+          ) : trip.guideName}
         </p>
       )}
       <div className="mt-auto flex items-center justify-between gap-3">

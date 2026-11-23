@@ -127,7 +127,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.93 | Rolę nadaje tylko serwer — użytkownik nie zmieni swojej roli (`profiles`), `handle_new_user` i `auth/callback` nie przyjmą `admin` z danych konta (pilne, przed SEO) | M | opus | done (PR #175) | — |
 | FA-1.95 | Log zdarzeń tylko dla serwera — zamknięty odczyt `inquiry_events` sesją (`anon`, `authenticated`) | S | opus | done (PR #197) | — |
 | FA-1.96 | Strony z tokenem bez skryptów zewnętrznych — `/offers/`, `/reviews/`, `/invite/`, `/guide-intake/` + przegląd `?token=`/`?code=` | S | sonnet | done (PR #202) | FA-M.04 |
-| FA-1.97 | Blog w nowym stylu — artykuł i lista wg makiety (grain), spis treści sticky, FAQ jako sekcja + `FAQPage`, dyrektywy `:::summary`/`::quote` | L | opus | todo | — |
+| FA-1.97 | Blog w nowym stylu — artykuł i lista wg makiety (grain), spis treści sticky, FAQ jako sekcja + `FAQPage`, dyrektywy `:::summary`/`::quote` | L | opus | review | — |
 | FA-1.98 | Edytor bloga — „Wstaw zdjęcie” w treści, alt obowiązkowy, autor i „Last checked” per wpis, „Report an outdated rule” | M | opus | todo | FA-1.97 |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |

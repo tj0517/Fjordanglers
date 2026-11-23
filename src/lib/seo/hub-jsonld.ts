@@ -8,6 +8,7 @@
  */
 
 import type { DestinationHub } from '@/lib/destinations'
+import { buildFaqPageJsonLd } from './faq-jsonld'
 
 export type HubJsonLdOffer = {
   page: { slug: string; experience_name: string; hero_image_url: string | null }
@@ -57,19 +58,9 @@ export function buildHubJsonLd(
     ],
   }
 
-  const faq = hub.faq ?? []
-
   return {
     itemList,
     breadcrumb,
-    faq: faq.length === 0 ? null : {
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: faq.map(entry => ({
-        '@type': 'Question',
-        name: entry.question,
-        acceptedAnswer: { '@type': 'Answer', text: entry.answer },
-      })),
-    },
+    faq: buildFaqPageJsonLd(hub.faq ?? []),
   }
 }

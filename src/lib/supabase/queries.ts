@@ -21,6 +21,7 @@ import { hubContentFromRow, type HubContent } from '@/lib/hubs/content'
 import { hubSpecies } from '@/lib/hub-species'
 import { getTestimonial, type Testimonial } from './testimonials'
 import { isValidBlogSlug, toBlogPost, toBlogPostSummary, type BlogPost, type BlogPostSummary } from '@/lib/blog/post'
+import { publicGuideSlug } from '@/lib/guide-url'
 import {
   speciesNames,
   parseLicenseInfo,
@@ -326,7 +327,11 @@ export type FeaturedExperiencePage = {
   price_type: string
   currency: string
   hero_image_url: string | null
-  guide: { id: string; full_name: string } | null
+  /**
+   * The offer's guide. `publicSlug` is set only when the guide's profile is public (`publicGuideSlug`,
+   * FA-1.86) — the one caller that links it is the trip card under an article (FA-1.97).
+   */
+  guide: { id: string; full_name: string; publicSlug: string | null } | null
 }
 
 // ─── Related experience pages (offer page, "More trips") ─────────────────────
@@ -338,7 +343,18 @@ export type RelatedExperiencePages = {
 }
 
 const RELATED_SELECT =
-  'id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, guide:guides!guide_id ( id, full_name )'
+  'id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, guide:guides!guide_id ( id, full_name, slug, status, is_hidden )'
+
+type RelatedRow = {
+  id: string; slug: string; experience_name: string; country: string; region: string
+  price_from: number; price_type: string; currency: string; hero_image_url: string | null
+  guide: { id: string; full_name: string; slug: string | null; status: string; is_hidden: boolean } | null
+}
+
+/** A row of `RELATED_SELECT` as a card's data: the guide's status columns become `publicSlug` and go no further. */
+function toFeaturedPage({ guide, ...page }: RelatedRow): FeaturedExperiencePage {
+  return { ...page, guide: guide == null ? null : { id: guide.id, full_name: guide.full_name, publicSlug: publicGuideSlug(guide) } }
+}
 
 /**
  * Up to `limit` active pages, as close to `country` / `region` as the catalogue allows: same
@@ -386,7 +402,7 @@ async function relatedPagesByTier(
       continue
     }
     if (data != null && data.length > 0) {
-      return { tier, pages: data as unknown as FeaturedExperiencePage[] }
+      return { tier, pages: data.map(toFeaturedPage) }
     }
   }
 
@@ -1601,56 +1617,27 @@ export async function getLatestBlogPosts(limit = 3): Promise<BlogPostSummary[]> 
   return (await publishedPostsOrNone('getLatestBlogPosts')).slice(0, limit)
 }
 
-type ArticleGuide = {
-  id:        string
-  slug:      string
-  name:      string
-  avatarUrl: string | null
-  tagline:   string | null
-}
-
 export type ArticleRelated = {
   /** Offers by tier (D3): same country → same part of the world → anywhere; never 'region' (a post has none). */
   offers: RelatedExperiencePages
-  /** Active, visible guides from the post's country; empty when there are none (the part is hidden). */
-  guides: ArticleGuide[]
   /** The hub that covers the post's country, null for a general post or a country with no hub. */
   hub:    { slug: string; label: string } | null
 }
 
 /**
- * What an article links to below its body: 2–3 offers, 1–2 guides and its hub (FA-1.90). The
- * article itself is read by `getBlogPost`; this reads only offers and guides, cached under their
- * tags and `blog`. Every part degrades to empty on a failed read and logs — the article renders
+ * What an article links to below its body: 2–3 offers and its hub (FA-1.90; the guides part went in
+ * FA-1.97 — an offer card names its guide). The article itself is read by `getBlogPost`; this reads
+ * only offers, cached under their tags and `blog`. A guide's name is printed on the cards, so a guide
+ * edit revalidates this too. A failed read degrades to no offers and logs — the article renders
  * without the block rather than not at all.
  */
 export async function getArticleRelated({ country }: { country: string | null }): Promise<ArticleRelated> {
-  const fromDb = await unstable_cache(
-    async (): Promise<Omit<ArticleRelated, 'hub'>> => {
-      const offers = await relatedPagesByTier('getArticleRelated', { excludeId: null, country, region: '', limit: 3 })
-      if (country == null) return { offers, guides: [] }
-
-      const { data, error } = await createPublicClient()
-        .from('guides')
-        .select('id, slug, full_name, avatar_url, tagline')
-        .eq('country', country)
-        .eq('status', 'active')
-        .eq('is_hidden', false)
-        .not('slug', 'is', null)
-        .order('average_rating', { ascending: false, nullsFirst: false })
-        .order('full_name')
-        .limit(2)
-
-      if (error) console.error('[getArticleRelated] guides', error.message)
-
-      const guides = (data ?? []).flatMap(g => g.slug == null ? [] : [{
-        id: g.id, slug: g.slug, name: g.full_name, avatarUrl: g.avatar_url, tagline: g.tagline,
-      }])
-      return { offers, guides }
-    },
-    ['article-related', country ?? '(none)'],
+  // The key changed with the shape (FA-1.97): an entry cached by the previous deploy is `{ offers, guides }`.
+  const offers = await unstable_cache(
+    () => relatedPagesByTier('getArticleRelated', { excludeId: null, country, region: '', limit: 3 }),
+    ['article-related-offers', country ?? '(none)'],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES, CACHE_TAG_BLOG] },
   )()
 
-  return { ...fromDb, hub: country == null ? null : await getHubCrumbForCountry(country) }
+  return { offers, hub: country == null ? null : await getHubCrumbForCountry(country) }
 }

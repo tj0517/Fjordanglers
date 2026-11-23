@@ -1,9 +1,15 @@
 import Image from 'next/image'
+import type { CSSProperties, ReactNode } from 'react'
+import { FaqList, type FaqEntry } from '@/components/site/faq'
+import { MUTED, NAVY, ON_DARK, SALMON_ON_DARK, SectionHeading } from '@/components/site/ui'
+import g from '@/components/site/grain.module.css'
+import a from './article.module.css'
 
 /**
- * Presentational pieces of a blog article (FA-1.83): the four named blocks of the article format
- * (warning, info, stat, photo), the breakout table and one image component. They were inline in the
- * Norway article's JSX; the article body is Markdown now and `article-body.tsx` maps to these.
+ * Presentational pieces of a blog article (FA-1.83, restyled FA-1.97 after docs/design/blog-2026-11/
+ * article.dc.html): the named blocks of the article format (info, warning, stat, photo, summary,
+ * quote), the table frame, the FAQ section and one image component. The article body is Markdown;
+ * `article-body.tsx` maps the plugin's markers to these.
  */
 
 // ─── Image ────────────────────────────────────────────────────────────────────
@@ -28,14 +34,16 @@ interface BlogImageProps {
   priority?: boolean
   /** 'high' on the page's LCP image only. Next 16's `priority` preloads but sends no fetchpriority (FA-1.92). */
   fetchPriority?: 'high'
+  /** What the browser should pick from the srcset; without it `next/image` assumes the full viewport width. */
+  sizes?: string
   className?: string
-  style?: React.CSSProperties
+  style?: CSSProperties
 }
 
 /** Fills its (positioned) parent. An https host `next/image` does not know falls back to a plain <img>, never a crash. */
-export function BlogImage({ src, alt, priority, fetchPriority, className, style }: BlogImageProps) {
+export function BlogImage({ src, alt, priority, fetchPriority, sizes, className, style }: BlogImageProps) {
   if (canOptimise(src)) {
-    return <Image src={src} alt={alt} fill priority={priority} fetchPriority={fetchPriority} className={className} style={style} />
+    return <Image src={src} alt={alt} fill priority={priority} fetchPriority={fetchPriority} sizes={sizes} className={className} style={style} />
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element -- host is not in next.config images.remotePatterns
@@ -53,118 +61,137 @@ export function BlogImage({ src, alt, priority, fetchPriority, className, style 
 // ─── Blocks ───────────────────────────────────────────────────────────────────
 
 /**
- * The article's paragraphs read `--article-p-*` (see article-body.tsx), so a block restyles the
- * paragraphs it contains without the Markdown knowing about the block: smaller text, no bottom margin.
+ * The article's paragraphs and list items read `--article-p-*` (see article.module.css and
+ * article-body.tsx), so a block restyles what it contains without the Markdown knowing about the
+ * block: its own size and colour, tight spacing between its paragraphs.
  */
-function blockText(o: { size: string; lineHeight: number; color: string; fontStyle?: string }): React.CSSProperties {
+function blockText(o: { size: string; lineHeight: number; color: string }): CSSProperties {
   return {
     display: 'flex',
     flexDirection: 'column',
     gap: '0.6rem',
+    minWidth: 0,
     '--article-p-size': o.size,
     '--article-p-lh': String(o.lineHeight),
     '--article-p-color': o.color,
-    '--article-p-mb': '0',
-    '--article-p-style': o.fontStyle ?? 'normal',
-  } as React.CSSProperties
+  } as CSSProperties
 }
 
-export function InfoNote({ children }: { children: React.ReactNode }) {
+const calloutBox: CSSProperties = { display: 'flex', gap: 16, padding: '22px 24px', borderRadius: 16 }
+const calloutIcon: CSSProperties = { flex: 'none', marginTop: 2 }
+
+export function InfoNote({ children }: { children: ReactNode }) {
   return (
-    <div style={{
-      background: 'rgba(27,79,114,0.06)',
-      border: '1px solid rgba(27,79,114,0.15)',
-      borderLeft: '3px solid #1B4F72',
-      borderRadius: '0 10px 10px 0',
-      padding: '1rem 1.25rem',
-      marginBottom: '1.5rem',
-    }}>
-      <div style={blockText({ size: '14px', lineHeight: 1.7, color: 'rgba(10,46,77,0.7)', fontStyle: 'italic' })}>
-        {children}
-      </div>
-    </div>
+    <aside style={{ ...calloutBox, background: '#E9EEF0', border: '1px solid #CBD6DD' }}>
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2" strokeLinecap="round" style={calloutIcon}>
+        <circle cx="12" cy="12" r="9" /><path d="M12 11v6" /><path d="M12 7.5v.5" />
+      </svg>
+      <div style={blockText({ size: '16.5px', lineHeight: 1.6, color: NAVY })}>{children}</div>
+    </aside>
   )
 }
 
-export function WarningCard({ children }: { children: React.ReactNode }) {
+export function WarningCard({ children }: { children: ReactNode }) {
   return (
-    <div style={{
-      background: 'rgba(230,126,80,0.08)',
-      border: '1px solid rgba(230,126,80,0.25)',
-      borderLeft: '3px solid #E67E50',
-      borderRadius: '0 10px 10px 0',
-      padding: '1.25rem 1.5rem',
-      marginBottom: '2rem',
-      marginTop: '1rem',
-    }}>
-      <div style={blockText({ size: '14px', lineHeight: 1.75, color: 'rgba(10,46,77,0.7)' })}>
-        {children}
-      </div>
-    </div>
+    <aside style={{ ...calloutBox, background: '#FBE9DF', border: '1px solid #F2B99D' }}>
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C4561F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={calloutIcon}>
+        <path d="M12 3 2.5 20h19L12 3z" /><path d="M12 10v5" /><path d="M12 17.5v.5" />
+      </svg>
+      <div style={blockText({ size: '16.5px', lineHeight: 1.6, color: NAVY })}>{children}</div>
+    </aside>
   )
 }
 
-export function StatCallout({ value, label, children }: { value: string; label: string; children?: React.ReactNode }) {
+export function StatCallout({ value, label, children }: { value: string; label: string; children?: ReactNode }) {
   return (
-    <div style={{
-      background: '#0A2E4D',
-      borderRadius: '16px',
-      padding: '2rem 2.5rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '2rem',
-      marginTop: '0.5rem',
-      marginBottom: '2rem',
-      flexWrap: 'wrap',
-    }}>
-      <div>
-        <div style={{ fontSize: 'clamp(40px, 6vw, 56px)', fontWeight: 800, color: '#E67E50', lineHeight: 1 }}>
+    <aside
+      className={`${g.blur} ${g.fjord}`}
+      style={{ borderRadius: 20, padding: '36px clamp(24px, 4vw, 44px)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px 40px' }}
+    >
+      <p style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span className="f-display" style={{ fontWeight: 400, fontSize: 'clamp(48px, 7vw, 68px)', lineHeight: 1, letterSpacing: '-.02em', color: '#FFFFFF' }}>
           {value}
-        </div>
-        <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>{label}</div>
-      </div>
-      <div style={{ flex: 1, minWidth: '200px', ...blockText({ size: '14px', lineHeight: 1.75, color: 'rgba(255,255,255,0.65)' }) }}>
-        {children}
-      </div>
-    </div>
+        </span>
+        <span className="f-body" style={{ fontSize: 14, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: SALMON_ON_DARK }}>
+          {label}
+        </span>
+      </p>
+      <div style={{ flex: '1 1 260px', ...blockText({ size: '17px', lineHeight: 1.6, color: ON_DARK }) }}>{children}</div>
+    </aside>
   )
 }
 
 export function PhotoBlock({ src, alt, caption }: { src: string; alt: string; caption?: string }) {
   return (
-    <figure style={{ margin: '2.5rem -2rem' }}>
-      <div style={{
-        position: 'relative',
-        height: 'clamp(220px, 35vw, 400px)',
-        borderRadius: '16px',
-        overflow: 'hidden',
-        background: '#0A2E4D',
-      }}>
-        <BlogImage src={src} alt={alt} className="object-cover" style={{ opacity: 0.85 }} />
+    <figure style={{ margin: '8px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ position: 'relative', aspectRatio: '16 / 10', borderRadius: 16, overflow: 'hidden', background: NAVY }}>
+        <BlogImage src={src} alt={alt} sizes="(min-width: 1024px) 760px, 100vw" className="object-cover" />
       </div>
       {caption != null && caption !== '' && (
-        <figcaption style={{
-          fontSize: '12px',
-          color: 'rgba(10,46,77,0.4)',
-          textAlign: 'center',
-          marginTop: '0.75rem',
-          fontStyle: 'italic',
-          lineHeight: 1.6,
-          padding: '0 1rem',
-        }}>
-          {caption}
-        </figcaption>
+        <figcaption className="f-body" style={{ fontSize: 14, color: MUTED }}>{caption}</figcaption>
       )}
     </figure>
   )
 }
 
-export function BreakoutTable({ children }: { children: React.ReactNode }) {
+/** The "In short" box: the Markdown inside (a bullet list) is drawn by `article.module.css`. */
+export function SummaryBox({ id, children }: { id?: string; children: ReactNode }) {
   return (
-    <div style={{ margin: '0 -2rem 2.5rem', overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', borderRadius: '16px', overflow: 'hidden', fontSize: '14px' }}>
-        {children}
-      </table>
+    <aside id={id} aria-label="In short" className={a.summary} style={{ scrollMarginTop: '6rem' }}>
+      <p className="f-body" style={{ margin: 0, fontSize: '12.5px', fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: '#E67E50' }}>
+        In short
+      </p>
+      {children}
+    </aside>
+  )
+}
+
+/** A guide's own words, on the guide photo's grain block. Name and region are optional; both empty = no caption. */
+export function GuideQuote({ text, guide, region }: { text: string; guide: string; region: string }) {
+  const who = [guide, region].filter(part => part !== '').join(', ')
+  return (
+    <figure
+      className={`${g.blur} ${g.guide}`}
+      style={{ margin: 0, borderRadius: 20, padding: '44px clamp(24px, 4vw, 48px)', display: 'flex', flexDirection: 'column', gap: 18 }}
+    >
+      <blockquote
+        className="f-display"
+        style={{ margin: 0, fontWeight: 400, fontStyle: 'italic', fontSize: 'clamp(24px, 3vw, 30px)', lineHeight: 1.3, color: '#FFFFFF' }}
+      >
+        {text}
+      </blockquote>
+      {who !== '' && (
+        <figcaption className="f-body" style={{ fontSize: 15, fontWeight: 600, color: SALMON_ON_DARK }}>{who}</figcaption>
+      )}
+    </figure>
+  )
+}
+
+export function ArticleTable({ children }: { children: ReactNode }) {
+  return (
+    <div className={a.tableWrap}>
+      <table>{children}</table>
     </div>
+  )
+}
+
+/**
+ * The FAQ section the body's `## FAQ…` becomes: grain block, the title and intro on the left, the
+ * questions as the site's FAQ list on the right. `id` is the heading's, so the table of contents
+ * link lands here. The answers arrive rendered (`answerContent`), the intro too.
+ */
+export function ArticleFaq({ id, title, intro, entries }: { id: string; title: string; intro: ReactNode; entries: readonly FaqEntry[] }) {
+  return (
+    <section
+      id={id}
+      data-block="article-faq"
+      className={`${g.blur} ${g.iceland} flex scroll-mt-24 flex-wrap items-start gap-x-12 gap-y-7`}
+      style={{ borderRadius: 24, padding: 'clamp(20px, 4vw, 48px)', marginTop: 24 }}
+    >
+      <div className="flex max-w-[360px] flex-[1_1_240px] flex-col gap-[14px] pt-2">
+        <SectionHeading eyebrow="FAQ" title={title} dark size={38}>{intro}</SectionHeading>
+      </div>
+      <FaqList entries={entries} />
+    </section>
   )
 }
