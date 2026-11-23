@@ -146,14 +146,6 @@ export const valueCell = {
   verticalAlign: 'top' as const,
 }
 
-export const noteBox = {
-  backgroundColor: '#F0F7FF',
-  border: '1px solid #DBEAFE',
-  borderRadius: '8px',
-  padding: '14px 18px',
-  margin: '0 0 24px',
-}
-
 export const successBox = {
   backgroundColor: '#F0FDF4',
   border: '1px solid #BBF7D0',
