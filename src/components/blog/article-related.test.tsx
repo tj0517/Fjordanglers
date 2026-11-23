@@ -13,10 +13,10 @@ import type { BlogPostSummary } from '@/lib/blog/post'
 
 vi.mock('@/components/layout/nav', () => ({ PLAN_YOUR_TRIP_HREF: '/trips' }))
 
-const page = (n: number, country: string, guide: string | null = null): FeaturedExperiencePage => ({
+const page = (n: number, country: string, guide: string | null = null, publicSlug: string | null = null): FeaturedExperiencePage => ({
   id: `p${n}`, slug: `trip-${n}`, experience_name: `Trip ${n}`, country, region: '',
   price_from: 100, price_type: 'per_person', currency: 'EUR', hero_image_url: null,
-  guide: guide == null ? null : { id: `g${n}`, full_name: guide },
+  guide: guide == null ? null : { id: `g${n}`, full_name: guide, publicSlug },
 })
 const HUB = { slug: 'norway', label: 'Guided Fishing Trips in Norway' }
 
@@ -34,6 +34,15 @@ describe('ArticleRelated', () => {
     expect(html).toContain('All Norway trips')
     expect(html).not.toContain('data-part="guides"')
     expect(html).not.toContain('Guides in')
+  })
+
+  it('FA-1.97 (tj review): "Guide:" links to /guides/<slug> when the profile is public, otherwise it is text', () => {
+    const html = render({ offers: { tier: 'country', pages: [page(1, 'Norway', 'Public Guide', 'public-guide'), page(2, 'Norway', 'Private Guide', null)] }, hub: HUB }, 'Norway')
+    expect(hrefs(html)).toEqual(['/trips?country=Norway', '/experiences/trip-1', '/guides/public-guide', '/experiences/trip-2'])
+    expect(html).toMatch(/<a [^>]*href="\/guides\/public-guide"[^>]*>Public Guide<\/a>/)
+    expect(html.replace(/<!-- -->/g, '')).toContain('Guide: Private Guide')
+    // The guide's link is not inside the card's own links.
+    expect(html).not.toMatch(/<a [^>]*href="\/experiences\/[^"]*"[^>]*>(?:(?!<\/a>)[\s\S])*href="\/guides\//)
   })
 
   it('group fallback: "Trips near Norway" — the heading never claims Swedish trips are in Norway, and the link is not "All Norway trips"', () => {

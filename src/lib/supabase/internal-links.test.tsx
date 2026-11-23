@@ -30,6 +30,7 @@ vi.mock('@/components/ui/contact-expert-button', () => ({ ContactExpertButton: (
 vi.mock('@/components/analytics/WebEventTracker', () => ({ WebEventTracker: () => null }))
 
 import { getArticleRelated, getDestinationHub, getLatestBlogPosts } from './queries'
+import ArticleRelated from '@/components/blog/article-related'
 import HomePage from '@/app/page'
 import DestinationHubPage from '@/app/(hub)/[destination]/page'
 
@@ -97,6 +98,37 @@ describe('getArticleRelated (article → offers, hub)', () => {
     expect(r.hub).toEqual({ slug: 'norway', label: 'Guided Fishing Trips in Norway' })
     expect('guides' in r).toBe(false)
     expect(h.db.reads).not.toContain('guides')
+  })
+
+  it('FA-1.97 (tj review): a trip card links its guide only when the profile is public — active, not hidden, with a slug', async () => {
+    const guide = (id: string, over: Record<string, unknown>) => ({ guide: { id, full_name: `Guide ${id}`, slug: `guide-${id}`, status: 'active', is_hidden: false, ...over } })
+    h.db.tables.experience_pages = [
+      offer('Norway', guide('public', {})),
+      offer('Norway', guide('hidden', { is_hidden: true })),
+      offer('Norway', guide('pending', { status: 'pending' })),
+    ]
+
+    const r = await getArticleRelated({ country: 'Norway' })
+
+    expect(r.offers.pages.map(p => p.guide?.publicSlug)).toEqual(['guide-public', null, null])
+    // Only the derived slug leaves the data layer, not the guide's status columns.
+    expect(Object.keys(r.offers.pages[0]!.guide ?? {}).sort()).toEqual(['full_name', 'id', 'publicSlug'])
+
+    const html = renderToStaticMarkup(<ArticleRelated related={r} country="Norway" />)
+    expect([...html.matchAll(/href="(\/guides\/[^"]*)"/g)].map(m => m[1])).toEqual(['/guides/guide-public'])
+    expect(html.replace(/<!-- -->/g, '')).toContain('Guide: Guide hidden')
+    expect(html.replace(/<!-- -->/g, '')).toContain('Guide: Guide pending')
+  })
+
+  it('a guide with no slug: the name, no link', async () => {
+    h.db.tables.experience_pages = [offer('Norway', { guide: { id: 'x', full_name: 'No Slug', slug: null, status: 'active', is_hidden: false } })]
+
+    const r = await getArticleRelated({ country: 'Norway' })
+
+    expect(r.offers.pages[0]!.guide?.publicSlug).toBeNull()
+    const html = renderToStaticMarkup(<ArticleRelated related={r} country="Norway" />)
+    expect(html).not.toContain('/guides/')
+    expect(html).toContain('No Slug')
   })
 
   it('group fallback: no offer in the country → offers from the same part of the world (Nordic), never further', async () => {

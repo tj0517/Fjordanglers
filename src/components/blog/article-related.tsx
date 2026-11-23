@@ -1,6 +1,8 @@
 /**
  * "Fish it with a guide", under an article (FA-1.90, restyled FA-1.97): 2–3 trips as the site's trip
- * cards, with the guide's name on each (the guides FA-1.90 listed here as people are gone — T8).
+ * cards, with the guide's name on each (the guides FA-1.90 listed here as people are gone — T8). The
+ * name links to the guide's profile when that profile is public (`publicSlug`), which keeps the
+ * article → profile links FA-1.90 added.
  * The data layer picks the trips' tier (same country, same part of the world, anywhere — tj D3) and
  * the heading says which, so "Trips in Norway" is never a list of Swedish trips. A general post (no
  * country) gets trips from anywhere. No trips, no block.
@@ -48,6 +50,8 @@ export default function ArticleRelated({ related, country }: { related: ArticleR
                 cover:     page.hero_image_url,
                 species:   [],
                 guideName: page.guide?.full_name ?? null,
+                // The one place a trip card links its guide (tj, FA-1.97 review): only a public profile.
+                guideSlug: page.guide?.publicSlug ?? null,
                 priceText: formatPrice({ priceFrom: page.price_from, priceType: page.price_type, currency: page.currency }),
               }}
             />

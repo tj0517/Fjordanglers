@@ -21,6 +21,7 @@ import { hubContentFromRow, type HubContent } from '@/lib/hubs/content'
 import { hubSpecies } from '@/lib/hub-species'
 import { getTestimonial, type Testimonial } from './testimonials'
 import { isValidBlogSlug, toBlogPost, toBlogPostSummary, type BlogPost, type BlogPostSummary } from '@/lib/blog/post'
+import { publicGuideSlug } from '@/lib/guide-url'
 import {
   speciesNames,
   parseLicenseInfo,
@@ -326,7 +327,11 @@ export type FeaturedExperiencePage = {
   price_type: string
   currency: string
   hero_image_url: string | null
-  guide: { id: string; full_name: string } | null
+  /**
+   * The offer's guide. `publicSlug` is set only when the guide's profile is public (`publicGuideSlug`,
+   * FA-1.86) — the one caller that links it is the trip card under an article (FA-1.97).
+   */
+  guide: { id: string; full_name: string; publicSlug: string | null } | null
 }
 
 // ─── Related experience pages (offer page, "More trips") ─────────────────────
@@ -338,7 +343,18 @@ export type RelatedExperiencePages = {
 }
 
 const RELATED_SELECT =
-  'id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, guide:guides!guide_id ( id, full_name )'
+  'id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, guide:guides!guide_id ( id, full_name, slug, status, is_hidden )'
+
+type RelatedRow = {
+  id: string; slug: string; experience_name: string; country: string; region: string
+  price_from: number; price_type: string; currency: string; hero_image_url: string | null
+  guide: { id: string; full_name: string; slug: string | null; status: string; is_hidden: boolean } | null
+}
+
+/** A row of `RELATED_SELECT` as a card's data: the guide's status columns become `publicSlug` and go no further. */
+function toFeaturedPage({ guide, ...page }: RelatedRow): FeaturedExperiencePage {
+  return { ...page, guide: guide == null ? null : { id: guide.id, full_name: guide.full_name, publicSlug: publicGuideSlug(guide) } }
+}
 
 /**
  * Up to `limit` active pages, as close to `country` / `region` as the catalogue allows: same
@@ -386,7 +402,7 @@ async function relatedPagesByTier(
       continue
     }
     if (data != null && data.length > 0) {
-      return { tier, pages: data as unknown as FeaturedExperiencePage[] }
+      return { tier, pages: data.map(toFeaturedPage) }
     }
   }
 
