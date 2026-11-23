@@ -38,6 +38,7 @@ import { DeleteInquiryButton } from './DeleteInquiryButton'
 import type { TripDetails } from '@/actions/inquiries'
 import { availabilityWindow } from '@/lib/availability-window'
 import { busyDaysByGuide, calendarStatusByGuide } from '@/lib/calendar/connections'
+import { listGuideRequestsForInquiry } from '@/lib/guide-requests/requests'
 import { depositSetFromOldPrice } from '@/lib/inquiries/deposit'
 import { ExternalOfferToggle } from '../ExternalOfferToggle'
 import { EventTimeline } from '@/components/admin/inquiry/EventTimeline'
@@ -199,6 +200,9 @@ export default async function AdminInquiryDetailPage({
   const { data: guide } = inquiry.assigned_guide_id != null
     ? await svc.from('guides').select('full_name, invite_email').eq('id', inquiry.assigned_guide_id).single()
     : { data: null }
+
+  // ── FA-M.05: guide requests for the timeline (no token, no hash) ─────────
+  const guideRequests = await listGuideRequestsForInquiry(svc, inquiry.id)
 
   // ── Fetch active guides with blocked dates ────────────────────────────────
   let countryGuides: GuideWithCalendar[] = []
@@ -591,6 +595,7 @@ export default async function AdminInquiryDetailPage({
       guideAcceptance={inquiry.guide_acceptance ?? null}
       guideDeclineReason={inquiry.guide_decline_reason ?? null}
       externalOfferSent={inquiry.external_offer_sent ?? false}
+      requests={guideRequests}
     />
   )
 
