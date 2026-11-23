@@ -228,3 +228,84 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
   ```
   
   Database: no writes to production. Prod reads (SELECT): the published rows, their bodies and their md5s (Norway `1d885e79…`, NZ `56e0bfe4…`). The NZ row was copied into the **local** DB only, for the screenshots (`INSERT 0 1`, md5 checked equal before the insert). Trackers in the browser were blocked (`ERR_BLOCKED_BY_CLIENT` for googletagmanager in the console log).
+
+- **2026-11-23, tj (review PR #212):** przyjęte z uzupełnieniami; rozszerzenie zakresu — „Guide: {imię}” na karcie oferty pod artykułem linkuje do publicznego profilu przewodnika (FA-1.86); reszta diffu i drobne wybory bez zmian; kategorii Norwegii nie zmieniamy (dane na prod, tj). Status zostaje `review`.
+- **2026-11-23, agent — raport po review (runda 1):**
+
+  ## Report — FA-1.97, after tj's review (round 1): "Guide:" links to the guide's profile
+  
+  Scope extension from tj (23 XI): under an article, the trip card's "Guide: {name}" links to the guide's profile. This restores the article → profile links that FA-1.90 added and T8 removed. Nothing else in the accepted diff was touched; the Norway category is unchanged.
+  
+  ### Done
+  - **The FA-1.86 visibility rule, read from code:**
+    - `getGuide()` serves only `status = 'active'` and `is_hidden = false` (`src/lib/supabase/queries.ts:249–262`).
+    - A profile has a URL only with a slug (`guideProfilePath`).
+    - It is indexable only with ≥ 1 active offer (`generateMetadata` noindex in `src/app/(public)/guides/[id]/page.tsx:114–117`; the same rule in `src/app/sitemap.ts:80–83`).
+    - Under an article the card **is** an active offer of that guide (`relatedPagesByTier` filters `experience_pages.status = 'active'`), so the offer half holds by construction. The rule is `publicGuideSlug()` in `src/lib/guide-url.ts`: active + not hidden + non-blank slug, otherwise `null`. Missing columns also give `null`, never a guess.
+  - **No new query.**
+    - `RELATED_SELECT` already embedded the guide; it now also reads `slug, status, is_hidden`.
+    - `relatedPagesByTier` maps each row to `guide: { id, full_name, publicSlug }`, so the status columns stop in the data layer. This also replaced the old `as unknown as` cast.
+    - Prod read confirming anon may read those columns and RLS returns every guide row (so the rule must be applied in code):
+      ```
+      has_column_privilege('anon','public.guides', c,'SELECT'): id, full_name, slug, status, is_hidden → all true
+      pg_policies guides SELECT: "Public reads all guides" qual = true; "Public reads active guides" qual = ((status='active' OR verified_at IS NOT NULL) AND is_hidden=false)
+      ```
+  - **`TripCardData.guideSlug?: string | null`.**
+    - With a slug, the guide line renders `<Link href="/guides/{slug}">`; without one, it is text as before.
+    - The line is its own `<p>`, outside the card's photo link and "View trip" link. A test asserts no `/guides/` href sits inside an `/experiences/` anchor.
+  - **Only `article-related.tsx` passes the slug** (`page.guide?.publicSlug ?? null`). The hub, offer v2 "More trips", `/trips` and guide-profile cards do not.
+  - **`CACHE_TAG_GUIDES` stays** on `getArticleRelated` (`queries.ts:1639`: `tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES, CACHE_TAG_BLOG]`). Hiding or renaming a guide revalidates the link.
+  
+  ### Not done
+  - **The link target cannot be shown rendering locally.**
+    - `/guides/hana-seed-new-zealand` returns 500 on a local run. The cause is unrelated to this branch: `getLandscapeUrl` builds the cover from `NEXT_PUBLIC_SUPABASE_URL` (`127.0.0.1:54421` locally), and that host is not in `next.config` `images`.
+    - This branch changes neither the profile page nor `next.config`. The guide was found (a hidden or unknown one would be a `notFound()` 404); the error is thrown in render.
+    - Added to deferred-tasks.
+  
+  ### Noticed, not touched (→ docs/deferred-tasks.md)
+  - Every guide profile 500s on `next dev` against the local stack (above): `src/lib/landscapes.ts`, `next.config.ts`.
+  
+  ### Needs a decision
+  - none
+  
+  ### Verification
+  Tests (`src/lib/__tests__/guide-url.test.ts` new, `src/components/experience-v2/offer-more-trips.test.tsx` new, `article-related.test.tsx` and `internal-links.test.tsx` extended):
+  - card with a public slug → `<a href="/guides/public-guide">Public Guide</a>`; without one → `Guide: Private Guide`, no link;
+  - data layer → card: guides `public` / `is_hidden: true` / `status: 'pending'` → `publicSlug` = `['guide-public', null, null]`, only `/guides/guide-public` in the HTML, and the hidden and pending guides as text; a guide with no slug → text;
+  - the guide object leaving the data layer has exactly `full_name, id, publicSlug`;
+  - offer page "More trips" gets data **with** `publicSlug` set and still has no `/guides/` link;
+  - hub: `destination-hub-view.test.tsx` is unchanged and green (19/19). Its existing assertion that every `<a>` in a hub card points to `/experiences/<slug>` covers "no guide link on the hub".
+  
+  ```
+  $ pnpm vitest run guide-url article-related internal-links offer-more-trips destination-hub-view
+  Test Files  5 passed (5)      Tests  48 passed (48)
+  ```
+  
+  Red proof — `publicGuideSlug` without the hidden check (`|| guide.is_hidden !== false` removed):
+  ```
+   FAIL  guide-url.test.ts > publicGuideSlug > hidden: null (getGuide() serves no hidden profile — the link would be a 404)
+  AssertionError: expected 'josh-hart-new-zealand' to be null
+   FAIL  internal-links.test.tsx > getArticleRelated > FA-1.97 (tj review): a trip card links its guide only when the profile is public — active, not hidden, with a slug
+  AssertionError: expected [ Array(3) ] to deeply equal [ 'guide-public', null, null ]
+        Tests  2 failed | 16 passed (18)
+  restored → Tests  18 passed (18)
+  ```
+  
+  Local HTML `/blog/best-time-to-fly-fish-new-zealand` (dev on the local stack; local offer `seed-backcountry-day-nz`, guide Hana Seed: `active`, `is_hidden = f`, slug `hana-seed-new-zealand`):
+  ```
+  heading: ['Trips in New Zealand']
+  Guide line: Guide: <a style="color:#0A2E4D;text-decoration:underline;text-decoration-color:#E67E50;text-underline-offset:3px" href="/guides/hana-seed-new-zealand">Hana Seed</a>
+  all /guides/ hrefs on the page: ['/guides/hana-seed-new-zealand']
+  ```
+  
+  Gates:
+  ```
+  pnpm typecheck                                  → exit 0
+  pnpm lint --ignore-pattern '.fa-proofs/**'       → 0 errors, 91 warnings, exit 0
+  pnpm knip                                       → exit 0
+  pnpm vitest run (full)                          → Test Files 1 failed | 186 passed (187); Tests 2 failed | 2302 passed
+                                                    the 2 = guide-requests.test.ts, same as round 0 (local DB has FA-M.05's migration; clean origin/main fails them identically)
+  ```
+  
+  CI on the round-0 head (`18ed307`), run 45219706323: check (incl. `pnpm build`) pass · db pass · knip pass · secrets pass. CI for this commit: see the PR checks.
+  Status stays `review`; tj sets `done` after merge.
