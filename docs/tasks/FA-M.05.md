@@ -2,13 +2,14 @@
 id: FA-M.05
 title: Wysyłka zlecenia z karty zapytania — osobisty WhatsApp tj przez wa.me + oś czasu zlecenia, w miejsce starego przypisania
 stage: M
-status: in_progress
+status: review
 difficulty: M
 model: opus
 model_approved: tj 2026-11-23
 effort: high
 agent: fa-admin
 branch: feat/fa-m.05-send-guide-request
+pr: 211
 depends_on: [FA-M.03, FA-M.04]
 blocked_by_questions: []
 touches_db: true
@@ -107,3 +108,4 @@ grep -rn "guide_private" src --include=*.ts --include=*.tsx | grep -v database.t
   1. `accept_guide_request_on_behalf`: `inquiries.guide_responded_at` zostaje NULL — potwierdzone. `guide_requests.answered_at` jest ustawiane (CHECK answer ⇔ answered_at), więc **reguła metryki: każdy czas odpowiedzi przewodnika liczy wyłącznie odpowiedzi z `actor_kind = 'guide'`; odpowiedzi „w imieniu” (`actor_kind = 'admin'`, `payload.on_behalf_of_guide = true`) są wyłączone.** W `docs/REBUILD_PLAN.md` §7 nie ma jeszcze metryki czasu odpowiedzi przewodnika — reguła zapisana przy zdarzeniu `guide.request_answered` w Załączniku C (tam jest „czas zlecenie → odpowiedź (MVP)”) i jako wiersz w `docs/deferred-tasks.md` dla przyszłej metryki.
   2. Obie nowe funkcje: wyjątek przy `p_admin_id IS NULL`; `REVOKE EXECUTE … FROM PUBLIC, anon, authenticated` + `GRANT EXECUTE … TO service_role`. Red proofs: wywołania RPC przez anon i authenticated odrzucone dla obu; NULL admin id rzuca wyjątek. Po `CREATE OR REPLACE` dwóch istniejących funkcji pokazać `proacl` bez zmian (postgres, service_role).
   3. D5 jak opisane: najpierw utworzenie, potem wycofanie pozostałych otwartych zleceń (otwarte = nie wycofane i bez odpowiedzi; także ponowna wysyłka do tego samego przewodnika). Jeśli wycofanie się nie powiedzie, akcja zwraca widoczne ostrzeżenie na karcie („previous link still active — withdraw it manually”), nie cichy sukces. Z testem.
+- **2026-11-23 (agent):** `status: review`, PR #211. Migracja `20261122000000` NIE jest na prod — STOP przed merge: wdraża tj przez `deploy-db.yml`. Nazwy TS odpięcia bez zlecenia: `detachGuideWithoutRequest*` (funkcja DB `unassign_guide_without_request` bez zmian), bo grep weryfikacji `unassignGuide` bez granicy słowa łapałby nową nazwę.
