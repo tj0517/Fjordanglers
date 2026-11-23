@@ -9,7 +9,7 @@ model_approved:
 effort: high
 agent: fa-web
 branch: feat/fa-m.12-pwa-push
-depends_on: [FA-M.08, FA-M.05, FA-M.11]
+depends_on: [FA-M.08, FA-M.11]
 blocked_by_questions: []
 touches_db: true
 touches_prod: true
@@ -31,7 +31,7 @@ owner: tj
 Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
 
 ## Cel
-Przewodnik, który doda aplikację FA do ekranu telefonu i włączy powiadomienia w koncie, dostaje push przy nowym zleceniu; kliknięcie otwiera stronę zlecenia. WhatsApp zostaje kanałem gwarantowanym — push jest dodatkiem (na iOS działa tylko po instalacji na ekranie).
+Przewodnik, który doda aplikację FA do ekranu telefonu i włączy powiadomienia w koncie, dostaje push przy nowym zleceniu; kliknięcie otwiera stronę zlecenia. WhatsApp, wysyłany ręcznie przez FA, zostaje kanałem podstawowym — push jest dodatkiem (na iOS działa tylko po instalacji na ekranie).
 
 ## Zakres
 - [ ] Odczyt stanu: manifest/ikony, service worker (brak), konta z FA-M.08, miejsce wysyłki zlecenia z FA-M.05.
@@ -70,3 +70,4 @@ grep -n "addEventListener('fetch'" -r public src
 ## Notatki z realizacji
 - **2026-11-10, tj:** forma aplikacji = PWA (bez sklepu).
 - **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
+- **2026-11-23, tj — D3 (a):** FA-M.12 idzie równolegle z FA-M.05; zależy tylko od FA-M.08 i FA-M.11 (klucze VAPID). „WhatsApp jest kanałem gwarantowanym” → „WhatsApp, wysyłany ręcznie przez FA” (FA-M.05 wariant A: brak WhatsApp Business API, link `wa.me` z osobistego telefonu tj).
