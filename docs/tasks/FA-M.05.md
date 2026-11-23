@@ -2,7 +2,7 @@
 id: FA-M.05
 title: Wysyłka zlecenia z karty zapytania — osobisty WhatsApp tj przez wa.me + oś czasu zlecenia, w miejsce starego przypisania
 stage: M
-status: review
+status: done
 difficulty: M
 model: opus
 model_approved: tj 2026-11-23
@@ -109,3 +109,4 @@ grep -rn "guide_private" src --include=*.ts --include=*.tsx | grep -v database.t
   2. Obie nowe funkcje: wyjątek przy `p_admin_id IS NULL`; `REVOKE EXECUTE … FROM PUBLIC, anon, authenticated` + `GRANT EXECUTE … TO service_role`. Red proofs: wywołania RPC przez anon i authenticated odrzucone dla obu; NULL admin id rzuca wyjątek. Po `CREATE OR REPLACE` dwóch istniejących funkcji pokazać `proacl` bez zmian (postgres, service_role).
   3. D5 jak opisane: najpierw utworzenie, potem wycofanie pozostałych otwartych zleceń (otwarte = nie wycofane i bez odpowiedzi; także ponowna wysyłka do tego samego przewodnika). Jeśli wycofanie się nie powiedzie, akcja zwraca widoczne ostrzeżenie na karcie („previous link still active — withdraw it manually”), nie cichy sukces. Z testem.
 - **2026-11-23 (agent):** `status: review`, PR #211. Migracja `20261122000000` NIE jest na prod — STOP przed merge: wdraża tj przez `deploy-db.yml`. Nazwy TS odpięcia bez zlecenia: `detachGuideWithoutRequest*` (funkcja DB `unassign_guide_without_request` bez zmian), bo grep weryfikacji `unassignGuide` bez granicy słowa łapałby nową nazwę.
+- **2026-11-23, tj (wf-review):** accepted PR #211 at 77c3fcd — CI green (check, db, knip, secrets); all five actions requireAdmin with red proofs; migration 20261122000000 applied to prod via deploy-db.yml and verified read-only (proacl + source of create/withdraw/accept_on_behalf/unassign_without_request); legacy assign/unassign/email removed (grep empty). Not covered by the walk: edit-page screenshot (local next/image host, deferred FA-1.86/1.79) and deposit-link generation (tests only) — both checked by tj on prod after merge.

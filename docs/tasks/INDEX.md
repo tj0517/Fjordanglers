@@ -142,7 +142,7 @@ Zakres: dokument „Aplikacja dla przewodników — zakres MVP” (Claude Docs) 
 | FA-M.02 | Audyt panelu i kont przewodnika — co z `/dashboard`, logowania, resetu i zaproszeń działa; raport, bez kodu | M | sonnet | done | — |
 | FA-M.03 | Zlecenie do przewodnika w bazie — rekord z podpisanym tokenem, zdarzenia wysłano/otwarto/odpowiedział, skrót na `inquiries` | L | opus | done (PR #198) | — |
 | FA-M.04 | Strona zlecenia `/r/[token]` — akceptuj / odrzuć / 1–3 inne daty, bez logowania, mobile-first | M | sonnet | done (PR #200) | FA-M.03 |
-| FA-M.05 | Wysyłka zlecenia z karty zapytania — osobisty WhatsApp przez wa.me + oś czasu zlecenia, w miejsce starego przypisania | M | opus | review (PR #211) | FA-M.03, FA-M.04 |
+| FA-M.05 | Wysyłka zlecenia z karty zapytania — osobisty WhatsApp przez wa.me + oś czasu zlecenia, w miejsce starego przypisania | M | opus | done (PR #211) | FA-M.03, FA-M.04 |
 | FA-M.06 | Ponaglenie po 12 h (sezon) / 24 h — flaga admina + przycisk WhatsApp (ręcznie), push jeśli przewodnik ma push | M | sonnet | todo | FA-M.05, FA-M.12 |
 | FA-M.07 | Brief dla przewodnika — nocleg, licencje/permity i notatka FA na stronie zlecenia, z jednego Trip Briefu (migracja: kolumna licencji) | M | sonnet | done (PR #203) | FA-M.04 |
 | FA-M.08 | Konta przewodników — zaproszenie, logowanie, reset, sesje (zakres wg audytu) | L | opus | done (PR #196) | FA-M.02 |
