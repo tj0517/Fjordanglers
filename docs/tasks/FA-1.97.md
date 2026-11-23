@@ -2,7 +2,7 @@
 id: FA-1.97
 title: Blog w nowym stylu — strona artykułu i lista wg makiety (grain), spis treści sticky zamiast fixed, FAQ jako sekcja + `FAQPage`
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
