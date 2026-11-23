@@ -7,6 +7,7 @@
  *   answerGuideRequest              the guide answers through the link (once; same answer again = no-op)
  *   answerGuideRequestFromDashboard the signed-in dashboard (respondToAssignment, D2 b)
  *   withdrawGuideRequest            admin withdraws a request (FA-M.05 calls it)
+ *   listGuideRequestsForInquiry     the admin inquiry card's request timeline (FA-M.05)
  *
  * Every write is one database function (supabase/migrations/20261117000000_add_guide_requests.sql)
  * that changes the request, keeps the `inquiries` summary in sync and writes its `inquiry_events`
@@ -330,6 +331,49 @@ export async function listGuideRequestsForGuide(client: Client, guideId: string)
   }
 
   return items.sort((a, b) => Date.parse(b.askedAt) - Date.parse(a.askedAt))
+}
+
+// ─── the admin inquiry card (FA-M.05) ─────────────────────────────────────────
+
+/** One request on the admin inquiry card's timeline. Never carries the token or its hash. */
+export interface InquiryGuideRequest {
+  requestId:     string
+  guideId:       string | null
+  guideName:     string | null
+  channel:       string
+  sentAt:        string
+  expiresAt:     string
+  firstOpenedAt: string | null
+  answeredAt:    string | null
+  answer:        GuideAnswer | null
+  altDates:      string[]
+  note:          string | null
+  withdrawnAt:   string | null
+}
+
+/** Every request sent for the inquiry, newest first. Call after requireAdmin() (service client). */
+export async function listGuideRequestsForInquiry(client: Client, inquiryId: string): Promise<InquiryGuideRequest[]> {
+  const { data, error } = await client
+    .from('guide_requests')
+    .select(`id, guide_id, channel, sent_at, token_expires_at, first_opened_at, answered_at, answer,
+      alt_dates, note, withdrawn_at, guides (full_name)`)
+    .eq('inquiry_id', inquiryId)
+    .order('sent_at', { ascending: false })
+  if (error != null) throw new GuideRequestError(`listGuideRequestsForInquiry failed: ${error.message}`)
+  return (data ?? []).map(r => ({
+    requestId:     r.id,
+    guideId:       r.guide_id,
+    guideName:     r.guides?.full_name ?? null,
+    channel:       r.channel,
+    sentAt:        r.sent_at,
+    expiresAt:     r.token_expires_at,
+    firstOpenedAt: r.first_opened_at,
+    answeredAt:    r.answered_at,
+    answer:        isAnswer(r.answer) ? r.answer : null,
+    altDates:      r.alt_dates ?? [],
+    note:          r.note,
+    withdrawnAt:   r.withdrawn_at,
+  }))
 }
 
 // ─── withdraw ─────────────────────────────────────────────────────────────────

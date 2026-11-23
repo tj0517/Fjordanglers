@@ -1,0 +1,144 @@
+/**
+ * Sending a guide request by hand (FA-M.05, variant A — tj 2026-11-23).
+ *
+ * FA has no WhatsApp Business API: the request record is created here (FA-M.03, emits
+ * guide.request_sent), and the admin gets a `https://wa.me/<digits>?text=<message>` link to send the
+ * message from tj's own WhatsApp. The message carries the `/r/<token>` link.
+ *
+ * The plain token exists only in the return value of sendGuideRequestByWhatsApp(): it is never
+ * stored (only its sha256 is, by create_guide_request), never logged, never put in an admin URL.
+ * Callers return it to the admin once and drop it.
+ */
+
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/supabase/database.types'
+import { getGuidePhone } from '@/lib/guide-contacts'
+import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
+import { createGuideRequest } from './requests'
+
+type Client = SupabaseClient<Database>
+
+// ─── message ──────────────────────────────────────────────────────────────────
+
+const DAY_MS = 86_400_000
+
+function utc(iso: string): Date {
+  return new Date(`${iso}T00:00:00Z`)
+}
+
+function day(iso: string): string {
+  return String(utc(iso).getUTCDate())
+}
+
+function dayMonth(iso: string): string {
+  return utc(iso).toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' })
+}
+
+/** "14–15 Jan", "30 Jan – 2 Feb", "12 Jun, 14 Jun", "14 Jan"; empty → "flexible dates". */
+export function shortDates(dates: readonly string[]): string {
+  if (dates.length === 0) return 'flexible dates'
+  const sorted = [...new Set(dates)].sort()
+  const first = sorted[0]
+  const last = sorted[sorted.length - 1]
+  if (sorted.length === 1) return dayMonth(first)
+  const consecutive = sorted.every((d, i) => i === 0 || utc(d).getTime() - utc(sorted[i - 1]).getTime() === DAY_MS)
+  if (!consecutive) return sorted.map(dayMonth).join(', ')
+  const sameMonth = first.slice(0, 7) === last.slice(0, 7)
+  return sameMonth ? `${day(first)}–${dayMonth(last)}` : `${dayMonth(first)} – ${dayMonth(last)}`
+}
+
+export interface GuideRequestMessageInput {
+  guideFirstName: string | null
+  partySize:      number | null
+  /** Region of the experience, else the trip country; null when neither is known. */
+  area:           string | null
+  dates:          readonly string[]
+  link:           string
+}
+
+/**
+ * The WhatsApp text, in the wording of the approved push (docs/design/fa-m-guide-app/Push.dc.html):
+ * "New request · Taupō, 14–15 Jan" / "2 anglers … Tap to accept, decline or suggest dates."
+ * No client budget, no client name (FA-M.04 decision 2).
+ */
+export function buildGuideRequestMessage(input: GuideRequestMessageInput): string {
+  const greeting = input.guideFirstName != null && input.guideFirstName !== '' ? `Hi ${input.guideFirstName},` : 'Hi,'
+  const where = input.area != null ? `${input.area}, ` : ''
+  const party = input.partySize != null && input.partySize > 0
+    ? `${input.partySize} ${input.partySize === 1 ? 'angler' : 'anglers'}. `
+    : ''
+  return [
+    greeting,
+    '',
+    `New request · ${where}${shortDates(input.dates)}`,
+    `${party}Tap to accept, decline or suggest dates:`,
+    input.link,
+    '',
+    'FjordAnglers',
+  ].join('\n')
+}
+
+/** wa.me link for an E.164 number (validated again here — never built from unchecked input). */
+export function waMeUrl(phoneE164: string, text: string): string {
+  if (!/^\+[1-9]\d{7,14}$/.test(phoneE164)) throw new Error('waMeUrl: not an E.164 number')
+  return `https://wa.me/${phoneE164.slice(1)}?text=${encodeURIComponent(text)}`
+}
+
+// ─── send ─────────────────────────────────────────────────────────────────────
+
+export type SendGuideRequestResult =
+  | { ok: true; requestId: string; waUrl: string; link: string }
+  | { ok: false; reason: 'no_whatsapp_number' | 'guide_not_found' | 'inquiry_not_found' }
+
+/**
+ * Call after requireAdmin(); `adminId` is the caller's uid, `appUrl` the site origin. Checks the
+ * guide's number first — no number, no request. Then creates the request (one row + one
+ * guide.request_sent event, channel whatsapp, in one transaction) and returns the wa.me link.
+ */
+export async function sendGuideRequestByWhatsApp(
+  client: Client,
+  params: { inquiryId: string; guideId: string; adminId: string; appUrl: string },
+): Promise<SendGuideRequestResult> {
+  const phone = await getGuidePhone(params.guideId)
+  if (phone == null) return { ok: false, reason: 'no_whatsapp_number' }
+
+  const { data: guide, error: guideError } = await client
+    .from('guides')
+    .select('full_name')
+    .eq('id', params.guideId)
+    .maybeSingle()
+  if (guideError != null) throw new Error(`sendGuideRequestByWhatsApp: guide read failed: ${guideError.message}`)
+  if (guide == null) return { ok: false, reason: 'guide_not_found' }
+
+  const { data: inquiry, error: inquiryError } = await client
+    .from('inquiries')
+    .select('party_size, requested_dates, trip_country, experience_page_id, trip_id')
+    .eq('id', params.inquiryId)
+    .maybeSingle()
+  if (inquiryError != null) throw new Error(`sendGuideRequestByWhatsApp: inquiry read failed: ${inquiryError.message}`)
+  if (inquiry == null) return { ok: false, reason: 'inquiry_not_found' }
+
+  const experience = await getInquiryExperience({
+    experience_page_id: inquiry.experience_page_id,
+    trip_id:            inquiry.trip_id,
+  })
+  const region = experience?.region.trim() ?? ''
+  const country = inquiry.trip_country?.trim() ?? ''
+
+  const created = await createGuideRequest(client, {
+    inquiryId: params.inquiryId,
+    guideId:   params.guideId,
+    channel:   'whatsapp',
+    adminId:   params.adminId,
+  })
+
+  const link = `${params.appUrl.replace(/\/+$/, '')}/r/${created.token}`
+  const text = buildGuideRequestMessage({
+    guideFirstName: guide.full_name.trim().split(/\s+/)[0] ?? null,
+    partySize:      inquiry.party_size,
+    area:           region !== '' ? region : country !== '' ? country : null,
+    dates:          inquiry.requested_dates ?? [],
+    link,
+  })
+  return { ok: true, requestId: created.requestId, waUrl: waMeUrl(phone, text), link }
+}

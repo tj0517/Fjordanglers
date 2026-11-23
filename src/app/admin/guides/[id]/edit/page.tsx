@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import EditGuideForm from '@/components/admin/edit-guide-form'
+import { getGuidePhone } from '@/lib/guide-contacts'
+import { GuideWhatsAppField } from './GuideWhatsAppField'
 
 /**
  * /admin/guides/[id]/edit — Edit any guide profile.
@@ -51,6 +53,8 @@ export default async function AdminEditGuidePage({
   ])
 
   if (guide == null) notFound()
+
+  const whatsAppNumber = await getGuidePhone(guide.id)
 
   const guideWithImages = {
     ...guide,
@@ -110,6 +114,9 @@ export default async function AdminEditGuidePage({
           Changes are saved immediately on submit.
         </p>
       </div>
+
+      {/* ─── WhatsApp number (FA-M.05) — its own form, saved on its own ─── */}
+      <GuideWhatsAppField guideId={guide.id} initialNumber={whatsAppNumber} />
 
       {/* ─── Form ─────────────────────────────────────────────────── */}
       <EditGuideForm guide={guideWithImages} />
