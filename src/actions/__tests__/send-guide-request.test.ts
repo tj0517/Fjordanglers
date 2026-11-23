@@ -43,7 +43,7 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 
 import {
   sendGuideRequest, withdrawGuideRequestAction, saveGuideWhatsAppNumber,
-  acceptGuideRequestOnBehalfAction, unassignGuideWithoutRequestAction,
+  acceptGuideRequestOnBehalfAction, detachGuideWithoutRequestAction,
 } from '../guide-requests'
 import { UnauthorizedError } from '@/lib/auth/guards'
 import { listGuideRequestsForInquiry } from '@/lib/guide-requests/requests'
@@ -405,10 +405,10 @@ describe('D1 (b) — acceptGuideRequestOnBehalfAction', () => {
   })
 })
 
-describe('D3 (a) — unassignGuideWithoutRequestAction', () => {
+describe('D3 (a) — detachGuideWithoutRequestAction', () => {
   it('detaches a guide attached without a request (pre-FA-M.03) and emits guide.unassigned', async () => {
     await svc().from('inquiries').update({ assigned_guide_id: GUIDE, assigned_at: new Date().toISOString(), guide_acceptance: 'accepted', guide_responded_at: new Date().toISOString() }).eq('id', INQ)
-    expect(await unassignGuideWithoutRequestAction(INQ)).toEqual({ success: true })
+    expect(await detachGuideWithoutRequestAction(INQ)).toEqual({ success: true })
     expect(await inquiry()).toMatchObject({ assigned_guide_id: null, assigned_at: null, guide_acceptance: null, guide_responded_at: null })
     const ev = await events('guide.unassigned')
     expect(ev).toHaveLength(1)
@@ -417,20 +417,20 @@ describe('D3 (a) — unassignGuideWithoutRequestAction', () => {
 
   it('a guide with an open request → refused (withdraw instead), nothing changed', async () => {
     await sendGuideRequest(INQ, GUIDE)
-    expect(await unassignGuideWithoutRequestAction(INQ)).toEqual({ success: false, error: 'This guide has an open request — withdraw the request instead.' })
+    expect(await detachGuideWithoutRequestAction(INQ)).toEqual({ success: false, error: 'This guide has an open request — withdraw the request instead.' })
     expect((await inquiry()).assigned_guide_id).toBe(GUIDE)
     expect(await events('guide.unassigned')).toHaveLength(0)
   })
 
   it('no guide attached → refused', async () => {
-    expect(await unassignGuideWithoutRequestAction(INQ)).toEqual({ success: false, error: 'No guide is attached.' })
+    expect(await detachGuideWithoutRequestAction(INQ)).toEqual({ success: false, error: 'No guide is attached.' })
     expect(await events('guide.unassigned')).toHaveLength(0)
   })
 
   it('non-admin is refused; nothing changed', async () => {
     await svc().from('inquiries').update({ assigned_guide_id: GUIDE }).eq('id', INQ)
     requireAdmin.mockRejectedValue(new UnauthorizedError('Not authorized — admin role required'))
-    await expect(unassignGuideWithoutRequestAction(INQ)).rejects.toBeInstanceOf(UnauthorizedError)
+    await expect(detachGuideWithoutRequestAction(INQ)).rejects.toBeInstanceOf(UnauthorizedError)
     expect((await inquiry()).assigned_guide_id).toBe(GUIDE)
     expect(await events('guide.unassigned')).toHaveLength(0)
   })

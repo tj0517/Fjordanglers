@@ -9,7 +9,7 @@
  *   withdrawGuideRequest            admin withdraws a request (FA-M.05 calls it)
  *   listGuideRequestsForInquiry     the admin inquiry card's request timeline (FA-M.05)
  *   acceptGuideRequestOnBehalf      admin records "accepted" for the guide (FA-M.05 D1 b; event actor = admin)
- *   unassignGuideWithoutRequest     admin detaches a guide attached without an open request (FA-M.05 D3 a)
+ *   detachGuideWithoutRequest     admin detaches a guide attached without an open request (FA-M.05 D3 a)
  *
  * Every write is one database function (supabase/migrations/20261117000000_add_guide_requests.sql)
  * that changes the request, keeps the `inquiries` summary in sync and writes its `inquiry_events`
@@ -424,23 +424,23 @@ export async function acceptGuideRequestOnBehalf(
   throw new GuideRequestError(`acceptGuideRequestOnBehalf: unknown outcome ${String(outcome)}`)
 }
 
-export type UnassignOutcome = 'unassigned' | 'not_found' | 'no_guide' | 'has_open_request'
+export type DetachOutcome = 'unassigned' | 'not_found' | 'no_guide' | 'has_open_request'
 
 /**
  * Call after requireAdmin(). Detaches a guide attached without an open request (assignments from
  * before FA-M.03); emits guide.unassigned. A guide with an open request is detached by withdrawing it.
  */
-export async function unassignGuideWithoutRequest(
+export async function detachGuideWithoutRequest(
   client: Client,
   params: { inquiryId: string; adminId: string },
-): Promise<UnassignOutcome> {
+): Promise<DetachOutcome> {
   const { data, error } = await client.rpc('unassign_guide_without_request', {
     p_inquiry_id: params.inquiryId,
     p_admin_id:   params.adminId,
   })
-  if (error != null) throw new GuideRequestError(`unassignGuideWithoutRequest failed: ${error.message}`)
+  if (error != null) throw new GuideRequestError(`detachGuideWithoutRequest failed: ${error.message}`)
   if (data === 'unassigned' || data === 'not_found' || data === 'no_guide' || data === 'has_open_request') return data
-  throw new GuideRequestError(`unassignGuideWithoutRequest: unknown outcome ${String(data)}`)
+  throw new GuideRequestError(`detachGuideWithoutRequest: unknown outcome ${String(data)}`)
 }
 
 /**

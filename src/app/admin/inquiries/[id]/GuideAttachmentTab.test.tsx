@@ -15,12 +15,12 @@ const refresh = vi.fn()
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }))
 const acceptGuideRequestOnBehalfAction = vi.fn()
-const unassignGuideWithoutRequestAction = vi.fn()
+const detachGuideWithoutRequestAction = vi.fn()
 vi.mock('@/actions/guide-requests', () => ({
   sendGuideRequest: (i: string, g: string) => sendGuideRequest(i, g),
   withdrawGuideRequestAction: (i: string, r: string) => withdrawGuideRequestAction(i, r),
   acceptGuideRequestOnBehalfAction: (i: string, r: string) => acceptGuideRequestOnBehalfAction(i, r),
-  unassignGuideWithoutRequestAction: (i: string) => unassignGuideWithoutRequestAction(i),
+  detachGuideWithoutRequestAction: (i: string) => detachGuideWithoutRequestAction(i),
 }))
 vi.mock('@/actions/inquiries', () => ({ setExternalOffer: vi.fn() }))
 vi.mock('@/actions/calendar', () => ({ issueCalendarConnectLink: vi.fn() }))
@@ -164,11 +164,11 @@ describe('legacy assign replaced (D1, D3)', () => {
   })
 
   it('"Unassign" shows only for a guide attached without an open request, and calls the D3 action', async () => {
-    unassignGuideWithoutRequestAction.mockResolvedValue({ success: true })
+    detachGuideWithoutRequestAction.mockResolvedValue({ success: true })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     tab({ currentAssignedGuideId: GUIDE.id, guideAcceptance: 'accepted', requests: [] })
     fireEvent.click(screen.getByRole('button', { name: 'Unassign' }))
-    await vi.waitFor(() => expect(unassignGuideWithoutRequestAction).toHaveBeenCalledWith(INQ))
+    await vi.waitFor(() => expect(detachGuideWithoutRequestAction).toHaveBeenCalledWith(INQ))
     cleanup()
 
     const open: InquiryGuideRequest = { ...OTHER_DATES, requestId: 'r-9', answer: null, answeredAt: null, altDates: [], note: null }

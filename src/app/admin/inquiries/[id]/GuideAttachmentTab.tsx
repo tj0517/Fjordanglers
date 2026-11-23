@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { setExternalOffer } from '@/actions/inquiries'
-import { sendGuideRequest, unassignGuideWithoutRequestAction } from '@/actions/guide-requests'
+import { sendGuideRequest, detachGuideWithoutRequestAction } from '@/actions/guide-requests'
 import type { InquiryGuideRequest } from '@/lib/guide-requests/requests'
 import { GuideRequestTimeline } from './GuideRequestTimeline'
 import type { CalendarStatus } from '@/lib/calendar/connections'
@@ -262,7 +262,7 @@ function GuideCard({
     if (!window.confirm(`Detach ${guide.full_name} from this inquiry?`)) return
     setErr(null)
     startUnassign(async () => {
-      const res = await unassignGuideWithoutRequestAction(inquiryId)
+      const res = await detachGuideWithoutRequestAction(inquiryId)
       if (!res.success) {
         setErr(res.error)
       } else {

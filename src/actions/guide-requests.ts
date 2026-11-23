@@ -7,7 +7,7 @@
  *                                        open requests (D5), return the wa.me link — once
  *   withdrawGuideRequestAction           withdraw a request; the latest one also detaches the guide (D2)
  *   acceptGuideRequestOnBehalfAction     record "accepted" for the guide; event actor = admin (D1)
- *   unassignGuideWithoutRequestAction    detach a guide attached without an open request (D3)
+ *   detachGuideWithoutRequestAction    detach a guide attached without an open request (D3)
  *   saveGuideWhatsAppNumber              store / clear the guide's number in guide_contacts
  *
  * Every action runs requireAdmin() before any service-role read or write. The request token is in
@@ -21,7 +21,7 @@ import { getAppUrl } from '@/lib/app-url'
 import { parseGuidePhone, setGuidePhone } from '@/lib/guide-contacts'
 import { sendGuideRequestByWhatsApp } from '@/lib/guide-requests/send'
 import {
-  withdrawGuideRequest, acceptGuideRequestOnBehalf, unassignGuideWithoutRequest,
+  withdrawGuideRequest, acceptGuideRequestOnBehalf, detachGuideWithoutRequest,
 } from '@/lib/guide-requests/requests'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -87,18 +87,18 @@ export async function acceptGuideRequestOnBehalfAction(inquiryId: string, reques
   return { success: true }
 }
 
-const UNASSIGN_ERRORS: Record<string, string> = {
+const DETACH_ERRORS: Record<string, string> = {
   not_found:        'Inquiry not found.',
   no_guide:         'No guide is attached.',
   has_open_request: 'This guide has an open request — withdraw the request instead.',
 }
 
-export async function unassignGuideWithoutRequestAction(inquiryId: string): Promise<SimpleActionResult> {
+export async function detachGuideWithoutRequestAction(inquiryId: string): Promise<SimpleActionResult> {
   const { userId } = await requireAdmin()
   if (!UUID.test(inquiryId)) return { success: false, error: 'Invalid id.' }
 
-  const outcome = await unassignGuideWithoutRequest(createServiceClient(), { inquiryId, adminId: userId })
-  if (outcome !== 'unassigned') return { success: false, error: UNASSIGN_ERRORS[outcome] }
+  const outcome = await detachGuideWithoutRequest(createServiceClient(), { inquiryId, adminId: userId })
+  if (outcome !== 'unassigned') return { success: false, error: DETACH_ERRORS[outcome] }
 
   revalidatePath(`/admin/inquiries/${inquiryId}`)
   revalidatePath('/admin/inquiries')
