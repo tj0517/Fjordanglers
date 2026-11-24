@@ -1,15 +1,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getArticleRelated, getBlogPost } from '@/lib/supabase/queries'
+import { getArticleRelated, getBlogPost, getLatestBlogPosts } from '@/lib/supabase/queries'
 import { absoluteImageUrl, buildArticleJsonLd, buildBlogBreadcrumbJsonLd, formatPostDate } from '@/lib/blog/post'
-import { extractSections } from '@/lib/blog/article-markdown'
+import { extractArticleFaq, extractSections } from '@/lib/blog/article-markdown'
+import { buildFaqPageJsonLd } from '@/lib/seo/faq-jsonld'
 import { serializeJsonLd } from '@/lib/seo/offer-jsonld'
 import { ArticleBody } from '@/components/blog/article-body'
+import { ArticleCard, PostPills } from '@/components/blog/article-card'
+import { ArticleHubCta } from '@/components/blog/article-hub-cta'
 import { BlogImage } from '@/components/blog/article-blocks'
-import { ReadingProgress } from '@/components/blog/reading-progress'
 import { TableOfContents } from '@/components/blog/table-of-contents'
 import ArticleRelated from '@/components/blog/article-related'
+import { HeadingLink, MUTED, NAVY, SectionHeading, CREAM } from '@/components/site/ui'
 import { SITE_URL } from '@/lib/site'
 
 // The article comes from the table (FA-1.83): rendered on first request, then cached for 5 minutes under
@@ -58,124 +61,116 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
+function Chevron() {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8A949C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m9 6 6 6-6 6" />
+    </svg>
+  )
+}
+
+const crumbStyle = { color: MUTED, textDecoration: 'none' } as const
+
+/** The UTC day of an ISO timestamp — "updated" is shown only when it is a different day from "published". */
+const utcDay = (iso: string): string => iso.slice(0, 10)
+
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params
   const post = await getBlogPost(slug)
   if (post == null) notFound()
 
   const sections = extractSections(post.bodyMd)
-  const related = await getArticleRelated({ country: post.country })
+  const faq = extractArticleFaq(post.bodyMd)
+  const faqJsonLd = faq == null ? null : buildFaqPageJsonLd(faq.entries.map(entry => ({ question: entry.question, answer: entry.answerText })))
+  const [related, latest] = await Promise.all([getArticleRelated({ country: post.country }), getLatestBlogPosts(4)])
+  // The current post is never "more from the Journal"; up to three others.
+  const more = latest.filter(other => other.slug !== post.slug).slice(0, 3)
+  const updated = utcDay(post.updatedAt) !== utcDay(post.publishedAt)
 
   return (
-    <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
+    <div className="f-body min-h-screen" style={{ background: '#F3EDE4', color: NAVY }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildArticleJsonLd(post)) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildBlogBreadcrumbJsonLd(post)) }} />
-      <ReadingProgress />
-      <main>
+      {faqJsonLd != null && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqJsonLd) }} />
+      )}
 
-      {/* ── Hero ─────────────────────────────────────────────────── */}
-      <div className="relative" style={{ height: 'clamp(380px, 55vh, 640px)' }}>
-        <BlogImage src={post.imageUrl} alt={post.imageAlt} priority fetchPriority="high" className="object-cover" />
-        {/* Gradient: dark at bottom for legibility */}
-        <div
-          className="absolute inset-0"
-          style={{ background: 'linear-gradient(to bottom, rgba(5,10,20,0.18) 0%, rgba(5,10,20,0.1) 40%, rgba(5,10,20,0.82) 100%)' }}
-        />
-      </div>
+      {/* The nav is fixed and this page has no photo hero behind it: 72 px for the bar, 32 px of air. */}
+      <main className="mx-auto flex flex-col gap-[72px] px-6 pt-[104px]" style={{ maxWidth: 1200 }}>
+        {/* ── Hero ─────────────────────────────────────────────────── */}
+        <section data-block="article-hero" className="flex flex-col gap-7">
+          <nav aria-label="Breadcrumb" className="f-body flex flex-wrap items-center gap-2 text-[14px]">
+            <Link href="/" style={crumbStyle}>Home</Link>
+            <Chevron />
+            <Link href="/blog" style={crumbStyle}>Journal</Link>
+            {post.country != null && post.country.trim() !== '' && (
+              <>
+                <Chevron />
+                {related.hub != null
+                  ? <Link href={`/${related.hub.slug}`} style={crumbStyle}>{post.country}</Link>
+                  : <span style={{ color: MUTED }}>{post.country}</span>}
+              </>
+            )}
+            <Chevron />
+            <span aria-current="page" style={{ color: NAVY }}>{post.title}</span>
+          </nav>
 
-      {/* ── Title card ───────────────────────────────────────────── */}
-      <div style={{ background: '#F3EDE4' }}>
-        <div
-          className="mx-auto px-6"
-          style={{ maxWidth: '800px', paddingTop: '3rem', paddingBottom: '3rem' }}
-        >
-          {/* Back */}
-          <Link
-            href="/blog"
-            className="inline-flex items-center gap-2 f-body transition-opacity hover:opacity-60"
-            style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(10,46,77,0.4)', marginBottom: '2rem', display: 'flex' }}
-          >
-            ← Back to Journal
-          </Link>
-
-          {/* Meta */}
-          <div className="flex items-center gap-3" style={{ marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-            <span
-              className="f-body"
-              style={{
-                fontSize: '11px', fontWeight: 700, padding: '4px 14px', borderRadius: '99px',
-                background: 'rgba(230,126,80,0.12)', color: '#E67E50',
-                border: '1px solid rgba(230,126,80,0.25)', textTransform: 'uppercase', letterSpacing: '0.08em',
-              }}
-            >
-              {post.category}
-            </span>
-            <span className="f-body" style={{ fontSize: '13px', color: 'rgba(10,46,77,0.4)' }}>
-              {formatPostDate(post.publishedAt)}
-            </span>
-            <span style={{ color: 'rgba(10,46,77,0.2)', fontSize: '12px' }}>·</span>
-            <span className="f-body" style={{ fontSize: '13px', color: 'rgba(10,46,77,0.4)' }}>
-              {post.readMinutes} min read
-            </span>
+          <div className="flex flex-wrap items-center gap-x-14 gap-y-9">
+            <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-5">
+              <span className="flex flex-wrap gap-1.5"><PostPills post={post} tone="cream" /></span>
+              <h1
+                className="f-display"
+                style={{ margin: 0, fontWeight: 700, fontSize: 'clamp(36px, 4.6vw, 56px)', lineHeight: 1.05, letterSpacing: '-.02em', color: NAVY }}
+              >
+                {post.title}
+              </h1>
+              <p className="f-body m-0 text-[19px]" style={{ lineHeight: 1.55, color: MUTED }}>{post.description}</p>
+              <p className="f-body m-0 flex flex-wrap items-center gap-x-[14px] gap-y-1.5 text-[14.5px]" style={{ color: MUTED }}>
+                <span style={{ fontWeight: 600, color: NAVY }}>FjordAnglers</span>
+                <span>{formatPostDate(post.publishedAt)}</span>
+                <span>{post.readMinutes} min read</span>
+              </p>
+            </div>
+            <div className="relative min-w-0 flex-[1_1_420px] overflow-hidden" style={{ borderRadius: 20, aspectRatio: '5 / 4' }}>
+              <BlogImage src={post.imageUrl} alt={post.imageAlt} priority fetchPriority="high" sizes="(min-width: 1024px) 560px, 100vw" className="object-cover" />
+            </div>
           </div>
+        </section>
 
-          {/* Title */}
-          <h1
-            className="f-display font-bold"
-            style={{ fontSize: 'clamp(28px, 4vw, 50px)', color: '#0A2E4D', lineHeight: 1.08, maxWidth: '700px' }}
-          >
-            {post.title}
-          </h1>
-
-          {/* Excerpt / lead */}
-          <p
-            className="f-body"
-            style={{
-              fontSize: '18px', lineHeight: 1.75, color: 'rgba(10,46,77,0.55)',
-              marginTop: '1.25rem', maxWidth: '620px',
-            }}
-          >
-            {post.description}
-          </p>
-
-          {/* Rule */}
-          <div style={{ height: '1px', background: 'rgba(10,46,77,0.1)', marginTop: '3rem' }} />
+        {/* ── Contents + article ───────────────────────────────────── */}
+        <div className="flex flex-col gap-10 lg:flex-row lg:gap-[72px]">
+          {sections.length > 0 && <TableOfContents sections={sections} />}
+          <article className="flex min-w-0 max-w-[760px] flex-[1_1_0] flex-col gap-6">
+            <ArticleBody markdown={post.bodyMd} country={post.country} />
+            <div
+              className="flex flex-wrap items-center justify-between gap-4"
+              style={{ padding: 24, marginTop: 16, borderRadius: 16, background: CREAM }}
+            >
+              <p className="f-body m-0 flex flex-col gap-1">
+                <span style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Written by FjordAnglers</span>
+                <span style={{ fontSize: '14.5px', color: MUTED }}>
+                  Published {formatPostDate(post.publishedAt)}
+                  {updated && ` · Updated ${formatPostDate(post.updatedAt)}`}
+                </span>
+              </p>
+            </div>
+          </article>
         </div>
-      </div>
 
-      {/* ── Article body ─────────────────────────────────────────── */}
-      <div
-        className="mx-auto px-6"
-        style={{ maxWidth: '800px', paddingTop: '2.5rem', paddingBottom: '6rem' }}
-      >
-        {sections.length > 0 && <TableOfContents sections={sections} />}
-        <ArticleBody markdown={post.bodyMd} />
         <ArticleRelated related={related} country={post.country} />
+        <ArticleHubCta hub={related.hub} country={post.country} />
 
-        {/* Bottom nav */}
-        <div
-            style={{
-              marginTop: '5rem', paddingTop: '3rem',
-              borderTop: '1px solid rgba(10,46,77,0.1)',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem',
-            }}
-          >
-            <Link
-              href="/blog"
-              className="inline-flex items-center gap-2 f-body transition-opacity hover:opacity-60"
-              style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(10,46,77,0.5)' }}
-            >
-              ← Back to Journal
-            </Link>
-            <Link
-              href="/blog"
-              className="inline-flex items-center gap-2 text-sm font-semibold f-body px-6 py-2.5 rounded-full text-white transition-all hover:brightness-110"
-              style={{ background: '#E67E50' }}
-            >
-              More articles →
-            </Link>
-        </div>
-      </div>
+        {more.length > 0 && (
+          <section data-block="more-from-journal">
+            <div className="mb-7 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+              <SectionHeading eyebrow="Keep reading" title="More from the Journal" />
+              <HeadingLink href="/blog">All articles</HeadingLink>
+            </div>
+            <div className="grid gap-x-8 gap-y-10" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+              {more.map(other => <ArticleCard key={other.slug} post={other} />)}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   )

@@ -3,10 +3,16 @@
  * per entry, the first one open. The caller puts it on a grain block, next to its heading.
  */
 
+import type { ReactNode } from 'react'
 import { SALMON } from './ui'
 import s from './grain.module.css'
 
-export type FaqEntry = { question: string; answer: string }
+/**
+ * `answer` is plain text (the hubs, the offer pages, the home page). A caller whose answers are
+ * Markdown (a blog article, FA-1.97) also passes `answerContent`, the answer already rendered; it is
+ * shown instead of the text, which stays for whoever needs plain text (the `FAQPage` JSON-LD).
+ */
+export type FaqEntry = { question: string; answer: string; answerContent?: ReactNode }
 
 export function FaqList({ entries }: { entries: readonly FaqEntry[] }) {
   return (
@@ -24,7 +30,11 @@ export function FaqList({ entries }: { entries: readonly FaqEntry[] }) {
               </svg>
             </span>
           </summary>
-          <p className={`${s.fqAnswer} f-body m-0 whitespace-pre-line text-[16.5px]`} style={{ padding: '0 76px 24px 76px', lineHeight: 1.65 }}>{entry.answer}</p>
+          {entry.answerContent != null ? (
+            <div className={`${s.fqAnswer} f-body m-0 text-[16.5px]`} style={{ padding: '0 76px 24px 76px', lineHeight: 1.65 }}>{entry.answerContent}</div>
+          ) : (
+            <p className={`${s.fqAnswer} f-body m-0 whitespace-pre-line text-[16.5px]`} style={{ padding: '0 76px 24px 76px', lineHeight: 1.65 }}>{entry.answer}</p>
+          )}
         </details>
       ))}
     </div>

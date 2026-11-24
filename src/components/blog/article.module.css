@@ -1,0 +1,98 @@
+/*
+ * The article body (FA-1.97, docs/design/blog-2026-11/article.dc.html): one column of blocks with a
+ * 24 px rhythm, lists and the table drawn here because the Markdown elements carry no class.
+ * Paragraph size, line height and colour are variables, so a block (a callout, the stat, an FAQ
+ * answer) restyles the paragraphs and list items inside it without the Markdown knowing about it.
+ */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.body ul,
+.body ol {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.body ul { list-style: disc; }
+.body ol { list-style: decimal; }
+.body li {
+  padding-left: 0.25rem;
+  font-size: var(--article-p-size, 18px);
+  line-height: var(--article-p-lh, 1.7);
+  color: var(--article-p-color, #33485C);
+}
+
+/* "In short": the bullets are salmon dots, not the browser's. */
+.summary {
+  padding: 28px;
+  border-radius: 16px;
+  background: #FDFAF7;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.body .summary ul {
+  list-style: none;
+  padding-left: 0;
+  gap: 10px;
+}
+.body .summary li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 16.5px;
+  line-height: 1.5;
+  color: #0A2E4D;
+}
+.body .summary li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #E67E50;
+}
+
+/* GFM table in a cream frame; the first column reads as the row's name. */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid #E3DBCE;
+  border-radius: 16px;
+  background: #FDFAF7;
+}
+.tableWrap table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+.tableWrap thead tr { background: #F3EDE4; }
+.tableWrap th {
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4F6275;
+  border-bottom: 1px solid #E3DBCE;
+}
+.tableWrap td {
+  padding: 16px;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: #33485C;
+  border-bottom: 1px solid #E3DBCE;
+  vertical-align: top;
+}
+.tableWrap td:first-child {
+  font-weight: 700;
+  color: #0A2E4D;
+}

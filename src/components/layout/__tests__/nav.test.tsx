@@ -33,11 +33,11 @@ describe('SiteNav — mobile menu', () => {
     expect(menu().hidden).toBe(false)
   })
 
-  it('holds Trips, Guides and Plan your trip → /trips; no Journal for now (tj, 2026-11-20)', () => {
+  it('holds Trips, Guides, Journal and Plan your trip → /trips', () => {
     render(<SiteNav />)
     fireEvent.click(button())
     const links = [...menu().querySelectorAll('a')].map(a => [a.textContent, a.getAttribute('href')])
-    expect(links).toEqual([['Trips', '/trips'], ['Guides', '/guides'], ['Plan your trip', '/trips']])
+    expect(links).toEqual([['Trips', '/trips'], ['Guides', '/guides'], ['Journal', '/blog'], ['Plan your trip', '/trips']])
   })
 
   it('Escape closes it and puts focus back on the button', () => {

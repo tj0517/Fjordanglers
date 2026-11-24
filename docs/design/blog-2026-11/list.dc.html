@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Journal</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,400..700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A2E4D;text-decoration-color:#E67E50;text-underline-offset:3px}a:hover{color:#1A3A5C}
+.pg{font-family:'DM Sans',system-ui,sans-serif;color:#0A2E4D;background:#F3EDE4;-webkit-font-smoothing:antialiased}
+.pg *{box-sizing:border-box}
+.pg details>summary{list-style:none;cursor:pointer}
+.pg details>summary::-webkit-details-marker{display:none}
+.blur{position:relative;overflow:hidden;background-size:cover;background-position:center;isolation:isolate}
+.blur::after{content:"";position:absolute;inset:0;background-image:url(/_blob/899236fa4daa8527c2321e771557e977);background-size:180px 180px;mix-blend-mode:overlay;opacity:.85;pointer-events:none;z-index:0}
+.blur>*{position:relative;z-index:1}
+.b-canyon{background-image:linear-gradient(100deg,rgba(7,22,36,.62),rgba(7,22,36,.25)),url(/_blob/c75f0d51487d494143418d2364952c7c)}
+.b-fjord{background-image:linear-gradient(100deg,rgba(7,22,36,.55),rgba(7,22,36,.2)),url(/_blob/cc6d8b2d588da6684c3f574e9d2c480e)}
+.b-iceland{background-image:linear-gradient(100deg,rgba(7,22,36,.6),rgba(7,22,36,.3)),url(/_blob/b2cf832e3cc1819ae0e338f9c333888b)}
+.b-finland{background-image:linear-gradient(100deg,rgba(7,22,36,.58),rgba(7,22,36,.28)),url(/_blob/4d95ef2b2721413b5f6420b5b23d807a)}
+.fq{color:#FFFFFF;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.28);border-radius:18px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:background .2s}
+.fq:hover{background:rgba(255,255,255,.2)}
+.fq[open]{color:#0A2E4D;background:rgba(253,250,247,.97);border-color:transparent;box-shadow:0 20px 50px rgba(4,14,24,.35)}
+.fq .fq-ic{border:1px solid rgba(255,255,255,.5);transition:transform .2s}
+.fq[open] .fq-ic{transform:rotate(45deg);background:#0A2E4D;border-color:#0A2E4D;color:#FFFFFF}
+.fq .fq-a{color:#4F6275}
+.b-foot{background-image:linear-gradient(180deg,rgba(7,22,36,.66),rgba(7,22,36,.86)),url(/_blob/4d95ef2b2721413b5f6420b5b23d807a)}
+.b-guide{background-image:linear-gradient(100deg,rgba(7,22,36,.6),rgba(7,22,36,.3)),url(/_blob/8b44b8b584c56d0d2a5df6e754e5d2a5)}
+</style>
+</helmet>
+<div class="pg" style="width: 100%; min-height: 100vh">
+<header style="padding: 16px 16px 0">
+<div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; padding: 8px 8px 8px 24px; border-radius: 30px; background: #FDFAF7; border: 1px solid #E3DBCE; box-shadow: 0 10px 30px rgba(10,46,77,.07)">
+<a href="#" aria-label="FjordAnglers home" style="display: inline-flex; align-items: center; min-height: 44px"><img src="/_blob/12f152ff9e5107f9c02d0fee5ebeddd7" alt="FjordAnglers" style="height: 28px; width: auto; display: block"></a>
+<nav aria-label="Main" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px">
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; color: #0A2E4D; font-size: 15px; font-weight: 600; text-decoration: none">Trips</a><a href="Hub.dc.html" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; color: #0A2E4D; font-size: 15px; font-weight: 600; text-decoration: none">Destinations</a><a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; color: #0A2E4D; font-size: 15px; font-weight: 600; text-decoration: none">Guides</a><a href="Main.dc.html" aria-current="page" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; color: #0A2E4D; font-size: 15px; font-weight: 600; text-decoration: none"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #E67E50"></span>Journal</a><a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; color: #0A2E4D; font-size: 15px; font-weight: 600; text-decoration: none">About</a>
+</nav>
+<a href="#" class="blur b-fjord" style="display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px; border-radius: 999px; text-decoration: none"><span style="display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: #FFFFFF">Plan your trip<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></span></a>
+</div>
+</header>
+<main style="max-width: 1200px; margin: 0 auto; padding: 0 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 80px; padding-top: 56px">
+<section style="display: flex; flex-direction: column; gap: 36px">
+<div style="display: flex; flex-direction: column; gap: 14px; max-width: 760px">
+<p style="margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #E67E50">Journal</p>
+<h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: clamp(40px, 5.4vw, 64px); line-height: 1.04; letter-spacing: -.02em; color: #0A2E4D">Read before you go</h1>
+<p style="margin: 0; font-size: 19px; line-height: 1.55; color: #4F6275">Regulations, seasons and water notes for the places our guides fish.</p>
+</div>
+<section class="blur b-fjord" style="border-radius: 24px; padding: clamp(24px, 4vw, 48px); display: flex; flex-wrap: wrap; align-items: center; gap: 32px 48px">
+<div style="flex: 1 1 380px; display: flex; flex-direction: column; gap: 18px; min-width: 0">
+<span style="display: flex; flex-wrap: wrap; gap: 6px"><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Regulations</span><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Norway</span></span>
+<h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: clamp(30px, 3.6vw, 46px); line-height: 1.08; letter-spacing: -.015em; color: #FFFFFF">Fishing in Norway 2026: Regulations, Licenses, and Limits</h2>
+<p style="margin: 0; font-size: 17px; line-height: 1.55; color: #EEF2F5; max-width: 520px">Licenses (fiskekort, fiskeravgift), export limits, gear disinfection, and what applies at sea, in lakes and salmon rivers.</p>
+<p style="margin: 0; font-size: 14px; color: #E3EAF0">March 17, 2026 · [X] min read</p>
+<div><a href="Article.dc.html" style="display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 22px; border-radius: 12px; font-size: 15px; font-weight: 600; text-decoration: none; white-space: nowrap; background: #F3EDE4; color: #0A2E4D">Read the guide</a></div>
+</div>
+<a href="Article.dc.html" style="flex: 1 1 380px; display: block; min-width: 0; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; box-shadow: 0 24px 60px rgba(4,14,24,.45)"><img src="/_blob/eceb36806ea80447f19b768a275a7f8f" alt="Snow-covered peak above the sea in northern Norway" style="width: 100%; height: 100%; object-fit: cover; display: block"></a>
+</section>
+</section>
+<section>
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 28px"><div style="display: flex; flex-direction: column; gap: 10px"><p style="margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #E67E50">Start here</p><h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 34px; line-height: 1.12; letter-spacing: -.01em; color: #0A2E4D">Topic hubs</h2></div></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px"><a href="#" class="blur b-iceland" style="display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; min-height: 240px; padding: 28px; border-radius: 20px; text-decoration: none">
+<span style="font-family: Fraunces, Georgia, serif; font-size: 28px; line-height: 1.1; color: #FFFFFF">Regulations and licences</span>
+<span style="font-size: 15.5px; line-height: 1.5; color: #EEF2F5">What you need before the first cast, country by country.</span>
+<span style="display: inline-flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: #FFFFFF; margin-top: 6px">Open the hub<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></span>
+</a><a href="#" class="blur b-finland" style="display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; min-height: 240px; padding: 28px; border-radius: 20px; text-decoration: none">
+<span style="font-family: Fraunces, Georgia, serif; font-size: 28px; line-height: 1.1; color: #FFFFFF">Seasons</span>
+<span style="font-size: 15.5px; line-height: 1.5; color: #EEF2F5">Open months, peak months and what changes on each river.</span>
+<span style="display: inline-flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: #FFFFFF; margin-top: 6px">Open the hub<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></span>
+</a><a href="#" class="blur b-guide" style="display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; min-height: 240px; padding: 28px; border-radius: 20px; text-decoration: none">
+<span style="font-family: Fraunces, Georgia, serif; font-size: 28px; line-height: 1.1; color: #FFFFFF">Species</span>
+<span style="font-size: 15.5px; line-height: 1.5; color: #EEF2F5">Where each fish lives and how the guides fish for it.</span>
+<span style="display: inline-flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: #FFFFFF; margin-top: 6px">Open the hub<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></span>
+</a></div>
+</section>
+<section>
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 28px"><div style="display: flex; flex-direction: column; gap: 10px"><p style="margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #E67E50">Latest</p><h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 34px; line-height: 1.12; letter-spacing: -.01em; color: #0A2E4D">All articles</h2></div></div>
+<div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 36px">
+<div role="group" aria-label="Filter by topic" style="display: flex; flex-wrap: wrap; gap: 8px"><a href="#" aria-current="true" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: #0A2E4D; color: #FFFFFF; font-size: 14.5px; font-weight: 600; text-decoration: none">All</a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: #FDFAF7; color: #0A2E4D; border: 1px solid #E3DBCE; font-size: 14.5px; font-weight: 600; text-decoration: none">Planning</a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: #FDFAF7; color: #0A2E4D; border: 1px solid #E3DBCE; font-size: 14.5px; font-weight: 600; text-decoration: none">Regulations</a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: #FDFAF7; color: #0A2E4D; border: 1px solid #E3DBCE; font-size: 14.5px; font-weight: 600; text-decoration: none">Seasons</a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: #FDFAF7; color: #0A2E4D; border: 1px solid #E3DBCE; font-size: 14.5px; font-weight: 600; text-decoration: none">Species</a></div>
+<div role="group" aria-label="Filter by destination" style="display: flex; flex-wrap: wrap; gap: 8px"><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: #FDFAF7; color: #0A2E4D; border: 1px solid #E3DBCE; font-size: 14.5px; font-weight: 600; text-decoration: none">Iceland</a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: #FDFAF7; color: #0A2E4D; border: 1px solid #E3DBCE; font-size: 14.5px; font-weight: 600; text-decoration: none">Norway</a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: #FDFAF7; color: #0A2E4D; border: 1px solid #E3DBCE; font-size: 14.5px; font-weight: 600; text-decoration: none">Sweden</a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: #FDFAF7; color: #0A2E4D; border: 1px solid #E3DBCE; font-size: 14.5px; font-weight: 600; text-decoration: none">Finland</a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: #FDFAF7; color: #0A2E4D; border: 1px solid #E3DBCE; font-size: 14.5px; font-weight: 600; text-decoration: none">New Zealand</a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: #FDFAF7; color: #0A2E4D; border: 1px solid #E3DBCE; font-size: 14.5px; font-weight: 600; text-decoration: none">Patagonia</a></div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 40px 32px"><article style="display: flex; flex-direction: column; gap: 14px">
+<a href="Article.dc.html" style="position: relative; display: block; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; background: #FDFAF7">
+<img src="/_blob/4dee62e3e0d01c73c6ea83c8b1cee251" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+<span style="position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px"><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Seasons</span><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Iceland</span></span>
+</a>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 22px; line-height: 1.2; color: #0A2E4D"><a href="Article.dc.html" style="color: #0A2E4D; text-decoration: none">When is the fishing season in Iceland?</a></h3>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4F6275">Guided seasons run from April or May to September. What each guide names as the best months.</p>
+<p style="margin: 0; font-size: 13.5px; color: #4F6275">[DATE] · [X] min read</p>
+</div>
+</article><article style="display: flex; flex-direction: column; gap: 14px">
+<a href="Article.dc.html" style="position: relative; display: block; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; background: #FDFAF7">
+<img src="/_blob/2d11274d847994cae19d6c299664b10d" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+<span style="position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px"><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Planning</span><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Iceland</span></span>
+</a>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 22px; line-height: 1.2; color: #0A2E4D"><a href="Article.dc.html" style="color: #0A2E4D; text-decoration: none">Licences in Iceland: what the guide's price covers</a></h3>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4F6275">With some guides the licence is in the price. With others it is charged per person.</p>
+<p style="margin: 0; font-size: 13.5px; color: #4F6275">[DATE] · [X] min read</p>
+</div>
+</article><article style="display: flex; flex-direction: column; gap: 14px">
+<a href="Article.dc.html" style="position: relative; display: block; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; background: #FDFAF7">
+<img src="/_blob/3598092f56c935fac604e507417f55da" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+<span style="position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px"><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Planning</span><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">New Zealand</span></span>
+</a>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 22px; line-height: 1.2; color: #0A2E4D"><a href="Article.dc.html" style="color: #0A2E4D; text-decoration: none">Sight fishing in Southland: how a day runs</a></h3>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4F6275">Walking spring creeks around Lumsden and Mossburn, casting to trout you can see.</p>
+<p style="margin: 0; font-size: 13.5px; color: #4F6275">[DATE] · [X] min read</p>
+</div>
+</article><article style="display: flex; flex-direction: column; gap: 14px">
+<a href="Article.dc.html" style="position: relative; display: block; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; background: #FDFAF7">
+<img src="/_blob/1c2d8c8cd4da98665ff5fd8bb5ed6306" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+<span style="position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px"><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Planning</span><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Patagonia</span></span>
+</a>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 22px; line-height: 1.2; color: #0A2E4D"><a href="Article.dc.html" style="color: #0A2E4D; text-decoration: none">Do you need fly fishing experience in Patagonia?</a></h3>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4F6275">No. Guides in Bariloche and Puerto Natales take beginners and adapt the day.</p>
+<p style="margin: 0; font-size: 13.5px; color: #4F6275">[DATE] · [X] min read</p>
+</div>
+</article><article style="display: flex; flex-direction: column; gap: 14px">
+<a href="Article.dc.html" style="position: relative; display: block; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; background: #FDFAF7">
+<img src="/_blob/a4a80f3c590959793a2be8f4309db050" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+<span style="position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px"><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Species</span><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Finland</span></span>
+</a>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 22px; line-height: 1.2; color: #0A2E4D"><a href="Article.dc.html" style="color: #0A2E4D; text-decoration: none">[ARTICLE TITLE]</a></h3>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4F6275">[One or two sentences from the article description, up to 155 characters.]</p>
+<p style="margin: 0; font-size: 13.5px; color: #4F6275">[DATE] · [X] min read</p>
+</div>
+</article><article style="display: flex; flex-direction: column; gap: 14px">
+<a href="Article.dc.html" style="position: relative; display: block; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; background: #FDFAF7">
+<img src="/_blob/582b297cc79907e508bc155227e1bb0c" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+<span style="position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px"><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Seasons</span><span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: #FFFFFF; color: #0A2E4D; font-size: 12.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(11,27,42,.18)">Sweden</span></span>
+</a>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 22px; line-height: 1.2; color: #0A2E4D"><a href="Article.dc.html" style="color: #0A2E4D; text-decoration: none">[ARTICLE TITLE]</a></h3>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4F6275">[One or two sentences from the article description, up to 155 characters.]</p>
+<p style="margin: 0; font-size: 13.5px; color: #4F6275">[DATE] · [X] min read</p>
+</div>
+</article></div>
+<div style="display: flex; justify-content: center; margin-top: 48px"><a href="#" style="display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 22px; border-radius: 12px; font-size: 15px; font-weight: 600; text-decoration: none; white-space: nowrap; background: #FDFAF7; color: #0A2E4D; border: 1.5px solid #E67E50">Load more articles</a></div>
+</section>
+<section>
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 28px"><div style="display: flex; flex-direction: column; gap: 10px"><p style="margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #E67E50">Destinations</p><h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 34px; line-height: 1.12; letter-spacing: -.01em; color: #0A2E4D">Browse by destination</h2></div></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px"><a href="Hub.dc.html" style="position: relative; display: flex; align-items: flex-end; aspect-ratio: 3 / 4; border-radius: 16px; overflow: hidden; text-decoration: none; background: #0A2E4D">
+<img src="/_blob/2d11274d847994cae19d6c299664b10d" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover"><span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,22,36,0) 40%, rgba(7,22,36,.78) 100%)"></span>
+<span style="position: relative; display: flex; flex-direction: column; gap: 2px; padding: 16px"><span style="font-family: Fraunces, Georgia, serif; font-size: 22px; color: #FFFFFF">Iceland</span><span style="font-size: 13.5px; color: #E3EAF0">Trout, char, salmon</span></span>
+</a><a href="Hub.dc.html" style="position: relative; display: flex; align-items: flex-end; aspect-ratio: 3 / 4; border-radius: 16px; overflow: hidden; text-decoration: none; background: #0A2E4D">
+<img src="/_blob/eceb36806ea80447f19b768a275a7f8f" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover"><span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,22,36,0) 40%, rgba(7,22,36,.78) 100%)"></span>
+<span style="position: relative; display: flex; flex-direction: column; gap: 2px; padding: 16px"><span style="font-family: Fraunces, Georgia, serif; font-size: 22px; color: #FFFFFF">Norway</span><span style="font-size: 13.5px; color: #E3EAF0">Fjords, lakes, salmon rivers</span></span>
+</a><a href="Hub.dc.html" style="position: relative; display: flex; align-items: flex-end; aspect-ratio: 3 / 4; border-radius: 16px; overflow: hidden; text-decoration: none; background: #0A2E4D">
+<img src="/_blob/582b297cc79907e508bc155227e1bb0c" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover"><span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,22,36,0) 40%, rgba(7,22,36,.78) 100%)"></span>
+<span style="position: relative; display: flex; flex-direction: column; gap: 2px; padding: 16px"><span style="font-family: Fraunces, Georgia, serif; font-size: 22px; color: #FFFFFF">Sweden</span><span style="font-size: 13.5px; color: #E3EAF0">Archipelago and lakes</span></span>
+</a><a href="Hub.dc.html" style="position: relative; display: flex; align-items: flex-end; aspect-ratio: 3 / 4; border-radius: 16px; overflow: hidden; text-decoration: none; background: #0A2E4D">
+<img src="/_blob/a4a80f3c590959793a2be8f4309db050" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover"><span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,22,36,0) 40%, rgba(7,22,36,.78) 100%)"></span>
+<span style="position: relative; display: flex; flex-direction: column; gap: 2px; padding: 16px"><span style="font-family: Fraunces, Georgia, serif; font-size: 22px; color: #FFFFFF">Finland</span><span style="font-size: 13.5px; color: #E3EAF0">Lakes and Lapland</span></span>
+</a><a href="Hub.dc.html" style="position: relative; display: flex; align-items: flex-end; aspect-ratio: 3 / 4; border-radius: 16px; overflow: hidden; text-decoration: none; background: #0A2E4D">
+<img src="/_blob/3598092f56c935fac604e507417f55da" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover"><span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,22,36,0) 40%, rgba(7,22,36,.78) 100%)"></span>
+<span style="position: relative; display: flex; flex-direction: column; gap: 2px; padding: 16px"><span style="font-family: Fraunces, Georgia, serif; font-size: 22px; color: #FFFFFF">New Zealand</span><span style="font-size: 13.5px; color: #E3EAF0">Sight fishing for trout</span></span>
+</a><a href="Hub.dc.html" style="position: relative; display: flex; align-items: flex-end; aspect-ratio: 3 / 4; border-radius: 16px; overflow: hidden; text-decoration: none; background: #0A2E4D">
+<span style="position: absolute; inset: 0; background: #0A2E4D; display: flex; align-items: flex-start; padding: 14px; font-size: 12px; letter-spacing: .08em; color: #C9D6E2">[PHOTO: PATAGONIA]</span>
+<span style="position: relative; display: flex; flex-direction: column; gap: 2px; padding: 16px"><span style="font-family: Fraunces, Georgia, serif; font-size: 22px; color: #FFFFFF">Patagonia</span><span style="font-size: 13.5px; color: #E3EAF0">Argentina and Chile</span></span>
+</a></div>
+</section>
+<section class="blur b-canyon" style="border-radius: 24px; padding: 56px clamp(24px, 5vw, 64px); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 32px">
+<div style="display: flex; flex-direction: column; gap: 14px; flex: 1 1 420px; max-width: 620px">
+<p style="margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #F6B596">Plan your trip</p>
+<h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: clamp(30px, 4vw, 44px); line-height: 1.08; letter-spacing: -.015em; color: #FFFFFF">Tell us your dates. We check with the guide.</h2>
+<p style="margin: 0; font-size: 17px; line-height: 1.55; color: #EEF2F5">We come back with availability and a price within two business days. You pay nothing to ask.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px"><a href="#" style="display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 22px; border-radius: 12px; font-size: 15px; font-weight: 600; text-decoration: none; white-space: nowrap; background: #F3EDE4; color: #0A2E4D">Plan your trip</a></div>
+</section>
+</main>
+<footer class="blur b-foot" style="margin-top: 96px">
+<div style="max-width: 1200px; margin: 0 auto; box-sizing: border-box; padding: clamp(44px, 6vw, 80px) 24px 36px; display: flex; flex-direction: column; gap: 56px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 40px 64px">
+<div style="flex: 1 1 320px; max-width: 460px; display: flex; flex-direction: column; gap: 22px">
+<p style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: clamp(30px, 3.6vw, 44px); line-height: 1.08; letter-spacing: -.015em; color: #FFFFFF">You talk to the guide who takes you out.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 12px"><a href="#" style="display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 22px; border-radius: 12px; font-size: 15px; font-weight: 600; text-decoration: none; white-space: nowrap; background: #F3EDE4; color: #0A2E4D">Plan your trip</a><a href="#" style="display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 22px; border-radius: 12px; font-size: 15px; font-weight: 600; text-decoration: none; white-space: nowrap; color: #FFFFFF; border: 1px solid rgba(255,255,255,.55)">Become a guide</a></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 36px 56px">
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 130px"><p style="margin: 0 0 8px; font-size: 12.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #F6B596">Destinations</p><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Iceland</a><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Norway</a><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Sweden</a><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Finland</a><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">New Zealand</a><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Patagonia</a></div>
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 130px"><p style="margin: 0 0 8px; font-size: 12.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #F6B596">Journal</p><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Regulations</a><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Seasons</a><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Species</a><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Planning</a></div>
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 130px"><p style="margin: 0 0 8px; font-size: 12.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #F6B596">FjordAnglers</p><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Trips</a><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Guides</a><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">About</a><a href="#" style="display: inline-flex; align-items: center; min-height: 32px; color: #EEF2F5; text-decoration: none; font-size: 15px">Instagram</a></div>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.22)">
+<img src="/_blob/f41f184a5c6b5bf12cd3e7a30c3d5119" alt="FjordAnglers" style="height: 28px; width: auto">
+<p style="margin: 0; display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 14px; color: #E3EAF0"><span>© 2026 FjordAnglers</span><a href="#" style="color: #E3EAF0; text-decoration: none">Terms</a><a href="#" style="color: #E3EAF0; text-decoration: none">Privacy</a></p>
+</div>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1360,"height":3900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

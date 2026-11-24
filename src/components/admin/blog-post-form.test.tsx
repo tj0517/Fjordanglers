@@ -98,7 +98,7 @@ describe('preview and HTML warning (E4)', () => {
     renderNew({ body_md: body })
     const preview = screen.getByTestId('preview')
     await waitFor(() => expect(preview.textContent).toContain('Check the licence.'))
-    expect(preview.textContent).toContain('Important:')
+    expect(preview.textContent).toContain('Important.')
     expect(preview.textContent).toContain('15 kg')
     expect(preview.textContent).not.toContain('pasted')
   })

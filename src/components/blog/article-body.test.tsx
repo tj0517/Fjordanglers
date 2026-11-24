@@ -48,14 +48,14 @@ describe('article body — no raw HTML from the database (XSS)', () => {
 describe('article body — the four named blocks (D1)', () => {
   it(':::warning and :::info keep their labels and Markdown inside', () => {
     const warning = html(':::warning\nCheck **every** river.\n:::')
-    expect(warning).toContain('Important: ')
+    expect(warning).toContain('Important. ')
     expect(warning).toContain('<strong>every</strong>')
-    expect(warning).toContain('#E67E50') // the warning accent
+    expect(warning).toContain('#C4561F') // the warning accent
 
     const info = html(':::info\nStay clear of fish farms.\n:::')
-    expect(info).toContain('Note: ')
+    expect(info).toContain('Good to know. ')
     expect(info).toContain('Stay clear of fish farms.')
-    expect(info).toContain('#1B4F72')
+    expect(info).toContain('#CBD6DD') // the info frame
   })
 
   it(':::stat shows the number, its label and the note', () => {
@@ -63,13 +63,13 @@ describe('article body — the four named blocks (D1)', () => {
     expect(out).toContain('15 kg')
     expect(out).toContain('marine fish per person')
     expect(out).toContain('Maximum twice per year.')
-    expect(out).toContain('clamp(40px')
+    expect(out).toContain('clamp(48px')
   })
 
   it('a stat without a value or label is not a stat — its text stays', () => {
     const out = html('Intro.\n\n:::stat\nonly the note\n:::')
     expect(out).toContain('only the note')
-    expect(out).not.toContain('clamp(40px') // the stat's big number
+    expect(out).not.toContain('clamp(48px') // the stat's big number
   })
 
   it('::photo draws a figure with alt text and caption', () => {
@@ -139,7 +139,52 @@ describe('article body — headings and the table of contents', () => {
 
   it('the first paragraph is the lead', () => {
     const out = html('First paragraph.\n\nSecond.')
-    expect(out).toMatch(/<p style="[^"]*font-size:20px[^"]*">First paragraph\./)
-    expect(out).not.toMatch(/font-size:20px[^>]*>Second/)
+    expect(out).toMatch(/<p style="[^"]*font-size:21px[^"]*">First paragraph\./)
+    expect(out).not.toMatch(/font-size:21px[^>]*>Second/)
+  })
+})
+
+describe('article body — :::summary and ::quote (FA-1.97)', () => {
+  it(':::summary is the "In short" box with its Markdown list, and a line in the contents', () => {
+    const md = 'Lead.\n\n:::summary\n- Sea: no licence.\n- **Rivers**: a fiskekort.\n:::\n\n## Sea angling\n\nText.'
+    const out = html(md)
+    expect(out).toMatch(/<aside[^>]*aria-label="In short"[^>]*id="in-short"|<aside[^>]*id="in-short"[^>]*aria-label="In short"/)
+    expect(out).toContain('In short')
+    expect(out).toMatch(/<ul[\s\S]*<li[^>]*>Sea: no licence\.<\/li>/)
+    expect(out).toContain('<strong>Rivers</strong>')
+    expect(extractSections(md)).toEqual([{ id: 'in-short', label: 'In short' }, { id: 'sea-angling', label: 'Sea angling' }])
+  })
+
+  it('an empty :::summary is not a box', () => {
+    expect(html('Lead.\n\n:::summary\n:::')).not.toContain('In short')
+  })
+
+  it('::quote{text guide region} is the guide quote block with its caption', () => {
+    const out = html('::quote{text="Fish the tide, not the clock." guide="Kristina" region="Southland"}')
+    expect(out).toContain('<blockquote')
+    expect(out).toContain('Fish the tide, not the clock.')
+    expect(out).toContain('Kristina, Southland')
+    expect(out).toContain('<figure')
+  })
+
+  it('a ::quote with only text has no caption', () => {
+    const out = html('::quote{text="Just the words."}')
+    expect(out).toContain('Just the words.')
+    expect(out).not.toContain('<figcaption')
+  })
+
+  it('a ::quote without text does not throw and shows what was typed — it is not a quote block', () => {
+    const typed = '::quote{guide="Kristina" region="Southland"}'
+    let out = ''
+    expect(() => { out = html(typed) }).not.toThrow()
+    expect(out).toContain('quote{guide=')
+    expect(out).toContain('Kristina')
+    expect(out).not.toContain('<blockquote')
+    expect(out).not.toContain('<figure')
+  })
+
+  it('quote attributes are text, never markup', () => {
+    const out = html('::quote{text="<script>alert(1)</script>" guide="<b>x</b>"}')
+    expect(out).not.toMatch(/<script|<b>/i)
   })
 })

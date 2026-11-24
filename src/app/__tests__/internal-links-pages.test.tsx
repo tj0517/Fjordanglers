@@ -3,9 +3,10 @@
  * rows: the three pages rendered for real with a mocked data layer, links counted the way
  * `.fa-proofs/FA-1.90/link-counts.mjs` counts them — unique internal hrefs inside <main> only.
  *
- *   /blog/<norway post> → ≥ 2 /experiences/, ≥ 1 /guides/, exactly 1 hub link (/norway)
+ *   /blog/<norway post> → ≥ 2 /experiences/, exactly 1 hub link (/norway). The ≥ 1 /guides/ the
+ *                         criterion had went with the guides block (FA-1.97, tj T8).
  *   /norway             → ≥ 1 /blog/
- *   /                   → no /blog/ while the Journal is hidden (src/lib/blog/visibility.ts)
+ *   /                   → ≥ 1 /blog/
  */
 import { vi, describe, it, expect } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -26,7 +27,6 @@ const page = (n: number, country: string): FeaturedExperiencePage => ({
 })
 const RELATED: ArticleRelated = {
   offers: { tier: 'country', pages: [page(1, 'Norway'), page(2, 'Norway'), page(3, 'Norway')] },
-  guides: [{ id: 'g1', slug: 'fixture-guide', name: 'Fixture Guide', avatarUrl: null, tagline: null }],
   hub:    { slug: 'norway', label: 'Guided Fishing Trips in Norway' },
 }
 
@@ -68,11 +68,10 @@ function linksInMain(html: string) {
 }
 
 describe('FA-1.90 link counts inside <main> (fixtures)', () => {
-  it('article (Norway): ≥ 2 /experiences/, ≥ 1 /guides/, exactly 1 hub link — /norway', async () => {
+  it('article (Norway): ≥ 2 /experiences/, exactly 1 hub link — /norway (the breadcrumb and the hub block both point at it)', async () => {
     const html = renderToStaticMarkup(await BlogPostPage({ params: Promise.resolve({ slug: POST.slug }) }))
     const links = linksInMain(html)
     expect(links.experiences.length).toBeGreaterThanOrEqual(2)
-    expect(links.guides.length).toBeGreaterThanOrEqual(1)
     expect(links.hubs).toEqual(['/norway'])
   })
 
@@ -81,8 +80,8 @@ describe('FA-1.90 link counts inside <main> (fixtures)', () => {
     expect(linksInMain(html).blog).toEqual(['/blog/fishing-regulations-norway-2026'])
   })
 
-  it('home: no /blog/ while the Journal is hidden from it (tj, 2026-11-20; was ≥ 1, the three newest posts)', async () => {
+  it('home: ≥ 1 /blog/ — the three newest posts', async () => {
     const html = renderToStaticMarkup(await HomePage())
-    expect(linksInMain(html).blog).toEqual([])
+    expect(linksInMain(html).blog).toEqual(['/blog/a', '/blog/b', '/blog/c'])
   })
 })
