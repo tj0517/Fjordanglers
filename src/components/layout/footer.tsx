@@ -3,10 +3,11 @@
  * framed like the photo heroes — 12 px in from the edges and the bottom at any width, 28 px
  * corners (tj, 2026-11-20).
  *
- * The blog has no category pages yet, so the Journal column links to the blog itself; links the
- * mockup has with no page behind them ("About", "Become a guide") are left out. Kept from the old
- * footer although the mockup does not have them (tj, 2026-11-17): guide sign-in, and the Cookie
- * Policy and Legal Notice next to Terms and Privacy.
+ * The blog has no category pages, so each Journal entry opens the list filtered to that category
+ * (`/blog?category=…`, FA-1.97: the list reads it as its starting filter; a category with no post
+ * shows the full list). Links the mockup has with no page behind them ("About", "Become a guide")
+ * are left out. Kept from the old footer although the mockup does not have them (tj, 2026-11-17):
+ * guide sign-in, and the Cookie Policy and Legal Notice next to Terms and Privacy.
  */
 
 import Image from 'next/image'
@@ -64,7 +65,7 @@ export function SiteFooter() {
               ))}
             </Column>
             <Column title="Journal">
-              {JOURNAL.map(label => <FooterLink key={label} href="/blog">{label}</FooterLink>)}
+              {JOURNAL.map(label => <FooterLink key={label} href={`/blog?category=${label.toLowerCase()}`}>{label}</FooterLink>)}
             </Column>
             <Column title="FjordAnglers">
               <FooterLink href="/trips">Trips</FooterLink>
