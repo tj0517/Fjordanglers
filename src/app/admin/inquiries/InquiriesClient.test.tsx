@@ -87,4 +87,17 @@ describe('applyBaseFilters', () => {
     expect(ids).toContain('no')
     expect(ids).not.toContain('is')
   })
+
+  // FA-M.05 (deferred FA-M.03): the guide proposed other dates.
+  it('guideRespFilter other_dates keeps only rows where the guide proposed other dates', () => {
+    const rows = [
+      makeRow({ id: 'other',    assigned_guide_id: 'g', guide_acceptance: 'other_dates' }),
+      makeRow({ id: 'accepted', assigned_guide_id: 'g', guide_acceptance: 'accepted' }),
+      makeRow({ id: 'pending',  assigned_guide_id: 'g', guide_acceptance: null }),
+    ]
+    const ids = applyBaseFilters(rows, { ...BASE, guideRespFilter: 'other_dates' }).map(r => r.id)
+    expect(ids).toEqual(['other'])
+    // and other_dates is not counted as "awaiting"
+    expect(applyBaseFilters(rows, { ...BASE, guideRespFilter: 'pending' }).map(r => r.id)).toEqual(['pending'])
+  })
 })

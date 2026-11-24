@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import DeleteGuideButton from '@/components/admin/delete-guide-button'
 import GuideAccountCard from '@/components/admin/guide-account-card'
 import { getGuideAccountSummary } from '@/actions/guide-invites'
+import { getGuidePhone } from '@/lib/guide-contacts'
 import { AdminGuideActions } from './AdminGuideActions'
 import { MigratePhotosButton } from './MigratePhotosButton'
 import { ExternalLink, Pencil, Mail, Images, BookOpen } from 'lucide-react'
@@ -119,6 +120,7 @@ export default async function AdminGuideDetailPage({
   if (guide == null) notFound()
 
   const accountSummary = await getGuideAccountSummary(guide.id)
+  const whatsAppNumber = await getGuidePhone(guide.id)
 
   const guidePhotos = guidePhotosRaw ?? []
   const s = STATUS_STYLES[guide.status as keyof typeof STATUS_STYLES] ?? STATUS_STYLES.pending
@@ -269,6 +271,18 @@ export default async function AdminGuideDetailPage({
           </div>
         </div>
       </div>
+
+      {/* ─── WhatsApp number (FA-M.05) — read-only here, edited on /edit ─── */}
+      <SectionCard title="WhatsApp">
+        {whatsAppNumber != null ? (
+          <p className="text-sm f-body text-[#0A2E4D]" data-testid="guide-whatsapp-number">{whatsAppNumber}</p>
+        ) : (
+          <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.45)' }} data-testid="guide-whatsapp-number">
+            No WhatsApp number — requests cannot be sent to this guide.{' '}
+            <Link href={`/admin/guides/${guide.id}/edit`} className="underline">Add it</Link>
+          </p>
+        )}
+      </SectionCard>
 
       {/* ─── Account & Stripe + Ratings ──────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">

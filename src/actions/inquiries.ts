@@ -26,7 +26,6 @@ import {
   correctReceivedDate,
   HistoryError,
 } from '@/lib/inquiries/history'
-import { tripCountryPatchFromGuide } from '@/lib/inquiries/trip-country'
 import { computeFallbackDepositCents } from '@/lib/inquiries/deposit-fallback'
 import {
   getInquiryExperience,
@@ -39,7 +38,6 @@ import { env } from '@/lib/env'
 import { getAppUrl } from '@/lib/app-url'
 import {
   sendDepositLinkAnglerEmail,
-  sendGuideAssignedEmail,
 } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin, requireGuide, requireToken, UnauthorizedError } from '@/lib/auth/guards'
@@ -1045,131 +1043,6 @@ export interface TripDetails {
 }
 
 
-// ─── assignGuideToInquiry ─────────────────────────────────────────────────────
-
-/**
- * FA assigns a guide to an inquiry.
- * Saves assigned_guide_id + assigned_at, then emails the guide.
- */
-export async function assignGuideToInquiry(
-  inquiryId: string,
-  guideId: string,
-): Promise<ActionResult> {
-  await requireAdmin()
-  const svc = createServiceClient()
-
-  // An inquiry with no destination yet (e-mail / WhatsApp) takes the guide's country.
-  const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
-
-  // Update inquiry
-  const { error: updateError } = await svc
-    .from('inquiries')
-    .update({ assigned_guide_id: guideId, assigned_at: new Date().toISOString(), ...countryPatch })
-    .eq('id', inquiryId)
-
-  if (updateError != null) {
-    console.error('[assignGuideToInquiry] DB error:', updateError)
-    return { success: false, error: updateError.message }
-  }
-
-  // Fetch guide email + name
-  const { data: guide } = await svc
-    .from('guides')
-    .select('id, full_name, invite_email, user_id')
-    .eq('id', guideId)
-    .single()
-
-  if (guide == null) {
-    return { success: false, error: 'Guide not found' }
-  }
-
-  // Resolve email: prefer invite_email, fall back to auth user email
-  let guideEmail: string | null = guide.invite_email ?? null
-  if ((guideEmail == null || guideEmail.trim() === '') && guide.user_id != null) {
-    const { data: authUser } = await svc.auth.admin.getUserById(guide.user_id)
-    guideEmail = authUser?.user?.email ?? null
-  }
-
-  // Fetch inquiry info for email
-  const { data: inquiry } = await svc
-    .from('inquiries')
-    .select('angler_name, angler_country, message, requested_dates, party_size')
-    .eq('id', inquiryId)
-    .single()
-
-  // Fetch trip brief (graceful — table may not exist yet)
-  let tripDetails: Record<string, unknown> | null = null
-  try {
-    const { data: td } = await svc
-      .from('inquiry_trip_details')
-      .select('confirmed_date, confirmed_party_size, price_range, date_flexibility, target_species, accommodation, guide_notes')
-      .eq('inquiry_id', inquiryId)
-      .maybeSingle()
-    tripDetails = td ?? null
-  } catch {
-    // Table not yet migrated — graceful fallback
-  }
-
-  const baseUrl   = await getAppUrl()
-  const tripsUrl  = `${baseUrl}/dashboard/trips/${inquiryId}`
-  const acceptUrl = `${baseUrl}/dashboard/trips/${inquiryId}?action=accept`
-
-  if (guideEmail != null && inquiry != null) {
-    sendGuideAssignedEmail({
-      to:             guideEmail,
-      guideName:      guide.full_name ?? 'Guide',
-      anglerName:     inquiry.angler_name,
-      anglerCountry:  (inquiry.angler_country as string | null) ?? null,
-      confirmedDate:   (tripDetails?.confirmed_date as string | null) ?? null,
-      requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
-      dateFlexibility: (tripDetails?.date_flexibility as string | null) ?? null,
-      partySize:       (tripDetails?.confirmed_party_size as number | null) ?? (inquiry.party_size as number) ?? 1,
-      targetSpecies:  (tripDetails?.target_species as string | null) ?? null,
-      priceRange:     (tripDetails?.price_range as string | null) ?? null,
-      accommodation:  (tripDetails?.accommodation as string | null) ?? null,
-      guideNotes:     (tripDetails?.guide_notes as string | null) ?? null,
-      anglerMessage:  (inquiry.message as string | null) ?? null,
-      acceptUrl,
-      tripsUrl,
-    }).catch(err => console.error('[assignGuideToInquiry] Email error:', err))
-  }
-
-  revalidatePath('/admin/inquiries/' + inquiryId)
-  console.log(`[assignGuideToInquiry] Inquiry ${inquiryId} → guide ${guideId}`)
-  return { success: true }
-}
-
-// ─── unassignGuide ────────────────────────────────────────────────────────────
-
-/**
- * FA removes the currently assigned guide from an inquiry.
- * Clears assignment fields so a new guide can be assigned.
- */
-export async function unassignGuide(inquiryId: string): Promise<ActionResult> {
-  await requireAdmin()
-  const svc = createServiceClient()
-
-  const { error } = await svc
-    .from('inquiries')
-    .update({
-      assigned_guide_id:    null,
-      assigned_at:          null,
-      guide_acceptance:     null,
-      guide_decline_reason: null,
-      guide_offer_eta:      null,
-    })
-    .eq('id', inquiryId)
-
-  if (error != null) {
-    console.error('[unassignGuide] DB error:', error)
-    return { success: false, error: error.message }
-  }
-
-  revalidatePath('/admin/inquiries/' + inquiryId)
-  console.log(`[unassignGuide] Inquiry ${inquiryId} — guide unassigned`)
-  return { success: true }
-}
-
 // ─── setExternalOffer ─────────────────────────────────────────────────────────
 
 /**
@@ -1189,41 +1062,6 @@ export async function setExternalOffer(
   if (error != null) return { success: false, error: error.message }
   revalidatePath('/admin/inquiries/' + inquiryId)
   revalidatePath('/admin/inquiries')
-  return { success: true }
-}
-
-// ─── assignGuideSilently ──────────────────────────────────────────────────────
-
-/**
- * FA links a guide to an inquiry without sending any notification.
- * Used for "old-way" offers FA built manually — guide is visible in admin only.
- */
-export async function assignGuideSilently(
-  inquiryId: string,
-  guideId: string,
-): Promise<ActionResult> {
-  await requireAdmin()
-  const svc = createServiceClient()
-
-  const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
-
-  const { error } = await svc
-    .from('inquiries')
-    .update({
-      assigned_guide_id: guideId,
-      assigned_at:       new Date().toISOString(),
-      guide_acceptance:  'accepted',   // silent = no need to accept, treat as already confirmed
-      ...countryPatch,
-    })
-    .eq('id', inquiryId)
-
-  if (error != null) {
-    console.error('[assignGuideSilently] DB error:', error)
-    return { success: false, error: error.message }
-  }
-
-  revalidatePath('/admin/inquiries/' + inquiryId)
-  console.log(`[assignGuideSilently] Inquiry ${inquiryId} → guide ${guideId} (silent, auto-accepted)`)
   return { success: true }
 }
 

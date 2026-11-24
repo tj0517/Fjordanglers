@@ -46,7 +46,6 @@ vi.mock('@/lib/env', () => ({
 vi.mock('@/lib/email', () => ({
   sendDepositLinkAnglerEmail: vi.fn(),
   sendInquiryMessageAnglerEmail: vi.fn(),
-  sendGuideAssignedEmail: vi.fn(),
 }))
 
 vi.mock('@/lib/app-url', () => ({

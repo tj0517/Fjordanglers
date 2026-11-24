@@ -1,6 +1,6 @@
 ---
 id: FA-M.06
-title: Ponaglenie — po 12 h (sezon) / 24 h (poza sezonem) bez otwarcia linku jedno automatyczne WhatsApp do przewodnika + flaga dla admina
+title: Ponaglenie — flaga admina „przewodnik nie otworzył po 12 h (sezon) / 24 h” + przycisk WhatsApp do ręcznego ponaglenia, push jeśli przewodnik ma push
 stage: M
 status: todo
 difficulty: M
@@ -9,7 +9,7 @@ model_approved:
 effort: medium
 agent: fa-core
 branch: feat/fa-m.06-request-reminder
-depends_on: [FA-M.05]
+depends_on: [FA-M.05, FA-M.12]
 blocked_by_questions: []
 touches_db: false
 touches_prod: true
@@ -31,7 +31,7 @@ owner: tj
 Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
 
 ## Cel
-Przewodnicy w sezonie nie ignorują FA, tylko są zajęci — jedno przypomnienie skraca czas odpowiedzi. Jeśli przewodnik nie otworzy linku zlecenia w 12 h (w sezonie) albo 24 h (poza sezonem), dostaje jedno automatyczne WhatsApp z tym samym linkiem, a admin widzi na liście zapytań flagę „przewodnik nie otworzył” (O-53 → c).
+Przewodnicy w sezonie nie ignorują FA, tylko są zajęci — jedno przypomnienie skraca czas odpowiedzi. Jeśli przewodnik nie otworzy linku zlecenia w 12 h (w sezonie) albo 24 h (poza sezonem), admin widzi na liście zapytań i na karcie flagę „przewodnik nie otworzył” z przyciskiem WhatsApp (link `wa.me` z gotowym ponagleniem, wysyła tj ręcznie ze swojego telefonu); jeśli przewodnik ma włączony push (FA-M.12), dostaje też jedno automatyczne ponaglenie push. **2026-11-23 (tj, D2 a):** bez automatycznej wysyłki WhatsApp — FA nie ma WhatsApp Business API (FA-M.05, wariant A).
 
 ## Zakres
 - [ ] Odczyt stanu: crony w `vercel.json`, wzór `offer-sla`, plan Vercel (O-55 — czy crony mogą chodzić częściej niż raz dziennie).
@@ -67,3 +67,4 @@ grep -n "path" vercel.json
 - **2026-11-10, tj (wf-plan):** 12 h w sezonie / 24 h poza; ponaglenie do przewodnika i flaga dla admina (O-53 → c).
 - **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
 - **2026-11-17, tj:** O-55 → (a) crony Vercela (sub-daily wymaga planu Pro — tj potwierdza plan przed zmianą `vercel.json`); `blocked_by_questions` wyczyszczone.
+- **2026-11-23, tj — D2 (a):** FA nie ma WhatsApp Business API (FA-M.05, wariant A). FA-M.06 = flaga admina „przewodnik nie otworzył po 12/24 h” + przycisk WhatsApp (`wa.me`) do ręcznego ponaglenia; ponaglenie push, jeśli przewodnik ma push (FA-M.12). `depends_on: [FA-M.05, FA-M.12]`. Punkty zakresu i kryteria o automatycznym WhatsAppie przez `sendMessage` / „fake WhatsApp” są nieaktualne — do przepisania przy starcie zadania (`/fa-task`).

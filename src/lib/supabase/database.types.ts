@@ -3506,6 +3506,13 @@ export type Database = {
         Returns: unknown
       }
       _st_within: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      accept_guide_request_on_behalf: {
+        Args: { p_admin_id: string; p_request_id: string }
+        Returns: {
+          outcome: string
+          summary_updated: boolean
+        }[]
+      }
       addauth: { Args: { "": string }; Returns: boolean }
       addgeometrycolumn:
         | {
@@ -4560,6 +4567,10 @@ export type Database = {
           link_id: string
           refusal: string
         }[]
+      }
+      unassign_guide_without_request: {
+        Args: { p_admin_id: string; p_inquiry_id: string }
+        Returns: string
       }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {

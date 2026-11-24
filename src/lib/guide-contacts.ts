@@ -13,6 +13,21 @@
 
 import { createServiceClient } from '@/lib/supabase/server'
 
+/** E.164: `+`, a country code that does not start with 0, 8–15 digits in all (FA-M.05). */
+const E164 = /^\+[1-9]\d{7,14}$/
+
+export type ParsedPhone = { ok: true; phoneE164: string | null } | { ok: false }
+
+/**
+ * Admin input → E.164 or "clear". Spaces, hyphens, dots and brackets are dropped; everything else
+ * must already be E.164 (no guessing a country). Empty input = `null` (clears the number).
+ */
+export function parseGuidePhone(raw: string): ParsedPhone {
+  const compact = raw.trim().replace(/[\s\-.()]/g, '')
+  if (compact === '') return { ok: true, phoneE164: null }
+  return E164.test(compact) ? { ok: true, phoneE164: compact } : { ok: false }
+}
+
 /** The guide's WhatsApp number in E.164, or null when none is on file. Throws on a query error. */
 export async function getGuidePhone(guideId: string): Promise<string | null> {
   const { data, error } = await createServiceClient()
@@ -41,4 +56,19 @@ export async function findGuideIdsByPhone(phoneE164: string): Promise<string[]> 
     throw new Error(`guide_contacts lookup failed: ${error.message}`)
   }
   return (data ?? []).map(row => row.guide_id)
+}
+
+/**
+ * Store (or clear, with `null`) the guide's WhatsApp number. The caller has run requireAdmin() and
+ * passes a value from parseGuidePhone(). Throws on a query error.
+ */
+export async function setGuidePhone(guideId: string, phoneE164: string | null): Promise<void> {
+  if (phoneE164 != null && !E164.test(phoneE164)) throw new Error('setGuidePhone: not an E.164 number')
+  const { error } = await createServiceClient()
+    .from('guide_contacts')
+    .upsert({ guide_id: guideId, phone_e164: phoneE164 }, { onConflict: 'guide_id' })
+  if (error) {
+    console.error('[guide-contacts] setGuidePhone failed:', error.message)
+    throw new Error(`guide_contacts write failed: ${error.message}`)
+  }
 }

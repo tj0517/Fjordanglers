@@ -254,6 +254,8 @@ export function applyBaseFilters(allRows: InquiryRow[], p: BaseFilterParams): In
     result = result.filter(r => r.guide_acceptance === 'accepted')
   else if (p.guideRespFilter === 'declined')
     result = result.filter(r => r.guide_acceptance === 'declined')
+  else if (p.guideRespFilter === 'other_dates')
+    result = result.filter(r => r.guide_acceptance === 'other_dates')
 
   if (p.sourceFilter)
     result = result.filter(r => r.source === p.sourceFilter)
@@ -716,6 +718,7 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
           <SelectContent>
             <SelectItem value="accepted">✓ Accepted</SelectItem>
             <SelectItem value="declined">✗ Declined</SelectItem>
+            <SelectItem value="other_dates">↻ Other dates</SelectItem>
             <SelectItem value="pending">⏳ Awaiting</SelectItem>
             <SelectItem value="none">No guide</SelectItem>
           </SelectContent>
@@ -876,6 +879,9 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
                                 ? `"${row.guide_decline_reason.slice(0, 30)}${row.guide_decline_reason.length > 30 ? '…' : ''}"`
                                 : 'Declined'}
                             </span>
+                          )}
+                          {row.guide_acceptance === 'other_dates' && (
+                            <span className="text-sky-700 text-[10px]" data-testid="guide-acceptance-other-dates">↻ Other dates</span>
                           )}
                           {row.guide_acceptance == null && (
                             <span className="text-yellow-700 text-[10px]">⏳ Awaiting</span>

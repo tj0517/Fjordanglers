@@ -58,11 +58,16 @@ const EMITTED_EVENT_TYPES = [
   // Guide requests (FA-M.03) — written by the DB functions in 20261117000000_add_guide_requests.sql,
   // in the same transaction as the change (tj D3 a). No token or link in any payload; the guide's
   // note never leaves guide_requests (only has_note).
-  'guide.request_sent',       // create_guide_request; actor admin, channel = request channel; payload: request_id, guide_id, channel, expires_at
+  'guide.request_sent',       // create_guide_request; actor admin, channel = request channel; payload: request_id, guide_id, channel, expires_at,
+                              // trip_country_set (FA-M.05 D4: the guide's country written to an inquiry that had none; null otherwise)
   'guide.request_opened',     // first opening of the link only; actor guide, channel app; payload: request_id, guide_id
   'guide.request_answered',   // actor guide, channel app; payload: request_id, guide_id, answer (accepted|declined|other_dates), alt_dates, has_note.
                               // Variant WITHOUT request_id (allowed): dashboard answer to an assignment from before FA-M.03 (no request record; tj D2 b) — payload: guide_id, answer, alt_dates ([]), has_note
-  'guide.request_withdrawn',  // withdraw_guide_request (FA-M.05 calls it); actor admin, channel app; payload: request_id, guide_id, was_answered
+                              // Variant ON BEHALF (FA-M.05 D1 b, accept_guide_request_on_behalf): actor ADMIN, answer accepted, payload.on_behalf_of_guide = true.
+                              // Metric rule (tj 2026-11-23): a guide response time counts only actor_kind = 'guide' answers.
+  'guide.request_withdrawn',  // withdraw_guide_request (FA-M.05 calls it); actor admin, channel app; payload: request_id, guide_id, was_answered,
+                              // detached (FA-M.05 D2: withdrawing the latest request detached its guide from the inquiry)
+  'guide.unassigned',         // unassign_guide_without_request (FA-M.05 D3): guide attached without an open request detached; actor admin, channel app; payload: guide_id
 ] as const
 
 // ─── Reserved — no emitter yet ────────────────────────────────────────────────
@@ -75,7 +80,6 @@ const RESERVED_EVENT_TYPES = [
   'offer.viewed',            // stage 1 — FA-1.12 (offers table)
   'inquiry.brief_completed', // stage 4 — brief replaces inquiry_trip_details
   'guide.assigned',          // stage 4
-  'guide.unassigned',        // stage 4
   'guide.accepted',          // not emitted — FA-M.03 D1 (a): guide.request_answered carries the answer
   'guide.declined',          // not emitted — FA-M.03 D1 (a): guide.request_answered carries the answer
   'incident.opened',         // stage 6 — /quality (M16)

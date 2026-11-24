@@ -4,7 +4,10 @@ import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { assignGuideToInquiry, assignGuideSilently, setExternalOffer, unassignGuide } from '@/actions/inquiries'
+import { setExternalOffer } from '@/actions/inquiries'
+import { sendGuideRequest, detachGuideWithoutRequestAction } from '@/actions/guide-requests'
+import type { InquiryGuideRequest } from '@/lib/guide-requests/requests'
+import { GuideRequestTimeline } from './GuideRequestTimeline'
 import type { CalendarStatus } from '@/lib/calendar/connections'
 import { CalendarConnectStatus } from './CalendarConnectStatus'
 
@@ -27,9 +30,11 @@ interface Props {
   guides:                 GuideWithCalendar[]
   requestedDates:         string[]   // ISO dates the angler requested
   tripCountry:            string | null
-  guideAcceptance:        string | null  // 'accepted' | 'declined' | null
+  guideAcceptance:        string | null  // 'accepted' | 'declined' | 'other_dates' | null
   guideDeclineReason:     string | null
   externalOfferSent:      boolean
+  /** FA-M.05: every request sent for this inquiry, newest first. */
+  requests:               InquiryGuideRequest[]
 }
 
 // ─── Mini read-only calendar ──────────────────────────────────────────────────
@@ -191,6 +196,7 @@ function GuideCard({
   onUnassigned,
   guideAcceptance,
   guideDeclineReason,
+  hasOpenRequest,
 }: {
   guide:               GuideWithCalendar
   requestedDates:      string[]
@@ -200,12 +206,18 @@ function GuideCard({
   onUnassigned:        () => void
   guideAcceptance?:    string | null
   guideDeclineReason?: string | null
+  /** FA-M.05 D3: an attached guide with an open request is detached by withdrawing it (timeline). */
+  hasOpenRequest:      boolean
 }) {
   const [showCalendar,    setShowCalendar]    = useState(false)
   const [pending,         start]              = useTransition()
   const [unassignPending, startUnassign]      = useTransition()
-  const [lastMode,        setLastMode]        = useState<'notify' | 'silent' | null>(null)
   const [err,             setErr]             = useState<string | null>(null)
+  const [warning,         setWarning]         = useState<string | null>(null)
+  // FA-M.05 D1 (a): the wa.me link and the request link live only in this state, once, after
+  // "Send request" — never in the URL, never re-shown after a reload.
+  const [sent,            setSent]            = useState<{ waUrl: string; link: string } | null>(null)
+  const [copied,          setCopied]          = useState(false)
 
   const blockedSet   = useMemo(() => new Set(guide.blockedDates), [guide.blockedDates])
   const conflicts    = requestedDates.filter(d => blockedSet.has(d))
@@ -218,27 +230,41 @@ function GuideCard({
     .join('')
     .toUpperCase()
 
-  function handleAssign(silent: boolean) {
-    setLastMode(silent ? 'silent' : 'notify')
+  function handleSend() {
     setErr(null)
+    setWarning(null)
+    setSent(null)
+    setCopied(false)
     start(async () => {
-      const res = silent
-        ? await assignGuideSilently(inquiryId, guide.id)
-        : await assignGuideToInquiry(inquiryId, guide.id)
+      const res = await sendGuideRequest(inquiryId, guide.id)
       if (!res.success) {
-        setErr(res.error ?? 'Failed to assign')
+        setErr(res.error)
       } else {
+        setSent({ waUrl: res.waUrl, link: res.link })
+        setWarning(res.warning)
         onAssigned(guide.id)
       }
     })
   }
 
+  async function copyLink() {
+    if (sent == null) return
+    try {
+      await navigator.clipboard.writeText(sent.link)
+      setCopied(true)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  // FA-M.05 D3 (a): only for a guide attached without an open request (before FA-M.03).
   function handleUnassign() {
+    if (!window.confirm(`Detach ${guide.full_name} from this inquiry?`)) return
     setErr(null)
     startUnassign(async () => {
-      const res = await unassignGuide(inquiryId)
+      const res = await detachGuideWithoutRequestAction(inquiryId)
       if (!res.success) {
-        setErr(res.error ?? 'Failed to unassign')
+        setErr(res.error)
       } else {
         onUnassigned()
       }
@@ -301,6 +327,11 @@ function GuideCard({
                   ✗ Declined{guideDeclineReason ? ` — ${guideDeclineReason}` : ''}
                 </span>
               )}
+              {guideAcceptance === 'other_dates' && (
+                <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body inline-block bg-primary/[6%] text-primary border border-primary/20">
+                  ↻ Other dates proposed
+                </span>
+              )}
               {(guideAcceptance == null) && (
                 <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body inline-block bg-yellow-300/15 text-yellow-900 border border-yellow-400/35">
                   ⏳ Awaiting response
@@ -315,40 +346,39 @@ function GuideCard({
           {isAssigned ? (
             <>
               <span className="text-[10px] font-bold f-body px-3 py-1.5 rounded-xl bg-emerald-500/12 text-emerald-800 border border-emerald-500/25">
-                ✓ {lastMode === 'silent' ? 'Linked' : 'Assigned'}
+                ✓ Assigned
               </span>
               <button
                 type="button"
-                onClick={handleUnassign}
-                disabled={unassignPending}
-                className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body transition-all whitespace-nowrap bg-red-500/7 text-red-800 border border-red-500/20 disabled:opacity-60 disabled:cursor-default"
+                onClick={handleSend}
+                disabled={pending}
+                className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body transition-all whitespace-nowrap bg-primary/[6%] text-primary border border-primary/15 disabled:opacity-60 disabled:cursor-default"
               >
-                {unassignPending ? '…' : 'Unassign'}
+                {pending ? '…' : 'Send new request'}
               </button>
+              {!hasOpenRequest && (
+                <button
+                  type="button"
+                  onClick={handleUnassign}
+                  disabled={unassignPending}
+                  className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body transition-all whitespace-nowrap bg-red-500/7 text-red-800 border border-red-500/20 disabled:opacity-60 disabled:cursor-default"
+                >
+                  {unassignPending ? '…' : 'Unassign'}
+                </button>
+              )}
             </>
           ) : (
             <>
               <button
                 type="button"
-                onClick={() => handleAssign(false)}
+                onClick={handleSend}
                 disabled={pending}
                 className={cn(
                   'px-4 py-1.5 rounded-xl text-xs font-bold f-body transition-all whitespace-nowrap bg-primary text-white disabled:cursor-default',
-                  pending && lastMode === 'notify' && 'opacity-60',
+                  pending && 'opacity-60',
                 )}
               >
-                {pending && lastMode === 'notify' ? '…' : 'Assign & notify'}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAssign(true)}
-                disabled={pending}
-                className={cn(
-                  'px-4 py-1.5 rounded-xl text-xs font-semibold f-body transition-all whitespace-nowrap bg-primary/[6%] text-primary/50 border border-primary/10 disabled:cursor-default',
-                  pending && lastMode === 'silent' && 'opacity-60',
-                )}
-              >
-                {pending && lastMode === 'silent' ? '…' : 'Link silently'}
+                {pending ? '…' : 'Send request'}
               </button>
             </>
           )}
@@ -358,7 +388,45 @@ function GuideCard({
       {/* ── Error ── */}
       {err && (
         <div className="px-5 pb-3">
-          <p className="text-xs f-body text-red-600">{err}</p>
+          <p role="alert" className="text-xs f-body text-red-600">{err}</p>
+        </div>
+      )}
+
+      {/* ── FA-M.05 D5: the earlier link could not be withdrawn — never a silent success ── */}
+      {warning && (
+        <div className="px-5 pb-3">
+          <p role="alert" data-testid="previous-link-warning" className="text-xs f-body font-semibold text-amber-800 bg-amber-400/15 border border-amber-500/30 rounded-xl px-3 py-2">
+            ⚠ {warning}
+          </p>
+        </div>
+      )}
+
+      {/* ── FA-M.05: request created — send it from WhatsApp (shown once) ── */}
+      {sent != null && (
+        <div className="px-5 pb-4" data-testid="request-sent-panel">
+          <div className="rounded-2xl px-4 py-3 bg-emerald-500/[6%] border border-emerald-500/25">
+            <p className="text-xs f-body font-semibold text-emerald-900 mb-2">
+              Request created. Send it to {guide.full_name.split(' ')[0]} on WhatsApp — this link is shown only now.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href={sent.waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-1.5 rounded-xl text-xs font-bold f-body bg-accent text-primary"
+              >
+                Open WhatsApp
+              </a>
+              <button
+                type="button"
+                onClick={copyLink}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold f-body bg-white text-primary border border-primary/15"
+              >
+                {copied ? 'Copied' : 'Copy link'}
+              </button>
+            </div>
+            <p className="mt-2 text-[10px] f-body text-primary/50 break-all select-all">{sent.link}</p>
+          </div>
         </div>
       )}
 
@@ -405,19 +473,16 @@ export function GuideAttachmentTab({
   guideAcceptance,
   guideDeclineReason,
   externalOfferSent,
+  requests,
 }: Props) {
   const router = useRouter()
-  const [assignedGuideId, setAssignedGuideId] = useState(currentAssignedGuideId)
+  // FA-M.05: the attached guide comes from the server on every refresh — a withdraw in the timeline
+  // (D2) or a send to another guide changes it there, and a local copy would go stale.
+  const assignedGuideId = currentAssignedGuideId
   const [extOffer, setExtOffer]               = useState(externalOfferSent)
   const [extPending, startExt]                = useTransition()
 
-  function handleAssigned(guideId: string) {
-    setAssignedGuideId(guideId)
-    router.refresh()
-  }
-
-  function handleUnassigned() {
-    setAssignedGuideId(null)
+  function refresh() {
     router.refresh()
   }
 
@@ -456,6 +521,9 @@ export function GuideAttachmentTab({
         </p>
       </div>
 
+      {/* FA-M.05: requests sent for this inquiry */}
+      <GuideRequestTimeline inquiryId={inquiryId} requests={requests} />
+
       {/* External offer toggle */}
       <button
         type="button"
@@ -493,10 +561,11 @@ export function GuideAttachmentTab({
               requestedDates={requestedDates}
               isAssigned={guide.id === assignedGuideId}
               inquiryId={inquiryId}
-              onAssigned={handleAssigned}
-              onUnassigned={handleUnassigned}
+              onAssigned={refresh}
+              onUnassigned={refresh}
               guideAcceptance={guide.id === assignedGuideId ? guideAcceptance : null}
               guideDeclineReason={guide.id === assignedGuideId ? guideDeclineReason : null}
+              hasOpenRequest={requests.some(r => r.guideId === guide.id && r.withdrawnAt == null)}
             />
           ))}
         </div>
