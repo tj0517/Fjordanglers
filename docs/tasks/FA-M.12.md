@@ -2,14 +2,15 @@
 id: FA-M.12
 title: PWA + web push — instalacja na ekranie telefonu, zgoda na powiadomienia, push przy nowym zleceniu otwiera stronę zlecenia
 stage: M
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-web
 branch: feat/fa-m.12-pwa-push
-depends_on: [FA-M.08, FA-M.11]
+pr: 216
+depends_on: [FA-M.08]
 blocked_by_questions: []
 touches_db: true
 touches_prod: true
