@@ -2,7 +2,7 @@
 id: FA-M.12
 title: PWA + web push — instalacja na ekranie telefonu, zgoda na powiadomienia, push przy nowym zleceniu otwiera stronę zlecenia
 stage: M
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -71,3 +71,4 @@ grep -n "addEventListener('fetch'" -r public src
 - **2026-11-10, tj:** forma aplikacji = PWA (bez sklepu).
 - **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
 - **2026-11-23, tj — D3 (a):** FA-M.12 idzie równolegle z FA-M.05; zależy tylko od FA-M.08 i FA-M.11 (klucze VAPID). „WhatsApp jest kanałem gwarantowanym” → „WhatsApp, wysyłany ręcznie przez FA” (FA-M.05 wariant A: brak WhatsApp Business API, link `wa.me` z osobistego telefonu tj).
+- **2026-11-25, tj:** FA-M.12 is built and proven locally on test VAPID keys; FA-M.11 (prod keys + Vercel env) is needed only to turn push on in production — dependency removed.
