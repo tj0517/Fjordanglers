@@ -16,11 +16,13 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { getGuideRequestPage } from '@/lib/guide-requests/page'
 import { OpenedBeacon } from './OpenedBeacon'
 import { RequestPanel } from './RequestPanel'
+import { guideAppMetadata } from '@/lib/push/guide-app-metadata'
 import { datesLabel } from './format'
 
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
+  ...guideAppMetadata,   // FA-M.12: installable from the request page
   title: 'Trip request',
   robots: { index: false, follow: false },
   referrer: 'no-referrer',

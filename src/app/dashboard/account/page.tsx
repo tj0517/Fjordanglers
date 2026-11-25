@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { PasswordResetButton } from './AccountActions'
 import { MarketingConsentToggle } from './MarketingConsentToggle'
 import { CalendarConnectCard } from './CalendarConnectCard'
+import { PushSettings, HomeScreenSteps } from './PushSettings'
+import { vapidPublicKey } from '@/lib/push/config'
 import { googleClientFromEnv } from '@/lib/calendar/google'
 import { calendarLinkKey } from '@/lib/calendar/link-crypto'
 import { guideCalendarConnection } from '@/lib/guide-panel/queries'
@@ -34,6 +36,8 @@ export default async function AccountPage() {
   const connection      = await guideCalendarConnection(guide.id)
   const appleAvailable  = calendarLinkKey().ok
   const googleAvailable = appleAvailable && googleClientFromEnv() != null
+  // FA-M.12: only the PUBLIC VAPID key reaches the browser; null = push off (no keys on this deployment).
+  const pushPublicKey   = vapidPublicKey()
 
   const email       = user.email ?? '—'
   const provider    = user.app_metadata?.provider ?? 'email'
@@ -60,6 +64,14 @@ export default async function AccountPage() {
       </div>
 
       <div className="flex flex-col gap-5">
+
+        {/* ── Notifications (FA-M.12, Settings.dc.html) ────────────────────── */}
+        <div id="notifications" className="scroll-mt-20 flex flex-col gap-5">
+          <Card title="Notifications">
+            <PushSettings publicKey={pushPublicKey} />
+          </Card>
+          <HomeScreenSteps />
+        </div>
 
         {/* ── Sign-in ──────────────────────────────────────────────────────── */}
         <Card title="Sign-in" help={

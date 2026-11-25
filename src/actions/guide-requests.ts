@@ -4,7 +4,8 @@
  * Admin actions for guide requests and guide WhatsApp numbers (FA-M.05).
  *
  *   sendGuideRequest                     create a request (channel whatsapp), withdraw the inquiry's other
- *                                        open requests (D5), return the wa.me link — once
+ *                                        open requests (D5), return the wa.me link — once; then, after the
+ *                                        response, push to the guide's phones (FA-M.12)
  *   withdrawGuideRequestAction           withdraw a request; the latest one also detaches the guide (D2)
  *   acceptGuideRequestOnBehalfAction     record "accepted" for the guide; event actor = admin (D1)
  *   detachGuideWithoutRequestAction    detach a guide attached without an open request (D3)
@@ -15,11 +16,13 @@
  */
 
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { requireAdmin } from '@/lib/auth/guards'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getAppUrl } from '@/lib/app-url'
 import { parseGuidePhone, setGuidePhone } from '@/lib/guide-contacts'
 import { sendGuideRequestByWhatsApp } from '@/lib/guide-requests/send'
+import { notifyGuideOfNewRequest } from '@/lib/push/guide-request-push'
 import {
   withdrawGuideRequest, acceptGuideRequestOnBehalf, detachGuideWithoutRequest,
 } from '@/lib/guide-requests/requests'
@@ -43,8 +46,13 @@ export async function sendGuideRequest(inquiryId: string, guideId: string): Prom
   const { userId } = await requireAdmin()
   if (!UUID.test(inquiryId) || !UUID.test(guideId)) return { success: false, error: 'Invalid id.' }
 
-  const result = await sendGuideRequestByWhatsApp(createServiceClient(), {
+  const client = createServiceClient()
+  const result = await sendGuideRequestByWhatsApp(client, {
     inquiryId, guideId, adminId: userId, appUrl: await getAppUrl(),
+  }, {
+    // FA-M.12: the push runs after the response. after() registers the promise with the platform
+    // (Vercel: waitUntil), so the function is not frozen before the push goes out; it never throws.
+    schedulePush: job => after(() => notifyGuideOfNewRequest(client, job)),
   })
   if (!result.ok) return { success: false, error: SEND_ERRORS[result.reason] }
 

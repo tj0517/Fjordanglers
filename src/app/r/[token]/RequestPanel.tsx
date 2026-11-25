@@ -6,6 +6,7 @@ import { submitRequestAnswer, type SubmitOutcome } from './actions'
 import { DatePicker } from './DatePicker'
 import { ExpiredNotice, whatsappHref } from './ExpiredNotice'
 import { dayLabel } from './format'
+import { HomeScreenNudge } from './HomeScreenNudge'
 
 const MAX_DATES = 3
 const MAX_NOTE = 500
@@ -66,7 +67,14 @@ export function RequestPanel({
   }
 
   if (expired) return <ExpiredNotice />
-  if (answered != null) return <AnsweredView answered={answered} wasAnsweredBefore={wasAnsweredBefore} />
+  if (answered != null) {
+    return (
+      <>
+        <AnsweredView answered={answered} wasAnsweredBefore={wasAnsweredBefore} />
+        <HomeScreenNudge />
+      </>
+    )
+  }
 
   return (
     <section aria-label="Your answer" className="space-y-3">

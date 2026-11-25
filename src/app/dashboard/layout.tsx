@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import { TermsGate } from '@/components/dashboard/terms-gate'
 import { DashboardSidenav } from '@/components/dashboard/sidenav'
 import { signOut } from '@/actions/auth'
+import { guideAppMetadata } from '@/lib/push/guide-app-metadata'
+
+// FA-M.12: the guide panel is the installable app (manifest start_url = /dashboard).
+export const metadata = guideAppMetadata
 
 /**
  * Dashboard layout — server component.
