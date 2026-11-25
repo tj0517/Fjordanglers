@@ -29,6 +29,9 @@
  *  CALENDAR_LINK_KEY                  32 random bytes, base64 (optional — calendar connect + sync, FA-M.09)
  *  GOOGLE_CALENDAR_CLIENT_ID          Google OAuth client id (optional — "Connect with Google", FA-M.10)
  *  GOOGLE_CALENDAR_CLIENT_SECRET      server-only secret of that client (optional — FA-M.10)
+ *  VAPID_PUBLIC_KEY                   base64url P-256 public key (optional — web push, FA-M.12; the only VAPID value the browser gets)
+ *  VAPID_PRIVATE_KEY                  base64url private key, server-only secret (optional — FA-M.12)
+ *  VAPID_SUBJECT                      mailto:… or https://… contact for push services (optional — FA-M.12)
  *
  * The three rate-limit variables are all-or-nothing: with any of them missing the
  * limiter is off and the inquiries route behaves as if it had no limit (O-29 a).
@@ -146,6 +149,14 @@ export const envSchema = z.object({
   // Apple path is unaffected. Read only in src/lib/calendar/google.ts (server-only).
   GOOGLE_CALENDAR_CLIENT_ID: z.string().optional(),
   GOOGLE_CALENDAR_CLIENT_SECRET: z.string().optional(),
+
+  // ── Web push (FA-M.12) ─────────────────────────────────────────────────────
+  // VAPID keys, all optional and NOT format-checked here (CALENDAR_LINK_KEY pattern): missing or
+  // malformed → push is off (src/lib/push/config.ts), requests still go out on WhatsApp, the site
+  // starts. Production keys: tj, FA-M.11. The private key is server-only — never NEXT_PUBLIC_*.
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
 
   // ── Google Ads API ─────────────────────────────────────────────────────────
   // All optional — cron silently skips sync if not configured.

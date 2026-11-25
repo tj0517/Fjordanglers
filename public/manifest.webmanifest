@@ -1,0 +1,16 @@
+{
+  "id": "/dashboard",
+  "name": "FjordAnglers",
+  "short_name": "FjordAnglers",
+  "description": "Trip requests from FjordAnglers — accept, decline or suggest dates in one tap.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFB",
+  "theme_color": "#0A2E4D",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

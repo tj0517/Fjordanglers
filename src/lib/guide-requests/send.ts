@@ -15,6 +15,7 @@ import type { Database } from '@/lib/supabase/database.types'
 import { getGuidePhone } from '@/lib/guide-contacts'
 import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
 import { createGuideRequest, withdrawOtherOpenRequests } from './requests'
+import type { GuideRequestPushJob } from '@/lib/push/guide-request-push'
 
 type Client = SupabaseClient<Database>
 
@@ -63,19 +64,33 @@ export interface GuideRequestMessageInput {
  */
 export function buildGuideRequestMessage(input: GuideRequestMessageInput): string {
   const greeting = input.guideFirstName != null && input.guideFirstName !== '' ? `Hi ${input.guideFirstName},` : 'Hi,'
-  const where = input.area != null ? `${input.area}, ` : ''
-  const party = input.partySize != null && input.partySize > 0
-    ? `${input.partySize} ${input.partySize === 1 ? 'angler' : 'anglers'}. `
-    : ''
   return [
     greeting,
     '',
-    `New request · ${where}${shortDates(input.dates)}`,
-    `${party}Tap to accept, decline or suggest dates:`,
+    requestHeadline(input),
+    `${partyLine(input.partySize)}Tap to accept, decline or suggest dates:`,
     input.link,
     '',
     'FjordAnglers',
   ].join('\n')
+}
+
+/**
+ * The push text (FA-M.12), same wording as the WhatsApp message and Push.dc.html: title
+ * "New request · Taupō, 14–15 Jan", body "2 anglers. Tap to accept, decline or suggest dates."
+ * No level / method (tj 2026-11-25: as the WhatsApp text), no link — the link is the click target.
+ */
+function buildGuideRequestPushText(input: Omit<GuideRequestMessageInput, 'guideFirstName' | 'link'>): { title: string; body: string } {
+  return { title: requestHeadline(input), body: `${partyLine(input.partySize)}Tap to accept, decline or suggest dates.` }
+}
+
+function requestHeadline(input: { area: string | null; dates: readonly string[] }): string {
+  const where = input.area != null ? `${input.area}, ` : ''
+  return `New request · ${where}${shortDates(input.dates)}`
+}
+
+function partyLine(partySize: number | null): string {
+  return partySize != null && partySize > 0 ? `${partySize} ${partySize === 1 ? 'angler' : 'anglers'}. ` : ''
 }
 
 /** wa.me link for an E.164 number (validated again here — never built from unchecked input). */
@@ -91,15 +106,26 @@ export type SendGuideRequestResult =
   | { ok: true; requestId: string; waUrl: string; link: string; previousStillActive: boolean }
   | { ok: false; reason: 'no_whatsapp_number' | 'guide_not_found' | 'inquiry_not_found' }
 
+export interface SendGuideRequestHooks {
+  /**
+   * FA-M.12: hands the push job to whoever runs it after the response (the action: Next `after()`).
+   * Called once, after the request is committed. Whatever it does — throw included — never changes
+   * the send's result: the request, its event and the wa.me link stand.
+   */
+  schedulePush?: (job: GuideRequestPushJob) => void
+}
+
 /**
  * Call after requireAdmin(); `adminId` is the caller's uid, `appUrl` the site origin. Checks the
  * guide's number first — no number, no request. Then creates the request (one row + one
  * guide.request_sent event, channel whatsapp, in one transaction) and returns the wa.me link.
  * Then (D5 a) withdraws the inquiry's other open requests; a failure there is reported, not hidden.
+ * Last, the push to the guide's phones is scheduled (FA-M.12) — it runs after the response.
  */
 export async function sendGuideRequestByWhatsApp(
   client: Client,
   params: { inquiryId: string; guideId: string; adminId: string; appUrl: string },
+  hooks: SendGuideRequestHooks = {},
 ): Promise<SendGuideRequestResult> {
   const phone = await getGuidePhone(params.guideId)
   if (phone == null) return { ok: false, reason: 'no_whatsapp_number' }
@@ -139,13 +165,24 @@ export async function sendGuideRequestByWhatsApp(
     inquiryId: params.inquiryId, keepRequestId: created.requestId, adminId: params.adminId,
   })
 
-  const link = `${params.appUrl.replace(/\/+$/, '')}/r/${created.token}`
-  const text = buildGuideRequestMessage({
-    guideFirstName: guide.full_name.trim().split(/\s+/)[0] ?? null,
-    partySize:      inquiry.party_size,
-    area:           region !== '' ? region : country !== '' ? country : null,
-    dates:          inquiry.requested_dates ?? [],
-    link,
-  })
+  const path = `/r/${created.token}`
+  const link = `${params.appUrl.replace(/\/+$/, '')}${path}`
+  const facts = {
+    partySize: inquiry.party_size,
+    area:      region !== '' ? region : country !== '' ? country : null,
+    dates:     inquiry.requested_dates ?? [],
+  }
+  const text = buildGuideRequestMessage({ ...facts, guideFirstName: guide.full_name.trim().split(/\s+/)[0] ?? null, link })
+
+  if (hooks.schedulePush != null) {
+    try {
+      hooks.schedulePush({
+        inquiryId: params.inquiryId, requestId: created.requestId, guideId: params.guideId,
+        ...buildGuideRequestPushText(facts), path,
+      })
+    } catch {
+      console.error(`[push] request ${created.requestId}: could not schedule the push; the request itself was sent`)
+    }
+  }
   return { ok: true, requestId: created.requestId, waUrl: waMeUrl(phone, text), link, previousStillActive: previous.failed > 0 }
 }

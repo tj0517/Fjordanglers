@@ -40,6 +40,8 @@ vi.mock('@/lib/auth/guards', async importOriginal => ({
 }))
 vi.mock('@/lib/app-url', () => ({ getAppUrl: async () => 'https://fa.test' }))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+// FA-M.12: the push is handed to after(); these tests cover the send itself (push: send-guide-request-push.test.ts).
+vi.mock('next/server', async importOriginal => ({ ...(await importOriginal<typeof import('next/server')>()), after: vi.fn() }))
 
 import {
   sendGuideRequest, withdrawGuideRequestAction, saveGuideWhatsAppNumber,

@@ -1663,6 +1663,36 @@ export type Database = {
           },
         ]
       }
+      guide_push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       guide_requests: {
         Row: {
           alt_dates: string[]
@@ -3660,6 +3690,10 @@ export type Database = {
         }
         Returns: string
       }
+      delete_push_subscription: {
+        Args: { p_endpoint: string; p_user_id: string }
+        Returns: boolean
+      }
       disablelongtransactions: { Args: never; Returns: string }
       disconnect_calendar: {
         Args: { p_actor: string; p_guide_id: string }
@@ -3948,6 +3982,10 @@ export type Database = {
           outcome: string
         }[]
       }
+      remove_gone_push_subscriptions: {
+        Args: { p_ids: string[] }
+        Returns: number
+      }
       replace_calendar_busy_days: {
         Args: { p_dates: string[]; p_guide_id: string }
         Returns: number
@@ -3955,6 +3993,15 @@ export type Database = {
       revoke_guide_invite: {
         Args: { p_admin_id: string; p_invite_id: string }
         Returns: boolean
+      }
+      save_push_subscription: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+          p_user_id: string
+        }
+        Returns: string
       }
       search_trips_near: {
         Args: {
