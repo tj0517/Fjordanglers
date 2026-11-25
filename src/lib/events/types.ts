@@ -68,6 +68,8 @@ const EMITTED_EVENT_TYPES = [
   'guide.request_withdrawn',  // withdraw_guide_request (FA-M.05 calls it); actor admin, channel app; payload: request_id, guide_id, was_answered,
                               // detached (FA-M.05 D2: withdrawing the latest request detached its guide from the inquiry)
   'guide.unassigned',         // unassign_guide_without_request (FA-M.05 D3): guide attached without an open request detached; actor admin, channel app; payload: guide_id
+  'guide.request_push_sent',  // web push after a request was sent (FA-M.12, notifyGuideOfNewRequest, after the response); actor system, channel app;
+                              // only when a push was attempted (keys set, >= 1 subscription — tj D3 A); payload: request_id, guide_id, sent, failed (incl. gone), removed. No token, link or endpoint
 ] as const
 
 // ─── Reserved — no emitter yet ────────────────────────────────────────────────
