@@ -151,7 +151,7 @@ Zakres: dokument „Aplikacja dla przewodników — zakres MVP” (Claude Docs) 
 | FA-M.09 | Kalendarz 1 — synchronizacja zajętości, Apple (link udostępniania), strona „Connect” przez podpisany link | L | opus | done | — |
 | FA-M.10 | Kalendarz 2 — „Connect with Google” (OAuth, odczyt zajętości, tokeny) | L | opus | done (PR #206) | FA-M.09, FA-M.11 |
 | FA-M.11 | Zgłoszenia zewnętrzne — klucze VAPID do push + env (szablon Mety odpada, Google zrobione); robi tj | S | — (człowiek) | todo | — |
-| FA-M.12 | PWA + web push — instalacja, zgoda, push przy nowym zleceniu | L | opus | review (PR #216) | FA-M.08 |
+| FA-M.12 | PWA + web push — instalacja, zgoda, push przy nowym zleceniu | L | opus | done (PR #216) | FA-M.08 |
 | FA-M.13 | Panel przewodnika — zlecenia, podgląd kalendarza, „Connect” w koncie | M | sonnet | done (PR #207) | FA-M.08, FA-M.03, FA-M.09, FA-M.10 |
 
 ## Stages 2–8

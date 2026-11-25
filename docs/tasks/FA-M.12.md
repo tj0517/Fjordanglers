@@ -2,7 +2,7 @@
 id: FA-M.12
 title: PWA + web push — instalacja na ekranie telefonu, zgoda na powiadomienia, push przy nowym zleceniu otwiera stronę zlecenia
 stage: M
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -84,3 +84,4 @@ grep -n "addEventListener('fetch'" -r public src
   - Mockup differences accepted: notification text without level/method (WhatsApp wording, FA-M.05); Settings without the "You" section (FA-M.13).
 - **2026-11-25, tj — installability:** confirmed by tj 2026-11-25 by viewing — Chrome on tj's Mac (ssh tunnel to the local dev server, Google hosts blocked in DevTools) showed the "Install app" dialog for FjordAnglers (localhost:3000) with the manifest name and icon, and the install icon in the address bar. The screenshot stays with tj (no file in `.playwright-mcp`). The automated CDP check (`Page.getInstallabilityErrors`) was not used as proof: in headless Chromium it returned `[]` for the real manifest and for five broken ones alike.
 - **2026-11-25, tj:** the Google Ads tag `AW-18171634204` loading on logged-in `/dashboard` pages (also from localhost) → `docs/deferred-tasks.md` under FA-M.12, not fixed here.
+- **2026-11-25, tj:** Accepted by tj 2026-11-25 after review; prod policies read after migrate-prod; installability confirmed by tj by viewing; real-phone push and the remaining toggle states pending FA-M.11 (deferred).
