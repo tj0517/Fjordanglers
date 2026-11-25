@@ -72,3 +72,12 @@ grep -n "addEventListener('fetch'" -r public src
 - **2026-11-17, tj:** makieta zatwierdzona — `docs/design/fa-m-guide-app/` (kanwa claude.ai, prywatna tj). Układ i copy wg makiety, fonty i komponenty z aplikacji; przy sprzeczności z zakresem zadania wygrywa zadanie — zgłoś różnicę.
 - **2026-11-23, tj — D3 (a):** FA-M.12 idzie równolegle z FA-M.05; zależy tylko od FA-M.08 i FA-M.11 (klucze VAPID). „WhatsApp jest kanałem gwarantowanym” → „WhatsApp, wysyłany ręcznie przez FA” (FA-M.05 wariant A: brak WhatsApp Business API, link `wa.me` z osobistego telefonu tj).
 - **2026-11-25, tj:** FA-M.12 is built and proven locally on test VAPID keys; FA-M.11 (prod keys + Vercel env) is needed only to turn push on in production — dependency removed.
+- **2026-11-25, tj — decisions (STOP 1 + STOP 2):**
+  - D1a (A): a push subscription belongs to the login (`user_id` → auth.users ON DELETE CASCADE); a push for a guide goes to every subscription of `guides.user_id`. Unlinking / deleting the login silences its phones.
+  - D1b (A): guides only READ their own rows (RLS); every write is server-side (action after `requireGuide()` + zod host allowlist, through a DB function). No direct INSERT/UPDATE/DELETE for anon / authenticated. `endpoint` UNIQUE; the same device subscribing under another login moves to that login.
+  - D2 (A): turning push on / off writes one `audit_log` row in the same transaction (FA-M.09 precedent); no endpoint or keys in it.
+  - D3 (A): `guide.request_push_sent` (actor system, source app, channel app; payload request_id, guide_id, sent, failed, removed) only when push was attempted (keys present and ≥ 1 subscription). Keys missing → one log line, no event.
+  - D4 (A): `web-push@3.6.7` pinned + `@types/web-push@3.6.4` (dev). 4.0.0 (2026-11-06, ESM-only, no types) not taken.
+  - Manifest only on `/dashboard` and `/r/[token]` (public pages byte-identical). Push sent after the response — the report shows how it survives on Vercel (function not cut off before the push goes out), covered by a test.
+  - Env names `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` approved.
+  - Mockup differences accepted: notification text without level/method (WhatsApp wording, FA-M.05); Settings without the "You" section (FA-M.13).
