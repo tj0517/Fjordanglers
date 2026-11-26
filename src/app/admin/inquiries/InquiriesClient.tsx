@@ -7,6 +7,8 @@ import { Search, X, CalendarDays, List, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ExternalOfferToggle } from './ExternalOfferToggle'
 import { InquiriesCalendar } from './InquiriesCalendar'
+import { GuideReminderFlag } from './GuideReminderFlag'
+import { isGuideNotOpened, type ReminderState } from '@/lib/guide-requests/reminder'
 import { STATUS_LABELS, type InquiryStatus } from '@/lib/inquiries/state'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -214,6 +216,9 @@ export interface BaseFilterParams {
   sourceFilter:    string
   qualifiedFilter: string
   slaFilter:       boolean
+  /** FA-M.06: only inquiries whose latest request the guide hasn't opened past the threshold. */
+  notOpenedFilter?: boolean
+  reminderMap?:     Record<string, ReminderState>
   tripMap:         Record<string, string>
   countryMap:      Record<string, string>
 }
@@ -270,6 +275,9 @@ export function applyBaseFilters(allRows: InquiryRow[], p: BaseFilterParams): In
   if (p.slaFilter)
     result = result.filter(r => needsAttention(r) || noOfferSinceHours(r) !== null)
 
+  if (p.notOpenedFilter)
+    result = result.filter(r => isGuideNotOpened(p.reminderMap?.[r.id]))
+
   return result
 }
 
@@ -282,11 +290,13 @@ interface Props {
   countryMap:   Record<string, string>
   guideMap:     Record<string, string>
   offerSentIds: string[]
+  /** FA-M.06: reminder state per inquiry id (absent = nothing to show). */
+  reminderMap:  Record<string, ReminderState>
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMap, offerSentIds }: Props) {
+export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMap, offerSentIds, reminderMap }: Props) {
   const searchParams = useSearchParams()
   const router       = useRouter()
   const pathname     = usePathname()
@@ -313,6 +323,7 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
   const [sourceFilter,    setSourceFilter   ] = useState(() => searchParams.get('source')     ?? '')
   const [qualifiedFilter, setQualifiedFilter] = useState(() => searchParams.get('qualified')  ?? '')
   const [slaFilter,       setSlaFilter      ] = useState(() => searchParams.get('sla') === '1')
+  const [notOpenedFilter, setNotOpenedFilter] = useState(() => searchParams.get('not_opened') === '1')
 
   const mounted = useRef(false)
   useEffect(() => {
@@ -330,9 +341,10 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
     if (sourceFilter)    p.set('source',     sourceFilter)
     if (qualifiedFilter) p.set('qualified',  qualifiedFilter)
     if (slaFilter)       p.set('sla',        '1')
+    if (notOpenedFilter) p.set('not_opened', '1')
     const qs = p.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [displayMode, mainFilter, subFilter, q, from, to, countryFilter, guideIdFilter, guideRespFilter, sourceFilter, qualifiedFilter, slaFilter]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [displayMode, mainFilter, subFilter, q, from, to, countryFilter, guideIdFilter, guideRespFilter, sourceFilter, qualifiedFilter, slaFilter, notOpenedFilter, router, pathname])
 
   // ── Dropdown options ───────────────────────────────────────────────────────
   const countries = useMemo(() =>
@@ -367,9 +379,9 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
   const baseRows = useMemo(() =>
     applyBaseFilters(allRows, {
       mainFilter, subFilter, q, countryFilter, guideIdFilter, guideRespFilter,
-      sourceFilter, qualifiedFilter, slaFilter, tripMap, countryMap,
+      sourceFilter, qualifiedFilter, slaFilter, notOpenedFilter, reminderMap, tripMap, countryMap,
     }),
-    [allRows, mainFilter, subFilter, q, countryFilter, guideIdFilter, guideRespFilter, sourceFilter, qualifiedFilter, slaFilter, tripMap, countryMap]
+    [allRows, mainFilter, subFilter, q, countryFilter, guideIdFilter, guideRespFilter, sourceFilter, qualifiedFilter, slaFilter, notOpenedFilter, reminderMap, tripMap, countryMap]
   )
 
   // ── List rows: from/to applied on top of baseRows — list-only ─────────────
@@ -397,14 +409,14 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
 
   const hasActiveFilters = q !== '' || from !== '' || to !== '' ||
     countryFilter !== '' || guideIdFilter !== '' || guideRespFilter !== '' ||
-    sourceFilter !== '' || qualifiedFilter !== '' || slaFilter
+    sourceFilter !== '' || qualifiedFilter !== '' || slaFilter || notOpenedFilter
 
   function commitSearch(value: string) { setQ(value.trim()) }
 
   function clearAllFilters() {
     setQ(''); setLocalQ(''); setFrom(''); setTo('')
     setCountryFilter(''); setGuideIdFilter(''); setGuideRespFilter('')
-    setSourceFilter(''); setQualifiedFilter(''); setSlaFilter(false)
+    setSourceFilter(''); setQualifiedFilter(''); setSlaFilter(false); setNotOpenedFilter(false)
   }
 
   function switchMain(key: MainFilter) {
@@ -758,6 +770,17 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
           ⏱ SLA
         </Button>
 
+        {/* FA-M.06: guide hasn't opened the request past its threshold */}
+        <Button
+          variant={notOpenedFilter ? 'destructive' : 'outline'}
+          size="sm"
+          onClick={() => setNotOpenedFilter(s => !s)}
+          title="Show only inquiries whose guide hasn't opened the request (12 h in season / 24 h)"
+          data-testid="filter-not-opened"
+        >
+          Guide hasn’t opened
+        </Button>
+
         {/* Clear */}
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-destructive">
@@ -887,6 +910,9 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
                             <span className="text-yellow-700 text-[10px]">⏳ Awaiting</span>
                           )}
                         </div>
+                        {reminderMap[row.id] != null && (
+                          <GuideReminderFlag state={reminderMap[row.id]} inquiryId={row.id} compact />
+                        )}
                         {showToggle && (
                           <div className="mt-1" onClick={e => e.stopPropagation()}>
                             <ExternalOfferToggle inquiryId={row.id} initial={row.external_offer_sent} />

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { setExternalOffer } from '@/actions/inquiries'
 import { sendGuideRequest, detachGuideWithoutRequestAction } from '@/actions/guide-requests'
 import type { InquiryGuideRequest } from '@/lib/guide-requests/requests'
+import type { ReminderState } from '@/lib/guide-requests/reminder'
 import { GuideRequestTimeline } from './GuideRequestTimeline'
 import type { CalendarStatus } from '@/lib/calendar/connections'
 import { CalendarConnectStatus } from './CalendarConnectStatus'
@@ -35,6 +36,8 @@ interface Props {
   externalOfferSent:      boolean
   /** FA-M.05: every request sent for this inquiry, newest first. */
   requests:               InquiryGuideRequest[]
+  /** FA-M.06: reminder state of the latest non-withdrawn request (null = nothing to show). */
+  reminder?:              ReminderState | null
 }
 
 // ─── Mini read-only calendar ──────────────────────────────────────────────────
@@ -474,6 +477,7 @@ export function GuideAttachmentTab({
   guideDeclineReason,
   externalOfferSent,
   requests,
+  reminder = null,
 }: Props) {
   const router = useRouter()
   // FA-M.05: the attached guide comes from the server on every refresh — a withdraw in the timeline
@@ -522,7 +526,7 @@ export function GuideAttachmentTab({
       </div>
 
       {/* FA-M.05: requests sent for this inquiry */}
-      <GuideRequestTimeline inquiryId={inquiryId} requests={requests} />
+      <GuideRequestTimeline inquiryId={inquiryId} requests={requests} reminder={reminder} />
 
       {/* External offer toggle */}
       <button
@@ -553,7 +557,7 @@ export function GuideAttachmentTab({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="send-request" className="grid grid-cols-1 md:grid-cols-2 gap-4 scroll-mt-6">
           {sorted.map(guide => (
             <GuideCard
               key={guide.id}

@@ -39,6 +39,7 @@ import type { TripDetails } from '@/actions/inquiries'
 import { availabilityWindow } from '@/lib/availability-window'
 import { busyDaysByGuide, calendarStatusByGuide } from '@/lib/calendar/connections'
 import { listGuideRequestsForInquiry } from '@/lib/guide-requests/requests'
+import { listReminderStates } from '@/lib/guide-requests/reminder'
 import { depositSetFromOldPrice } from '@/lib/inquiries/deposit'
 import { ExternalOfferToggle } from '../ExternalOfferToggle'
 import { EventTimeline } from '@/components/admin/inquiry/EventTimeline'
@@ -203,6 +204,8 @@ export default async function AdminInquiryDetailPage({
 
   // ── FA-M.05: guide requests for the timeline (no token, no hash) ─────────
   const guideRequests = await listGuideRequestsForInquiry(svc, inquiry.id)
+  // FA-M.06: "guide hasn't opened" / reminded / link expired, computed now for the latest request
+  const reminder = (await listReminderStates(svc, { inquiryId: inquiry.id }))[inquiry.id] ?? null
 
   // ── Fetch active guides with blocked dates ────────────────────────────────
   let countryGuides: GuideWithCalendar[] = []
@@ -596,6 +599,7 @@ export default async function AdminInquiryDetailPage({
       guideDeclineReason={inquiry.guide_decline_reason ?? null}
       externalOfferSent={inquiry.external_offer_sent ?? false}
       requests={guideRequests}
+      reminder={reminder}
     />
   )
 

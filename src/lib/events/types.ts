@@ -70,6 +70,8 @@ const EMITTED_EVENT_TYPES = [
   'guide.unassigned',         // unassign_guide_without_request (FA-M.05 D3): guide attached without an open request detached; actor admin, channel app; payload: guide_id
   'guide.request_push_sent',  // web push after a request was sent (FA-M.12, notifyGuideOfNewRequest, after the response); actor system, channel app;
                               // only when a push was attempted (keys set, >= 1 subscription — tj D3 A); payload: request_id, guide_id, sent, failed (incl. gone), removed. No token, link or endpoint
+  'guide.request_reminded',   // record_guide_request_reminder (FA-M.06): the admin sent the one manual WhatsApp reminder from tj's phone (FA sends nothing);
+                              // actor admin, channel whatsapp; payload: request_id, guide_id. No token, link, phone number or message text
 ] as const
 
 // ─── Reserved — no emitter yet ────────────────────────────────────────────────

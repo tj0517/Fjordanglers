@@ -7,7 +7,7 @@
  *   answerGuideRequest              the guide answers through the link (once; same answer again = no-op)
  *   answerGuideRequestFromDashboard the signed-in dashboard (respondToAssignment, D2 b)
  *   withdrawGuideRequest            admin withdraws a request (FA-M.05 calls it)
- *   listGuideRequestsForInquiry     the admin inquiry card's request timeline (FA-M.05)
+ *   listGuideRequestsForInquiry     the admin inquiry card's request timeline (FA-M.05; reminded_at since FA-M.06)
  *   acceptGuideRequestOnBehalf      admin records "accepted" for the guide (FA-M.05 D1 b; event actor = admin)
  *   detachGuideWithoutRequest     admin detaches a guide attached without an open request (FA-M.05 D3 a)
  *
@@ -353,6 +353,8 @@ export interface InquiryGuideRequest {
   altDates:      string[]
   note:          string | null
   withdrawnAt:   string | null
+  /** FA-M.06: when the admin recorded the manual WhatsApp reminder. */
+  remindedAt:    string | null
 }
 
 /** Every request sent for the inquiry, newest first. Call after requireAdmin() (service client). */
@@ -360,7 +362,7 @@ export async function listGuideRequestsForInquiry(client: Client, inquiryId: str
   const { data, error } = await client
     .from('guide_requests')
     .select(`id, guide_id, channel, sent_at, token_expires_at, first_opened_at, answered_at, answer,
-      alt_dates, note, withdrawn_at, guides (full_name)`)
+      alt_dates, note, withdrawn_at, reminded_at, guides (full_name)`)
     .eq('inquiry_id', inquiryId)
     .order('sent_at', { ascending: false })
   if (error != null) throw new GuideRequestError(`listGuideRequestsForInquiry failed: ${error.message}`)
@@ -379,6 +381,7 @@ export async function listGuideRequestsForInquiry(client: Client, inquiryId: str
     altDates:      r.alt_dates ?? [],
     note:          r.note,
     withdrawnAt:   r.withdrawn_at,
+    remindedAt:    r.reminded_at,
   }))
 }
 

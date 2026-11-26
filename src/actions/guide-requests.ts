@@ -9,6 +9,7 @@
  *   withdrawGuideRequestAction           withdraw a request; the latest one also detaches the guide (D2)
  *   acceptGuideRequestOnBehalfAction     record "accepted" for the guide; event actor = admin (D1)
  *   detachGuideWithoutRequestAction    detach a guide attached without an open request (D3)
+ *   remindGuideOnWhatsAppAction          FA-M.06: record the one manual reminder, return its wa.me link
  *   saveGuideWhatsAppNumber              store / clear the guide's number in guide_contacts
  *
  * Every action runs requireAdmin() before any service-role read or write. The request token is in
@@ -20,8 +21,9 @@ import { after } from 'next/server'
 import { requireAdmin } from '@/lib/auth/guards'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getAppUrl } from '@/lib/app-url'
-import { parseGuidePhone, setGuidePhone } from '@/lib/guide-contacts'
-import { sendGuideRequestByWhatsApp } from '@/lib/guide-requests/send'
+import { parseGuidePhone, setGuidePhone, getGuidePhone } from '@/lib/guide-contacts'
+import { sendGuideRequestByWhatsApp, loadGuideRequestFacts, buildGuideReminderMessage, waMeUrl } from '@/lib/guide-requests/send'
+import { listReminderStates, recordGuideRequestReminder, type ReminderOutcome } from '@/lib/guide-requests/reminder'
 import { notifyGuideOfNewRequest } from '@/lib/push/guide-request-push'
 import {
   withdrawGuideRequest, acceptGuideRequestOnBehalf, detachGuideWithoutRequest,
@@ -111,6 +113,53 @@ export async function detachGuideWithoutRequestAction(inquiryId: string): Promis
   revalidatePath(`/admin/inquiries/${inquiryId}`)
   revalidatePath('/admin/inquiries')
   return { success: true }
+}
+
+// ─── FA-M.06: the manual WhatsApp reminder ────────────────────────────────────
+
+export type RemindActionResult = { success: true; waUrl: string } | { success: false; error: string }
+
+const REMIND_ERRORS: Record<Exclude<ReminderOutcome, 'reminded'> | 'not_due' | 'no_whatsapp_number', string> = {
+  not_due:            'This request does not need a reminder (yet).',
+  no_whatsapp_number: 'This guide has no WhatsApp number. Add it on the guide’s edit page first.',
+  not_found:          'Request not found.',
+  guide_removed:      'The guide was removed.',
+  withdrawn:          'This request was withdrawn.',
+  already_answered:   'The guide has already answered this request.',
+  already_opened:     'The guide has opened the request.',
+  already_reminded:   'A reminder was already recorded for this request.',
+  wrong_channel:      'Reminders are only for requests sent on WhatsApp.',
+  expired:            'The link has expired — send a new request.',
+}
+
+/**
+ * Records the reminder (reminded_at + guide.request_reminded, one transaction) and returns the
+ * wa.me link with the reminder text; the admin sends it from tj's phone. Refused unless the
+ * inquiry's latest request is flagged "hasn't opened" now (checked here on the server, not only by
+ * hiding the button). The text carries no link or token (the /r/ link cannot be rebuilt).
+ */
+export async function remindGuideOnWhatsAppAction(inquiryId: string, requestId: string): Promise<RemindActionResult> {
+  const { userId } = await requireAdmin()
+  if (!UUID.test(inquiryId) || !UUID.test(requestId)) return { success: false, error: 'Invalid id.' }
+
+  const client = createServiceClient()
+  const state = (await listReminderStates(client, { inquiryId }))[inquiryId]
+  if (state?.kind !== 'not_opened' || state.requestId !== requestId || !state.canRemind) {
+    return { success: false, error: REMIND_ERRORS.not_due }
+  }
+
+  const phone = await getGuidePhone(state.guideId)
+  if (phone == null) return { success: false, error: REMIND_ERRORS.no_whatsapp_number }
+  const loaded = await loadGuideRequestFacts(client, { inquiryId, guideId: state.guideId })
+  if (!loaded.ok) return { success: false, error: REMIND_ERRORS.not_found }
+  const waUrl = waMeUrl(phone, buildGuideReminderMessage({ ...loaded.facts, guideFirstName: loaded.guideFirstName }))
+
+  const outcome = await recordGuideRequestReminder(client, { requestId, adminId: userId })
+  if (outcome !== 'reminded') return { success: false, error: REMIND_ERRORS[outcome] }
+
+  revalidatePath(`/admin/inquiries/${inquiryId}`)
+  revalidatePath('/admin/inquiries')
+  return { success: true, waUrl }
 }
 
 export type SaveNumberResult = { success: true; phoneE164: string | null } | { success: false; error: string }

@@ -39,12 +39,12 @@ const OTHER_DATES: InquiryGuideRequest = {
   requestId: 'r-2', guideId: GUIDE.id, guideName: 'Tama Ngata', channel: 'whatsapp',
   sentAt: '2026-11-22T09:00:00Z', expiresAt: FUTURE, expired: false, firstOpenedAt: '2026-11-22T10:15:00Z',
   answeredAt: '2026-11-22T11:00:00Z', answer: 'other_dates', altDates: ['2027-01-20', '2027-01-21'],
-  note: 'River is high that week', withdrawnAt: null,
+  note: 'River is high that week', withdrawnAt: null,  remindedAt: null,
 }
 const EARLIER_DECLINED: InquiryGuideRequest = {
   requestId: 'r-1', guideId: 'g-old', guideName: 'Old Guide', channel: 'whatsapp',
   sentAt: '2026-11-20T09:00:00Z', expiresAt: FUTURE, expired: false, firstOpenedAt: '2026-11-20T09:30:00Z',
-  answeredAt: '2026-11-20T12:00:00Z', answer: 'declined', altDates: [], note: 'Fully booked', withdrawnAt: null,
+  answeredAt: '2026-11-20T12:00:00Z', answer: 'declined', altDates: [], note: 'Fully booked', withdrawnAt: null, remindedAt: null,
 }
 
 function tab(props: Partial<Parameters<typeof GuideAttachmentTab>[0]> = {}) {

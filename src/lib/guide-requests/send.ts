@@ -76,6 +76,24 @@ export function buildGuideRequestMessage(input: GuideRequestMessageInput): strin
 }
 
 /**
+ * FA-M.06 — the one manual reminder, in the wording of the approved "Still waiting" push
+ * (Push.dc.html, tj 2026-11-26). It carries no link: the token is stored only as a hash, so the
+ * `/r/` link cannot be rebuilt — the text points the guide to the link in the earlier message in the
+ * same WhatsApp chat. Same facts as the request message (first name, area, dates, party size).
+ */
+export function buildGuideReminderMessage(input: Omit<GuideRequestMessageInput, 'link'>): string {
+  const greeting = input.guideFirstName != null && input.guideFirstName !== '' ? `Hi ${input.guideFirstName},` : 'Hi,'
+  return [
+    greeting,
+    '',
+    `Still waiting · ${requestPlace(input)}`,
+    `${partyLine(input.partySize)}The client is waiting for an answer — the link is in my message above. One tap is enough.`,
+    '',
+    'FjordAnglers',
+  ].join('\n')
+}
+
+/**
  * The push text (FA-M.12), same wording as the WhatsApp message and Push.dc.html: title
  * "New request · Taupō, 14–15 Jan", body "2 anglers. Tap to accept, decline or suggest dates."
  * No level / method (tj 2026-11-25: as the WhatsApp text), no link — the link is the click target.
@@ -84,9 +102,13 @@ function buildGuideRequestPushText(input: Omit<GuideRequestMessageInput, 'guideF
   return { title: requestHeadline(input), body: `${partyLine(input.partySize)}Tap to accept, decline or suggest dates.` }
 }
 
-function requestHeadline(input: { area: string | null; dates: readonly string[] }): string {
+function requestPlace(input: { area: string | null; dates: readonly string[] }): string {
   const where = input.area != null ? `${input.area}, ` : ''
-  return `New request · ${where}${shortDates(input.dates)}`
+  return `${where}${shortDates(input.dates)}`
+}
+
+function requestHeadline(input: { area: string | null; dates: readonly string[] }): string {
+  return `New request · ${requestPlace(input)}`
 }
 
 function partyLine(partySize: number | null): string {
@@ -97,6 +119,62 @@ function partyLine(partySize: number | null): string {
 export function waMeUrl(phoneE164: string, text: string): string {
   if (!/^\+[1-9]\d{7,14}$/.test(phoneE164)) throw new Error('waMeUrl: not an E.164 number')
   return `https://wa.me/${phoneE164.slice(1)}?text=${encodeURIComponent(text)}`
+}
+
+// ─── the facts a guide message carries ───────────────────────────────────────
+
+interface GuideMessageFacts {
+  partySize: number | null
+  /** Region of the experience, else the trip country (an inquiry without one takes the guide's — D4). */
+  area:      string | null
+  dates:     readonly string[]
+}
+
+export type LoadFactsResult =
+  | { ok: true; guideFirstName: string | null; facts: GuideMessageFacts }
+  | { ok: false; reason: 'guide_not_found' | 'inquiry_not_found' }
+
+/**
+ * What the request message and the reminder (FA-M.06) say about the trip — and nothing more: the
+ * guide's first name, area, dates, party size. No angler name or contact, no budget.
+ */
+export async function loadGuideRequestFacts(
+  client: Client,
+  params: { inquiryId: string; guideId: string },
+): Promise<LoadFactsResult> {
+  const { data: guide, error: guideError } = await client
+    .from('guides')
+    .select('full_name, country')
+    .eq('id', params.guideId)
+    .maybeSingle()
+  if (guideError != null) throw new Error(`loadGuideRequestFacts: guide read failed: ${guideError.message}`)
+  if (guide == null) return { ok: false, reason: 'guide_not_found' }
+
+  const { data: inquiry, error: inquiryError } = await client
+    .from('inquiries')
+    .select('party_size, requested_dates, trip_country, experience_page_id, trip_id')
+    .eq('id', params.inquiryId)
+    .maybeSingle()
+  if (inquiryError != null) throw new Error(`loadGuideRequestFacts: inquiry read failed: ${inquiryError.message}`)
+  if (inquiry == null) return { ok: false, reason: 'inquiry_not_found' }
+
+  const experience = await getInquiryExperience({
+    experience_page_id: inquiry.experience_page_id,
+    trip_id:            inquiry.trip_id,
+  })
+  const region = experience?.region.trim() ?? ''
+  // An inquiry without a country takes the guide's in create_guide_request (D4) — say the same here.
+  const country = inquiry.trip_country?.trim() || guide.country?.trim() || ''
+
+  return {
+    ok: true,
+    guideFirstName: guide.full_name.trim().split(/\s+/)[0] ?? null,
+    facts: {
+      partySize: inquiry.party_size,
+      area:      region !== '' ? region : country !== '' ? country : null,
+      dates:     inquiry.requested_dates ?? [],
+    },
+  }
 }
 
 // ─── send ─────────────────────────────────────────────────────────────────────
@@ -130,29 +208,8 @@ export async function sendGuideRequestByWhatsApp(
   const phone = await getGuidePhone(params.guideId)
   if (phone == null) return { ok: false, reason: 'no_whatsapp_number' }
 
-  const { data: guide, error: guideError } = await client
-    .from('guides')
-    .select('full_name, country')
-    .eq('id', params.guideId)
-    .maybeSingle()
-  if (guideError != null) throw new Error(`sendGuideRequestByWhatsApp: guide read failed: ${guideError.message}`)
-  if (guide == null) return { ok: false, reason: 'guide_not_found' }
-
-  const { data: inquiry, error: inquiryError } = await client
-    .from('inquiries')
-    .select('party_size, requested_dates, trip_country, experience_page_id, trip_id')
-    .eq('id', params.inquiryId)
-    .maybeSingle()
-  if (inquiryError != null) throw new Error(`sendGuideRequestByWhatsApp: inquiry read failed: ${inquiryError.message}`)
-  if (inquiry == null) return { ok: false, reason: 'inquiry_not_found' }
-
-  const experience = await getInquiryExperience({
-    experience_page_id: inquiry.experience_page_id,
-    trip_id:            inquiry.trip_id,
-  })
-  const region = experience?.region.trim() ?? ''
-  // An inquiry without a country takes the guide's in create_guide_request (D4) — say the same here.
-  const country = inquiry.trip_country?.trim() || guide.country?.trim() || ''
+  const loaded = await loadGuideRequestFacts(client, { inquiryId: params.inquiryId, guideId: params.guideId })
+  if (!loaded.ok) return loaded
 
   const created = await createGuideRequest(client, {
     inquiryId: params.inquiryId,
@@ -167,12 +224,8 @@ export async function sendGuideRequestByWhatsApp(
 
   const path = `/r/${created.token}`
   const link = `${params.appUrl.replace(/\/+$/, '')}${path}`
-  const facts = {
-    partySize: inquiry.party_size,
-    area:      region !== '' ? region : country !== '' ? country : null,
-    dates:     inquiry.requested_dates ?? [],
-  }
-  const text = buildGuideRequestMessage({ ...facts, guideFirstName: guide.full_name.trim().split(/\s+/)[0] ?? null, link })
+  const { facts, guideFirstName } = loaded
+  const text = buildGuideRequestMessage({ ...facts, guideFirstName, link })
 
   if (hooks.schedulePush != null) {
     try {
