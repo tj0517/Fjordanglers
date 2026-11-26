@@ -98,7 +98,7 @@ async function resetInquiry() {
   const i = await s.from('inquiries').insert({
     id: INQ, angler_name: 'FA-M.06 Angler Secret', angler_email: 'fam06-angler@seed.test',
     angler_phone: '+48500100200', status: 'waiting_guide', trip_country: 'New Zealand', party_size: 2,
-    requested_dates: ['2027-01-14', '2027-01-15'],
+    requested_dates: ['2027-01-14', '2027-01-15'], experience_page_id: PAGE,
   })
   if (i.error != null) throw new Error(i.error.message)
 }
@@ -142,15 +142,17 @@ beforeEach(async () => {
 describe('record_guide_request_reminder — one reminder per request', () => {
   it('first call → reminded (reminded_at set, one guide.request_reminded); second call → already_reminded, nothing more', async () => {
     const id = await makeRequest()
-    expect(await recordGuideRequestReminder(svc(), { requestId: id, adminId: ADMIN_ID })).toBe('reminded')
+    const firstOutcome = await recordGuideRequestReminder(svc(), { requestId: id, adminId: ADMIN_ID })
     const first = await remindedAt(id)
-    expect(first).not.toBeNull()
+    const secondOutcome = await recordGuideRequestReminder(svc(), { requestId: id, adminId: ADMIN_ID })
 
-    expect(await recordGuideRequestReminder(svc(), { requestId: id, adminId: ADMIN_ID })).toBe('already_reminded')
-    expect(await remindedAt(id)).toBe(first)
-
+    // Counted first: without the guard the second call writes a second event.
     const ev = (await events()).filter(e => e.type === 'guide.request_reminded')
     expect(ev).toHaveLength(1)
+    expect([firstOutcome, secondOutcome]).toEqual(['reminded', 'already_reminded'])
+    expect(first).not.toBeNull()
+    expect(await remindedAt(id)).toBe(first)
+
     expect(ev[0]).toMatchObject({ actor_kind: 'admin', actor_id: ADMIN_ID, source: 'app', channel: 'whatsapp' })
     // payload: request_id and guide_id only — no token, link, phone number or message text
     expect(ev[0].payload).toEqual({ request_id: id, guide_id: GUIDE })

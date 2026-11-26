@@ -214,7 +214,7 @@ describe('listGuideRequestsForInquiry (what the card renders after a reload)', (
     expect(rendered.includes('token_hash')).toBe(false)
     expect(Object.keys(list[0]).sort()).toEqual([
       'altDates', 'answer', 'answeredAt', 'channel', 'expired', 'expiresAt', 'firstOpenedAt', 'guideId', 'guideName',
-      'note', 'requestId', 'sentAt', 'withdrawnAt',
+      'note', 'remindedAt', 'requestId', 'sentAt', 'withdrawnAt',
     ])
   })
 })

@@ -344,7 +344,7 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
     if (notOpenedFilter) p.set('not_opened', '1')
     const qs = p.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [displayMode, mainFilter, subFilter, q, from, to, countryFilter, guideIdFilter, guideRespFilter, sourceFilter, qualifiedFilter, slaFilter, notOpenedFilter]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [displayMode, mainFilter, subFilter, q, from, to, countryFilter, guideIdFilter, guideRespFilter, sourceFilter, qualifiedFilter, slaFilter, notOpenedFilter, router, pathname])
 
   // ── Dropdown options ───────────────────────────────────────────────────────
   const countries = useMemo(() =>

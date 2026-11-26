@@ -3975,6 +3975,13 @@ export type Database = {
         }
         Returns: string
       }
+      record_guide_request_reminder: {
+        Args: { p_admin_id: string; p_request_id: string }
+        Returns: {
+          outcome: string
+          reminded_at: string
+        }[]
+      }
       redeem_guide_invite: {
         Args: { p_token_hash: string; p_user_email: string; p_user_id: string }
         Returns: {
