@@ -6,6 +6,7 @@
 import { Suspense } from 'react'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getInquiryExperiences } from '@/lib/inquiries/experience-lookup'
+import { listReminderStates } from '@/lib/guide-requests/reminder'
 import { InquiriesClient } from './InquiriesClient'
 import type { InquiryRow } from './InquiriesClient'
 
@@ -59,6 +60,9 @@ export default async function AdminInquiriesPage() {
     .filter(d => Array.isArray(d.guide_options) && (d.guide_options as unknown[]).length > 0)
     .map(d => d.inquiry_id)
 
+  // ── FA-M.06: "guide hasn't opened" / reminded / link expired, computed now ──
+  const reminderMap = await listReminderStates(svc)
+
   return (
     <Suspense>
       <InquiriesClient
@@ -68,6 +72,7 @@ export default async function AdminInquiriesPage() {
         countryMap={countryMap}
         guideMap={guideMap}
         offerSentIds={offerSentIds}
+        reminderMap={reminderMap}
       />
     </Suspense>
   )

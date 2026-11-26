@@ -5,11 +5,16 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { withdrawGuideRequestAction, acceptGuideRequestOnBehalfAction } from '@/actions/guide-requests'
 import type { InquiryGuideRequest } from '@/lib/guide-requests/requests'
+import type { ReminderState } from '@/lib/guide-requests/reminder'
+import { GuideReminderFlag } from '../GuideReminderFlag'
 
 /**
  * FA-M.05 — the guide requests of one inquiry: the latest one on top, earlier ones (after a guide
  * change) under "Earlier requests". Each shows sent / opened / answer (accepted, declined with the
  * reason, other dates with the guide's dates and note) / withdrawn. The guide's note is plain text.
+ *
+ * FA-M.06: the latest request carries the "guide hasn't opened" flag with "Remind on WhatsApp"
+ * (WhatsApp requests only), "reminded X h ago" after that, or "link expired — send a new request".
  */
 
 const TZ = 'Europe/Warsaw'
@@ -90,7 +95,7 @@ function AnswerStep({ r }: { r: InquiryGuideRequest }) {
     : <Step testId="answer" tone="wait" label="Waiting for an answer" detail={`Link valid until ${when(r.expiresAt)}`} />
 }
 
-function RequestCard({ r, inquiryId, current }: { r: InquiryGuideRequest; inquiryId: string; current: boolean }) {
+function RequestCard({ r, inquiryId, current, reminder }: { r: InquiryGuideRequest; inquiryId: string; current: boolean; reminder: ReminderState | null }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [err, setErr] = useState<string | null>(null)
@@ -152,11 +157,15 @@ function RequestCard({ r, inquiryId, current }: { r: InquiryGuideRequest; inquir
           </div>
         )}
       </div>
+      {reminder != null && reminder.kind !== 'none' && <GuideReminderFlag state={reminder} inquiryId={inquiryId} />}
       <ol className="flex flex-col gap-2">
         <Step testId="sent" tone="done" label={`Sent via ${r.channel === 'whatsapp' ? 'WhatsApp' : r.channel}`} detail={when(r.sentAt)} />
         {r.firstOpenedAt != null
           ? <Step testId="opened" tone="done" label="Opened" detail={when(r.firstOpenedAt)} />
           : <Step testId="opened" tone="muted" label="Not opened yet" />}
+        {r.remindedAt != null && (
+          <Step testId="reminded" tone="done" label="Reminded on WhatsApp" detail={when(r.remindedAt)} />
+        )}
         <AnswerStep r={r} />
         {r.withdrawnAt != null && (
           <Step testId="withdrawn" tone="muted" label="Withdrawn" detail={when(r.withdrawnAt)} />
@@ -167,7 +176,7 @@ function RequestCard({ r, inquiryId, current }: { r: InquiryGuideRequest; inquir
   )
 }
 
-export function GuideRequestTimeline({ inquiryId, requests }: { inquiryId: string; requests: InquiryGuideRequest[] }) {
+export function GuideRequestTimeline({ inquiryId, requests, reminder = null }: { inquiryId: string; requests: InquiryGuideRequest[]; reminder?: ReminderState | null }) {
   if (requests.length === 0) {
     return (
       <section aria-label="Guide requests" className="mb-5">
@@ -179,14 +188,14 @@ export function GuideRequestTimeline({ inquiryId, requests }: { inquiryId: strin
   return (
     <section aria-label="Guide requests" className="mb-6">
       <p className="text-[10px] font-bold uppercase tracking-[0.12em] f-body text-primary/40 mb-2">Latest request</p>
-      <RequestCard r={latest} inquiryId={inquiryId} current />
+      <RequestCard r={latest} inquiryId={inquiryId} current reminder={reminder != null && reminder.kind !== 'none' && reminder.requestId === latest.requestId ? reminder : null} />
       {earlier.length > 0 && (
         <div className="mt-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] f-body text-primary/40 mb-2">
             Earlier requests ({earlier.length})
           </p>
           <div className="flex flex-col gap-2">
-            {earlier.map(r => <RequestCard key={r.requestId} r={r} inquiryId={inquiryId} current={false} />)}
+            {earlier.map(r => <RequestCard key={r.requestId} r={r} inquiryId={inquiryId} current={false} reminder={reminder != null && reminder.kind !== 'none' && reminder.requestId === r.requestId ? reminder : null} />)}
           </div>
         </div>
       )}
