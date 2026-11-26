@@ -2,7 +2,7 @@
 id: FA-M.06
 title: Ponaglenie — flaga admina „przewodnik nie otworzył po 12 h (sezon) / 24 h” + przycisk WhatsApp do ręcznego ponaglenia
 stage: M
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -91,3 +91,4 @@ git diff main -- src supabase | grep -n '^+.*\(eslint-disable\|as any\)'
   - **Order: merge first, then migrate-prod** (§3 of `docs/05-agent-operations.md`). `deploy-db.yml` (migrate-prod) runs only on `workflow_dispatch` from `main`, and the `production-db` Environment accepts only `main`, so the migration cannot reach prod before the merge. Safe in that order: prod has 0 `guide_requests`, so the remind button cannot appear before the function exists, and the flag reads only `reminded_at`, which is already on prod. After tj merges, dispatches and approves migrate-prod: the function's grants are read on prod (SELECT only) and pasted into the PR.
   - **Opened-and-expired request: keep as built** — label "link expired — send a new request", the request stays out of the "Guide hasn't opened" filter.
   - **Change outside the new code (missing from the report's list):** `src/lib/guide-requests/send.ts` refactored — `loadGuideRequestFacts` extracted from `sendGuideRequestByWhatsApp` (guide first name, area, dates, party size; shared by the request message and the reminder), behaviour unchanged (FA-M.05 send tests green).
+- **2026-11-26, tj:** Accepted with additions by tj 2026-11-26 after review of PR #217; merged first, then migrate-prod (`deploy-db.yml`) applied `20261126000000`; prod grants verified after migrate-prod — `record_guide_request_reminder` proacl `{postgres=X/postgres,service_role=X/postgres}`, prosecdef false, proconfig `{search_path=""}` (read in PR #217).
