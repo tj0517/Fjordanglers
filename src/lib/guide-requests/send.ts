@@ -123,7 +123,7 @@ export function waMeUrl(phoneE164: string, text: string): string {
 
 // ─── the facts a guide message carries ───────────────────────────────────────
 
-export interface GuideMessageFacts {
+interface GuideMessageFacts {
   partySize: number | null
   /** Region of the experience, else the trip country (an inquiry without one takes the guide's — D4). */
   area:      string | null
