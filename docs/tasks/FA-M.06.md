@@ -2,13 +2,14 @@
 id: FA-M.06
 title: Ponaglenie — flaga admina „przewodnik nie otworzył po 12 h (sezon) / 24 h” + przycisk WhatsApp do ręcznego ponaglenia
 stage: M
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: feat/fa-m.06-request-reminder
+pr: 217
 depends_on: [FA-M.05, FA-M.12]
 blocked_by_questions: []
 touches_db: true
@@ -85,3 +86,4 @@ git diff main -- src supabase | grep -n '^+.*\(eslint-disable\|as any\)'
 - **2026-11-25, tj:** D1 (a) flag + manual wa.me button only, no cron, no push reminder — push reminder to deferred; D2 (a) clicking the button records reminded_at + guide.request_reminded in one transaction (migration).
 - **2026-11-26, tj — STOP 1 (before the migration):** §1 approved with changes: `record_guide_request_reminder(p_request_id, p_admin_id)` reuses `guide_request_refusal(p_req, false)` (not_found > guide_removed > withdrawn), then already_answered → already_opened → already_reminded → wrong_channel → expired (expired last, so an answered request with an expired token still says already_answered). Reminders only for `channel = 'whatsapp'` (`wrong_channel`, no write; button hidden for email requests; email reminder → deferred). Red proofs: one test per refusal (reminded_at unchanged, 0 events added), `p_admin_id` NULL → 22004, two calls → `reminded` then `already_reminded` with exactly 1 event, ACL read after the migration. Types regenerated, `guide.request_reminded` in `src/lib/events/types.ts`. Rule reading confirmed: active `experience_guides` links (primary or backup), `season_months` merged, 12 h if any requested date is in a season month, only the inquiry's latest non-withdrawn request counts. Reminder text approved as proposed.
 - **2026-11-26, tj — §2 option B (expired link):** after `token_expires_at <= now()`, unanswered and not withdrawn → flag "link expired — send a new request", no remind button, the label links to the existing send-request flow; the function refuses `expired`; a request reminded earlier shows "reminded X h ago" until expiry, then the expired label. One test for the state, one for the refusal.
+- **2026-11-26 (agent):** `status: review`, PR #217. Migracja `20261126000000` NIE jest na prod — STOP przed merge: wdraża tj przez `deploy-db.yml`, potem odczyt grantów funkcji na prod.
