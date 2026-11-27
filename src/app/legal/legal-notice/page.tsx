@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import Image from 'next/image'
 import { SiteNav } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
 
@@ -98,7 +97,7 @@ export default function LegalNoticePage() {
           <section>
             <SalmonRule />
             <SectionHeading>Company Information</SectionHeading>
-            <Prose>The owner and operator of the FjordAnglers platform is:</Prose>
+            <Prose>FjordAnglers is a booking agency for guided fishing trips, operated by:</Prose>
             <InfoCard>
               <ul className="flex flex-col gap-2.5">
                 {[
@@ -169,8 +168,8 @@ export default function LegalNoticePage() {
             </Prose>
             <Prose>
               FjordAnglers is not legally obligated to, and does not declare willingness to, participate in
-              alternative dispute resolution procedures before consumer arbitration bodies (including in
-              accordance with the German Consumer Dispute Resolution Act — VSBG).
+              alternative dispute resolution procedures before consumer arbitration bodies. Complaints can be
+              sent to contact@fjordanglers.com — we reply within 30 days.
             </Prose>
           </section>
 

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import Image from 'next/image'
 import { SiteNav } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
 
@@ -124,7 +123,7 @@ export default function PrivacyPolicyPage() {
           Privacy <span style={{ fontStyle: 'italic' }}>Notice</span>
         </h1>
         <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-          fjordanglers.com &nbsp;·&nbsp; GDPR Privacy Notice &nbsp;·&nbsp; Last updated: April 1, 2026
+          fjordanglers.com &nbsp;·&nbsp; GDPR Privacy Notice &nbsp;·&nbsp; Last updated: November 27, 2026
         </p>
       </header>
 
@@ -193,32 +192,29 @@ export default function PrivacyPolicyPage() {
             </Prose>
             <BoldBulletList items={[
               {
-                label: 'Performance of the Agreement with the User',
-                desc: 'We process User data (first name, last name, email address, phone number, reservation history, and payment data) to enable the User to use the Platform, create a profile, and book fishing trips (Article 6(1)(b) GDPR).',
+                label: 'Handling your inquiry and booking',
+                desc: 'We process the data you give us — first and last name, email address, phone number, country, trip dates, group size, experience and preferences, and the messages we exchange — to answer your inquiry, prepare an offer with a guide, take your deposit and arrange the trip (Article 6(1)(b) GDPR: steps taken at your request before a contract, and performance of the contract). Card details are entered on Stripe’s page; we do not see or store them.',
               },
               {
                 label: 'Fulfillment of Legal Obligations',
-                desc: 'We process business documents, payout history, and approximate location data (based on IP) for necessary tax and accounting settlements (Article 6(1)(c) GDPR).',
+                desc: 'We keep payment records and invoices for tax and accounting purposes (Article 6(1)(c) GDPR).',
               },
               {
                 label: 'Legitimate Interests (Article 6(1)(f) GDPR)',
-                desc: 'Service provision: managing profiles, photos, and fishing reports. Security and fraud prevention: monitoring IP addresses, change history, and online communication to prevent dishonest practices and protect Platform integrity. Platform improvement: analyzing notification preferences, usage statistics, and NPS ratings to optimize service operation.',
+                desc: 'Following up on your inquiry, contacting you before your trip to confirm the details, asking for a review after it, protecting against fraud and misuse, and improving our service based on how our website and inquiry process are used.',
+              },
+              {
+                label: 'Consent (Article 6(1)(a) GDPR)',
+                desc: 'Publishing your review, name, country and photos, and using optional analytics and advertising cookies. You can withdraw consent at any time.',
               },
             ]} />
 
-            <SubHeading>No Profiling and Listing Ranking Principles (Omnibus Directive)</SubHeading>
+            <SubHeading>Automated Processing and AI Tools</SubHeading>
             <Prose>
-              FjordAnglers does not make any decisions regarding Users based on automated processing of personal
-              data. The Platform does not employ algorithmic profiling, behavioral tracking, or price
-              personalization for individual Users.
+              We use an AI model to help us read inquiries and prepare replies; some first replies are sent
+              automatically. These tools do not make decisions that have legal or similarly significant effects on
+              you — offers and bookings are decided by our team. We do not personalise prices for individual users.
             </Prose>
-            <Prose>
-              The display order and positioning of Guide Listings in search results depends exclusively on:
-            </Prose>
-            <BulletList items={[
-              'Objective criteria and search filters entered independently by the Customer (e.g., selected location, date, price range, fish species).',
-              'A random factor ensuring equal exposure opportunities for all Guides meeting the search criteria.',
-            ]} />
           </section>
 
           <Divider />
@@ -226,11 +222,11 @@ export default function PrivacyPolicyPage() {
           {/* 3. Communication Monitoring */}
           <section>
             <SalmonRule />
-            <SectionHeading>3. Communication Monitoring and Call Recording</SectionHeading>
+            <SectionHeading>3. Communication Channels and Call Recording</SectionHeading>
             <BoldBulletList items={[
               {
-                label: 'Message analysis',
-                desc: 'FjordAnglers provides an internal messaging system to facilitate arrangements between Customer and Guide. The Platform does not use automated tools for mass content scanning. However, pursuant to the controller\'s legitimate interest (Article 6(1)(f) GDPR), authorized FjordAnglers personnel reserve the right to conduct random, manual review of message content. This action is intended solely for: preventing financial fraud, protecting the integrity of the booking system (detecting attempts to circumvent the Platform booking process before deposit payment), and gathering evidence in case of reported complaints or Terms violations.',
+                label: 'How we communicate',
+                desc: 'We talk to you by email and, if you give us your number, by phone, SMS or WhatsApp; we talk to guides by email, WhatsApp and Instagram. We keep the messages about your inquiry together with it in our system so that our team can handle your booking and any later complaint.',
               },
               {
                 label: 'Call recording',
@@ -246,16 +242,16 @@ export default function PrivacyPolicyPage() {
             <SalmonRule />
             <SectionHeading>4. Data Recipients and International Transfer</SectionHeading>
             <Prose>
-              We share User personal data exclusively with two categories of trusted recipients:
+              We share User personal data only with these recipients:
             </Prose>
             <BoldBulletList items={[
               {
-                label: 'Data Processors',
-                desc: 'External companies, including payment operators (e.g., Stripe) and hosting and analytics service providers, which enable FjordAnglers to operate the service efficiently and securely.',
+                label: 'Service providers (processors)',
+                desc: 'Supabase (database and file storage), Vercel (website hosting), Stripe (payments), Resend and Zoho (email), Anthropic (AI model used to read inquiries and draft replies), Meta (WhatsApp and Instagram messaging), Sentry (error monitoring), wFirma (invoicing and accounting), and — only with your cookie consent — Google, Microsoft Clarity and Meta for analytics and advertising (see the Cookie Policy).',
               },
               {
-                label: 'Other Users (Reservation Parties)',
-                desc: 'We transfer necessary data between Customer and Guide to enable execution of the booked trip. First and last name may be visible at the inquiry stage, while full contact details (phone, email) are shared with both parties only after deposit payment.',
+                label: 'Guides',
+                desc: 'To prepare an offer we share the trip details of your inquiry — and your first and last name — with the guides we ask. Full contact details (phone, email) are exchanged between you and the guide only after your deposit is paid.',
               },
               {
                 label: 'Transfer outside the European Economic Area (EEA)',
@@ -263,7 +259,7 @@ export default function PrivacyPolicyPage() {
               },
               {
                 label: 'Data retention period',
-                desc: 'We retain User personal data for the duration of the active account on the Platform. After account deletion, data may be retained only for the time necessary to pursue or defend against claims and for the period required by tax and accounting regulations (typically 5 years).',
+                desc: 'We keep inquiry and booking data for as long as we need it to handle your inquiry, your trip and any follow-up or complaint, and you can ask us to delete it at any time. Payment and invoice records are kept for the period required by tax and accounting regulations (typically 5 years), and data needed to pursue or defend legal claims for as long as such claims are possible.',
               },
             ]} />
           </section>
@@ -307,7 +303,7 @@ export default function PrivacyPolicyPage() {
             <BoldBulletList items={[
               {
                 label: 'Voluntary nature of data provision',
-                desc: 'Providing personal data is voluntary; however, it is necessary to create an account and use the Platform\'s booking services.',
+                desc: 'Providing personal data is voluntary; however, without your name and contact details we cannot answer your inquiry or arrange a booking.',
               },
               {
                 label: 'Sensitive data',
@@ -318,10 +314,14 @@ export default function PrivacyPolicyPage() {
                 desc: 'The Platform is intended exclusively for persons who are at least 18 years of age. If you become aware that a minor has shared their personal data with us, please contact us immediately for its deletion.',
               },
             ]} />
-            {/* FA-1.59 — placeholder until tj supplies the text (deferred-tasks.md: "text from tj — blocks FA-1.57") */}
             <SubHeading>Publication of reviews</SubHeading>
             <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.68)' }}>
-              [Reviews publication — text from tj]
+              After your trip we may send you a link to review it. We publish your review on fjordanglers.com —
+              together with your first name, country and the photos you add — only if you tick the publication
+              consent in the review form. Without that consent the review is used only internally. You can withdraw
+              consent at any time by writing to contact@fjordanglers.com, and we will remove the review from the
+              website. Reviews you post on external sites such as Trustpilot are governed by those sites&apos; own
+              privacy policies. We use trip photos you send us in our marketing only with your separate permission.
             </p>
           </section>
 
@@ -332,9 +332,8 @@ export default function PrivacyPolicyPage() {
             <SalmonRule />
             <SectionHeading>Data Protection Addendum (DPA)</SectionHeading>
             <Prose>
-              This Addendum forms an integral part of the FjordAnglers Terms of Use and Privacy Policy. It is a
-              binding agreement between FjordAnglers and the Guide who, as part of provided services, receives
-              Customer personal data.
+              This Addendum applies, together with the partner cooperation agreement, between FjordAnglers and every
+              Guide who receives Customer personal data from FjordAnglers.
             </Prose>
 
             <SubHeading>1. Definitions and Roles of Parties</SubHeading>
@@ -353,7 +352,7 @@ export default function PrivacyPolicyPage() {
             <Prose>The Guide receiving Customer data from FjordAnglers unconditionally undertakes to:</Prose>
             <BoldBulletList items={[
               { label: 'Purpose limitation', desc: 'Use data exclusively for the purpose of executing the booked fishing trip. It is strictly prohibited to use this data for marketing purposes (e.g., adding to newsletters) without the Customer\'s prior, explicit, and documented consent.' },
-              { label: 'Platform non-circumvention', desc: 'Prohibition of using Customer contact data to induce them to cancel the Platform reservation and enter into a direct agreement.' },
+              { label: 'Platform non-circumvention', desc: 'Prohibition of using Customer contact data to induce them to cancel the booking made through FjordAnglers and enter into a direct agreement instead.' },
               { label: 'Confidentiality', desc: 'Prohibition of disclosing, selling, renting, or sharing Customer data with third parties without their consent.' },
               { label: 'Legal compliance', desc: 'Compliance with GDPR and local privacy protection laws.' },
               { label: 'Data security', desc: 'Implementing appropriate technical and organizational measures (e.g., screen locks, secure passwords) to protect data from unauthorized access. The Guide bears full responsibility for compliance with these principles by their employees and subcontractors.' },
