@@ -2,14 +2,14 @@
 id: FA-M.15
 title: Reset hasła, który naprawdę wysyła maila i przeżywa drugie kliknięcie; wysyłki maili, które nie znikają na Vercelu
 stage: M
-status: in progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-m.15-reset-and-email-sends
-pr:
+pr: 220
 depends_on: []
 blocked_by_questions: []
 touches_db: false
