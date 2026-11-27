@@ -12,7 +12,8 @@
  * On success:
  *   • inquiries.deposit_paid_at, deposit_stripe_session_id — set atomically (D2 — FA-1.16)
  *   • inquiries.status → 'paid', through transition() (source 'webhook')
- *   • Sends emails: angler (confirmation), FA (deposit received), guide (booking confirmed)
+ *   • Sends the FA email (deposit received), awaited. The angler (confirmation) and guide
+ *     (booking confirmed) emails are off behind POST_DEPOSIT_PARTY_EMAILS_ENABLED (FA-M.15)
  *
  * Idempotent: UPDATE … WHERE deposit_paid_at IS NULL RETURNING id — only the first
  * writer gets a row back; a second delivery sees 0 rows and returns without emitting.
@@ -38,6 +39,11 @@ import {
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+// Disabled by tj 2026-11-27 until the post-deposit flow is designed (FA-M.15): no email to the
+// angler (deposit confirmed) or to the guide (booking confirmed) after a paid deposit. The FA
+// email is not behind this switch and always goes out.
+const POST_DEPOSIT_PARTY_EMAILS_ENABLED: boolean = false
 
 // Thrown when a transient Stripe API failure means Stripe should retry the delivery.
 class RetriableError extends Error {}
@@ -190,18 +196,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       : existing.deposit_amount ?? 0
   const requestedDates   = existing.requested_dates ?? []
 
-  // Fire all three confirmation emails (fire-and-forget)
-  const emailJobs: Promise<void>[] = [
-    sendDepositConfirmedAnglerEmail({
-      to:               existing.angler_email,
-      anglerName:       existing.angler_name,
-      tripTitle,
-      requestedDates,
-      partySize:        existing.party_size ?? 1,
-      depositAmountEur,
-      inquiryId,
-    }),
-    sendDepositConfirmedFaEmail({
+  // Every send is awaited: an un-awaited promise is dropped on Vercel once the response is
+  // returned and the function freezes (FA-M.15, same rule as POST /api/inquiries). The payment
+  // is already recorded, so a failed send is logged and the webhook still answers 200.
+  try {
+    await sendDepositConfirmedFaEmail({
       to:               env.FA_EMAIL ?? 'contact@fjordanglers.com',
       anglerName:       existing.angler_name,
       anglerEmail:      existing.angler_email,
@@ -211,25 +210,41 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       depositAmountEur,
       stripeSessionId:  session.id,
       inquiryId,
-    }),
-  ]
-
-  if (guideEmail != null) {
-    emailJobs.push(
-      sendBookingConfirmedGuideEmail({
-        to:             guideEmail,
-        guideName,
-        tripTitle,
-        anglerName:     existing.angler_name,
-        anglerCountry:  existing.angler_country ?? '—',
-        requestedDates,
-        partySize:      existing.party_size ?? 1,
-        inquiryId,
-      }),
-    )
+    })
+  } catch (err) {
+    console.error('[stripe-deposit/webhook] FA email error:', err)
   }
 
-  Promise.all(emailJobs).catch(err =>
-    console.error('[stripe-deposit/webhook] Email error:', err),
-  )
+  if (!POST_DEPOSIT_PARTY_EMAILS_ENABLED) return
+
+  try {
+    await sendDepositConfirmedAnglerEmail({
+      to:               existing.angler_email,
+      anglerName:       existing.angler_name,
+      tripTitle,
+      requestedDates,
+      partySize:        existing.party_size ?? 1,
+      depositAmountEur,
+      inquiryId,
+    })
+  } catch (err) {
+    console.error('[stripe-deposit/webhook] Angler email error:', err)
+  }
+
+  if (guideEmail == null) return
+
+  try {
+    await sendBookingConfirmedGuideEmail({
+      to:             guideEmail,
+      guideName,
+      tripTitle,
+      anglerName:     existing.angler_name,
+      anglerCountry:  existing.angler_country ?? '—',
+      requestedDates,
+      partySize:      existing.party_size ?? 1,
+      inquiryId,
+    })
+  } catch (err) {
+    console.error('[stripe-deposit/webhook] Guide email error:', err)
+  }
 }

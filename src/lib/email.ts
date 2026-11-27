@@ -9,6 +9,7 @@
  *   - Route Handlers (src/app/api/*)
  */
 
+import { randomUUID } from 'node:crypto'
 import { createElement } from 'react'
 import { render } from '@react-email/components'
 import { env } from '@/lib/env'
@@ -73,23 +74,91 @@ async function sendEmail({
   const body: Record<string, unknown> = { from: FROM, to, subject, html }
   if (Object.keys(headers).length > 0) body.headers = headers
 
-  // Call Resend REST API directly — bypasses the SDK's internal fetch which can
-  // fail silently in Next.js environments where the global fetch is patched with
-  // caching logic. Using cache: 'no-store' ensures every send is a fresh request.
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-    cache: 'no-store',
-  })
+  // One key for every attempt of this logical send: if an attempt reached Resend but the
+  // answer was lost, the retry is recognised as the same email and not delivered twice.
+  const idempotencyKey = randomUUID()
 
-  if (!response.ok) {
+  for (let attempt = 1; ; attempt++) {
+    const isLast = attempt >= RESEND_MAX_ATTEMPTS
+
+    let response: Response
+    try {
+      // Call Resend REST API directly — bypasses the SDK's internal fetch which can
+      // fail silently in Next.js environments where the global fetch is patched with
+      // caching logic. Using cache: 'no-store' ensures every send is a fresh request.
+      response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify(body),
+        cache: 'no-store',
+      })
+    } catch (err) {
+      if (isLast || !isTransientNetworkError(err)) throw err
+      console.warn(`[email] Resend attempt ${attempt} failed (network), retrying:`, describeNetworkError(err))
+      await sleep(RESEND_RETRY_DELAYS_MS[attempt - 1] ?? 0)
+      continue
+    }
+
+    if (response.ok) return
+
     const bodyText = await response.text().catch(() => '(no body)')
-    throw new Error(`[email] Resend HTTP ${response.status}: ${bodyText}`)
+    const retriable = response.status === 429 || response.status >= 500
+    if (isLast || !retriable) {
+      throw new Error(`[email] Resend HTTP ${response.status}: ${bodyText}`)
+    }
+    console.warn(`[email] Resend attempt ${attempt} failed (HTTP ${response.status}), retrying`)
+    await sleep(RESEND_RETRY_DELAYS_MS[attempt - 1] ?? 0)
   }
+}
+
+// ─── Retry policy (FA-M.15) ───────────────────────────────────────────────────
+
+/**
+ * Prod 2026-11-27: `TypeError: fetch failed` / ECONNRESET before the TLS handshake with
+ * api.resend.com. Such a failure is retried; a 4xx other than 429 is our mistake and is not.
+ */
+const RESEND_MAX_ATTEMPTS = 3
+/** Wait before attempt 2 and attempt 3. Short: these sends run inside a request. */
+const RESEND_RETRY_DELAYS_MS = [250, 750]
+
+const TRANSIENT_NETWORK_CODES = new Set([
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'ETIMEDOUT',
+  'EPIPE',
+  'EAI_AGAIN',
+  'ENETUNREACH',
+  'EHOSTUNREACH',
+  'UND_ERR_SOCKET',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_HEADERS_TIMEOUT',
+])
+
+function errorCode(err: unknown): string | undefined {
+  if (typeof err !== 'object' || err == null || !('code' in err)) return undefined
+  return typeof err.code === 'string' ? err.code : undefined
+}
+
+/** undici throws `TypeError('fetch failed')` with the socket error as `cause`. */
+function isTransientNetworkError(err: unknown): boolean {
+  if (err instanceof TypeError && err.message === 'fetch failed') return true
+  const code = errorCode(err) ?? (err instanceof Error ? errorCode(err.cause) : undefined)
+  return code != null && TRANSIENT_NETWORK_CODES.has(code)
+}
+
+function describeNetworkError(err: unknown): string {
+  const cause = err instanceof Error ? err.cause : undefined
+  return [err instanceof Error ? err.message : String(err), errorCode(err) ?? errorCode(cause)]
+    .filter(Boolean)
+    .join(' / ')
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 // ─── Typed send functions ─────────────────────────────────────────────────────

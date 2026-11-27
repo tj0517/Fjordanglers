@@ -30,6 +30,8 @@ export default async function ForgotPasswordPage({
 }) {
   const { error } = await searchParams
   const initialError = error != null ? (ERROR_MESSAGES[error] ?? 'Something went wrong. Please try again.') : undefined
+  // A used or expired reset link lands here (FA-M.15): the same form, worded as "send a new link".
+  const fromDeadLink = error === 'invalid_link'
 
   return (
     <div
@@ -102,7 +104,7 @@ export default async function ForgotPasswordPage({
                 }}
                 className="f-display"
               >
-                Forgot your password?
+                {fromDeadLink ? 'Get a new reset link' : 'Forgot your password?'}
               </h1>
               <p
                 style={{
@@ -114,11 +116,16 @@ export default async function ForgotPasswordPage({
                 }}
                 className="f-body"
               >
-                Enter your email and we&apos;ll send you a reset link.
+                {fromDeadLink
+                  ? "Enter your email and we'll send you a new link."
+                  : "Enter your email and we'll send you a reset link."}
               </p>
             </div>
 
-            <ForgotPasswordForm initialError={initialError} />
+            <ForgotPasswordForm
+              initialError={initialError}
+              submitLabel={fromDeadLink ? 'Send a new link' : 'Send reset link'}
+            />
           </div>
 
         </div>

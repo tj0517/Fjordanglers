@@ -130,7 +130,49 @@ export async function updatePassword(newPassword: string): Promise<{ error?: str
   }
 }
 
+// ─── Confirm password reset (the landing page's button) ──────────────────────
+
+/**
+ * POST from /auth/reset/confirm — the only place a recovery token is verified (FA-M.15).
+ *
+ * The email link only opens a landing page; nothing is verified on GET, so a refresh, a
+ * double request or a link scanner can no longer burn the one-time token (prod 2026-11-27:
+ * `/verify` 200 then 403 `otp_expired` for the same link 14 s later).
+ *
+ * If verification fails but this browser already holds a session from a verified recovery
+ * token — the button pressed twice, or the first POST succeeded and the user came back —
+ * the user goes on to /reset-password instead of seeing the error.
+ */
+export async function confirmPasswordReset(formData: FormData): Promise<never> {
+  const tokenHash = formData.get('token_hash')
+  const supabase = await createClient()
+
+  if (typeof tokenHash === 'string' && tokenHash !== '') {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+    if (error == null) redirect('/reset-password')
+    console.error('[auth/confirmPasswordReset] verifyOtp error:', error.message)
+  }
+
+  if (await hasRecoverySession(supabase)) redirect('/reset-password')
+
+  redirect('/forgot-password?error=invalid_link')
+}
+
+/**
+ * A verified session that was signed in by a one-time token (AMR `otp` — what Supabase Auth
+ * records for `verifyOtp({ type: 'recovery' })`; a password sign-in records `password`).
+ * getClaims() verifies the JWT, it does not just decode the cookie.
+ */
+async function hasRecoverySession(supabase: Awaited<ReturnType<typeof createClient>>): Promise<boolean> {
+  const { data, error } = await supabase.auth.getClaims()
+  if (error != null || data == null) return false
+  const amr = data.claims.amr ?? []
+  return amr.some(entry => (typeof entry === 'string' ? entry : entry.method) === 'otp')
+}
+
 // ─── Reset password ───────────────────────────────────────────────────────────
+
+const RESET_EMAIL_SEND_FAILED = "We couldn't send the email right now. Please try again in a minute."
 
 export async function resetPassword(email: string): Promise<AuthResult> {
   try {
@@ -164,13 +206,17 @@ export async function resetPassword(email: string): Promise<AuthResult> {
     // between admin.generateLink() and @supabase/ssr's exchangeCodeForSession().
     const resetUrl = `${await getAppUrl()}/auth/reset?token_hash=${data.properties.hashed_token}&type=recovery`
 
-    // Fire-and-forget — don't expose send errors to the user
-    sendPasswordResetEmail({
-      to: email,
-      resetUrl,
-    }).catch((err: unknown) => {
+    // Awaited (FA-M.15): an un-awaited send is killed on Vercel when the function freezes
+    // after the response (prod 2026-11-27 — `fetch failed` / ECONNRESET, email never sent).
+    // sendEmail already retries transient failures; reaching the catch means it gave up.
+    // The message is neutral: this branch is reached only for an existing account, so it
+    // must not say anything about the account itself.
+    try {
+      await sendPasswordResetEmail({ to: email, resetUrl })
+    } catch (err) {
       console.error('[auth/resetPassword] Email send error:', err)
-    })
+      return { error: RESET_EMAIL_SEND_FAILED }
+    }
 
     return { success: true }
   } catch (err) {

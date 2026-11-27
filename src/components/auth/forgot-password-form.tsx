@@ -58,7 +58,14 @@ const errorTextStyle: React.CSSProperties = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ForgotPasswordForm({ initialError }: { initialError?: string }) {
+export function ForgotPasswordForm({
+  initialError,
+  submitLabel = 'Send reset link',
+}: {
+  initialError?: string
+  /** "Send a new link" when the page was reached from a used or expired link (FA-M.15). */
+  submitLabel?: string
+}) {
   const [email, setEmail] = useState('')
   const [errors, setErrors] = useState<{ email?: string; form?: string }>({ form: initialError })
   const [focusedField, setFocusedField] = useState<string | null>(null)
@@ -229,7 +236,7 @@ export function ForgotPasswordForm({ initialError }: { initialError?: string }) 
         }}
         className="f-body"
       >
-        {isLoading ? 'Sending...' : 'Send reset link'}
+        {isLoading ? 'Sending...' : submitLabel}
       </button>
 
       <p
