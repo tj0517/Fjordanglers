@@ -13,7 +13,7 @@
  *   - Trip title in confirmation emails (FA-1.09)
  */
 
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import Stripe from 'stripe'
 
@@ -507,7 +507,7 @@ describe('stripe-deposit webhook — sequential double call', () => {
 // ─── Happy path emails (Checkout Session) ─────────────────────────────────────
 
 describe('stripe-deposit webhook — happy path emails (Checkout Session)', () => {
-  it('calls all three email functions when guide is assigned', async () => {
+  it('guide assigned: sends only the FA email — angler and guide emails are off (FA-M.15)', async () => {
     vi.mocked(createServiceClient).mockReturnValue({
       from: (table: string) => {
         if (table === 'inquiries') {
@@ -557,19 +557,17 @@ describe('stripe-deposit webhook — happy path emails (Checkout Session)', () =
 
     expect(response.status).toBe(200)
 
-    // Give fire-and-forget a tick to complete
-    await new Promise(r => setTimeout(r, 0))
-
-    expect(anglerEmail).toHaveBeenCalledOnce()
+    // No tick to wait for: every send is awaited before the response.
     expect(faEmail).toHaveBeenCalledOnce()
-    expect(guideEmail).toHaveBeenCalledOnce()
+    expect(anglerEmail).not.toHaveBeenCalled()
+    expect(guideEmail).not.toHaveBeenCalled()
   })
 })
 
 // ─── Trip title in confirmation emails (FA-1.09) ──────────────────────────────
 
 describe('stripe-deposit webhook — trip title in the confirmation emails (FA-1.09)', () => {
-  it('puts the resolved experience name into the angler and FA emails', async () => {
+  it('puts the resolved experience name into the FA email', async () => {
     vi.mocked(createServiceClient).mockReturnValue(
       buildHappyMock({ ...INQUIRY_ROW, experience_page_id: 'page-1' }),
     )
@@ -592,15 +590,13 @@ describe('stripe-deposit webhook — trip title in the confirmation emails (FA-1
 
     expect(response.status).toBe(200)
     expect(getInquiryExperience).toHaveBeenCalledWith({ experience_page_id: 'page-1', trip_id: null })
-    expect(sendDepositConfirmedAnglerEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ tripTitle: 'Salmon on the Laxá' }),
-    )
+    expect(sendDepositConfirmedAnglerEmail).not.toHaveBeenCalled()
     expect(sendDepositConfirmedFaEmail).toHaveBeenCalledWith(
       expect.objectContaining({ tripTitle: 'Salmon on the Laxá' }),
     )
   })
 
-  it('still returns 200 and sends the emails with the generic title when nothing resolves', async () => {
+  it('still returns 200 and sends the FA email with the generic title when nothing resolves', async () => {
     vi.mocked(createServiceClient).mockReturnValue(
       buildHappyMock({ ...INQUIRY_ROW, experience_page_id: null }),
     )
@@ -619,7 +615,7 @@ describe('stripe-deposit webhook — trip title in the confirmation emails (FA-1
     const response = await POST(makeReq(body))
 
     expect(response.status).toBe(200)
-    expect(sendDepositConfirmedAnglerEmail).toHaveBeenCalledWith(
+    expect(sendDepositConfirmedFaEmail).toHaveBeenCalledWith(
       expect.objectContaining({ tripTitle: 'Your trip' }),
     )
   })
@@ -665,11 +661,8 @@ describe('stripe-deposit webhook — depositAmountEur (FA-1.28)', () => {
     }
     const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
     await POST(makeReq(mockEvent(session)))
-    await new Promise(r => setTimeout(r, 0))
 
-    expect(sendDepositConfirmedAnglerEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ depositAmountEur: 200 }),
-    )
+    expect(sendDepositConfirmedAnglerEmail).not.toHaveBeenCalled()
     expect(sendDepositConfirmedFaEmail).toHaveBeenCalledWith(
       expect.objectContaining({ depositAmountEur: 200 }),
     )
@@ -687,12 +680,9 @@ describe('stripe-deposit webhook — depositAmountEur (FA-1.28)', () => {
     }
     const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
     await POST(makeReq(mockEvent(session)))
-    await new Promise(r => setTimeout(r, 0))
 
     const expected = 3_000_000 / 138 / 100
-    expect(sendDepositConfirmedAnglerEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ depositAmountEur: expected }),
-    )
+    expect(sendDepositConfirmedAnglerEmail).not.toHaveBeenCalled()
     expect(sendDepositConfirmedFaEmail).toHaveBeenCalledWith(
       expect.objectContaining({ depositAmountEur: expected }),
     )
@@ -710,12 +700,9 @@ describe('stripe-deposit webhook — depositAmountEur (FA-1.28)', () => {
     }
     const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
     await POST(makeReq(mockEvent(session)))
-    await new Promise(r => setTimeout(r, 0))
 
     // INQUIRY_ROW.deposit_amount = 360 → falls back to that
-    expect(sendDepositConfirmedAnglerEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ depositAmountEur: 360 }),
-    )
+    expect(sendDepositConfirmedAnglerEmail).not.toHaveBeenCalled()
     expect(sendDepositConfirmedFaEmail).toHaveBeenCalledWith(
       expect.objectContaining({ depositAmountEur: 360 }),
     )
@@ -741,5 +728,57 @@ describe('stripe-deposit webhook — payment.received currency uppercase (FA-1.2
     const call = vi.mocked(emitEvent).mock.calls.find(([, params]) => params.type === 'payment.received')
     expect(call).toBeDefined()
     expect(call![1].payload).toMatchObject({ currency: 'ISK' })
+  })
+})
+
+// ─── FA-M.15: FA email awaited, angler + guide emails off ─────────────────────
+
+describe('stripe-deposit webhook — FA email is awaited (FA-M.15)', () => {
+  afterEach(() => {
+    vi.mocked(sendDepositConfirmedFaEmail).mockReset()
+  })
+
+  const SESSION: Partial<Stripe.Checkout.Session> = {
+    id:             'cs_test_awaited',
+    object:         'checkout.session',
+    payment_status: 'paid',
+    metadata:       { payment_type: 'inquiry_deposit', inquiry_id: 'inq-test' },
+  }
+
+  it('does not answer before the FA email send has finished', async () => {
+    vi.mocked(createServiceClient).mockReturnValue(buildHappyMock())
+
+    let finishSend: () => void = () => {}
+    vi.mocked(sendDepositConfirmedFaEmail).mockImplementation(
+      () => new Promise<void>(resolve => { finishSend = resolve }),
+    )
+
+    const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
+    let answered = false
+    const pending = POST(makeReq(mockEvent(SESSION))).then(res => { answered = true; return res })
+
+    await vi.waitFor(() => expect(sendDepositConfirmedFaEmail).toHaveBeenCalledOnce())
+    await new Promise(r => setTimeout(r, 20))
+    expect(answered).toBe(false)          // fire-and-forget would have answered already
+
+    finishSend()
+    const response = await pending
+    expect(response.status).toBe(200)
+    expect(sendDepositConfirmedAnglerEmail).not.toHaveBeenCalled()
+  })
+
+  it('a failed FA email is logged and the webhook still answers 200 after recording the payment', async () => {
+    vi.mocked(createServiceClient).mockReturnValue(buildHappyMock())
+    vi.mocked(sendDepositConfirmedFaEmail).mockRejectedValue(new TypeError('fetch failed'))
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
+    const response = await POST(makeReq(mockEvent(SESSION)))
+
+    expect(response.status).toBe(200)
+    expect(emitEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ type: 'payment.received' }))
+    expect(transition).toHaveBeenCalledWith(expect.anything(), 'inq-test', 'paid', expect.anything())
+    expect(errSpy).toHaveBeenCalledWith('[stripe-deposit/webhook] FA email error:', expect.any(TypeError))
+    errSpy.mockRestore()
   })
 })
