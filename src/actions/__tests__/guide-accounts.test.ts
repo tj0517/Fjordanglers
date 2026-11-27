@@ -46,7 +46,7 @@ import {
   getGuideInviteByToken,
   getGuideAccountSummary,
 } from '@/actions/guide-invites'
-import { resetPassword, updatePassword } from '@/actions/auth'
+import { resetPassword, updatePassword, confirmPasswordReset } from '@/actions/auth'
 import { respondToAssignment } from '@/actions/inquiries'
 import { acceptGuideTerms, setPhotoMarketingConsent } from '@/actions/dashboard'
 import { UnauthorizedError } from '@/lib/auth/guards'
@@ -83,6 +83,24 @@ async function signedIn(email: string, password: string): Promise<Db> {
   const { error } = await c.auth.signInWithPassword({ email, password })
   if (error != null) throw new Error(`sign-in failed for test account: ${error.message}`)
   return c
+}
+
+function tokenForm(tokenHash: string): FormData {
+  const f = new FormData()
+  f.set('token_hash', tokenHash)
+  return f
+}
+
+/** The path a server action redirect()s to — read from Next's NEXT_REDIRECT digest. */
+async function redirectTarget(run: () => Promise<unknown>): Promise<string> {
+  try {
+    await run()
+  } catch (err) {
+    const digest = (err as { digest?: unknown }).digest
+    if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT;')) return digest.split(';')[2]!
+    throw err
+  }
+  throw new Error('expected a redirect')
 }
 
 async function asAdmin() { h.sessionClient = await signedIn(ADMIN.email, ADMIN.password) }
@@ -542,7 +560,8 @@ describe('password reset', () => {
     try {
       h.sessionClient = anonClient()
       expect(await resetPassword(`${PREFIX}cross-a@seed.test`)).toEqual({ success: true })
-      await vi.waitFor(() => expect(lines.some(l => l.includes('RESEND_DEV_FAKE=1 — not sent'))).toBe(true))
+      // Awaited since FA-M.15: the send has happened by the time resetPassword answers.
+      expect(lines.some(l => l.includes('RESEND_DEV_FAKE=1 — not sent'))).toBe(true)
     } finally {
       delete process.env.RESEND_DEV_FAKE
     }
@@ -557,14 +576,27 @@ describe('password reset', () => {
     const email = `${PREFIX}cross-a@seed.test`
     const { data, error } = await svc().auth.admin.generateLink({ type: 'recovery', email })
     expect(error).toBeNull()
+    const tokenHash = data.properties!.hashed_token
+    const link = `http://localhost:3000/auth/reset?token_hash=${tokenHash}&type=recovery`
 
-    // The real /auth/reset route verifies the token into the session client.
+    // FA-M.15: opening the link twice (refresh, double request, a mail scanner) verifies
+    // nothing — both GETs only forward to the landing page.
     const browser = anonClient()
     h.sessionClient = browser
     const { GET } = await import('@/app/auth/reset/route')
     const { NextRequest } = await import('next/server')
-    const res = await GET(new NextRequest(`http://localhost:3000/auth/reset?token_hash=${data.properties!.hashed_token}&type=recovery`))
-    expect(res.headers.get('location')).toBe('http://localhost:3000/reset-password')
+    const landing = `http://localhost:3000/auth/reset/confirm?token_hash=${tokenHash}&type=recovery`
+    expect((await GET(new NextRequest(link))).headers.get('location')).toBe(landing)
+    expect((await GET(new NextRequest(link))).headers.get('location')).toBe(landing)
+    expect((await browser.auth.getSession()).data.session).toBeNull()
+
+    // The button: the real local Auth verifies the token now, not before.
+    expect(await redirectTarget(() => confirmPasswordReset(tokenForm(tokenHash)))).toBe('/reset-password')
+
+    // Pressed a second time: the token is used up, but this browser holds the recovery
+    // session, so the guide goes on to the password form instead of the error.
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    expect(await redirectTarget(() => confirmPasswordReset(tokenForm(tokenHash)))).toBe('/reset-password')
 
     const NEW = 'fam08-new-password-2026'
     expect(await updatePassword(NEW)).toEqual({})
@@ -572,10 +604,24 @@ describe('password reset', () => {
     expect((await anonClient().auth.signInWithPassword({ email, password: NEW })).error).toBeNull()
     expect((await anonClient().auth.signInWithPassword({ email, password: PASSWORD })).error).not.toBeNull()
 
-    // The same link does not work twice.
+    // The same link in a browser without that session: used token → the "send a new link" page.
     h.sessionClient = anonClient()
-    vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    const again = await GET(new NextRequest(`http://localhost:3000/auth/reset?token_hash=${data.properties!.hashed_token}&type=recovery`))
-    expect(again.headers.get('location')).toBe('http://localhost:3000/forgot-password?error=invalid_link')
+    expect(await redirectTarget(() => confirmPasswordReset(tokenForm(tokenHash)))).toBe('/forgot-password?error=invalid_link')
+
+    // A password sign-in is not a session "from this flow": still the error page.
+    h.sessionClient = await signedIn(email, NEW)
+    expect(await redirectTarget(() => confirmPasswordReset(tokenForm(tokenHash)))).toBe('/forgot-password?error=invalid_link')
+  })
+
+  it('resetPassword for an address with no account: success, nothing sent', async () => {
+    process.env.RESEND_DEV_FAKE = '1'
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined)
+    try {
+      h.sessionClient = anonClient()
+      expect(await resetPassword(`${PREFIX}no-such-account@seed.test`)).toEqual({ success: true })
+    } finally {
+      delete process.env.RESEND_DEV_FAKE
+    }
+    expect(info.mock.calls.map(c => String(c[0])).filter(l => l.includes('not sent'))).toEqual([])
   })
 })

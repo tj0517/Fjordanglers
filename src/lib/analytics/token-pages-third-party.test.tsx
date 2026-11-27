@@ -110,3 +110,22 @@ describe('a normal page (/) — tags unchanged', () => {
     expect(html).toMatch(GOOGLE)
   })
 })
+
+describe('/auth/reset/confirm — password-reset landing, the token is in ?token_hash= (FA-M.15)', () => {
+  it('with consent stored as accepted renders no third-party script', () => {
+    const html = show('/auth/reset/confirm', 'accepted')
+    expect(html).not.toMatch(GOOGLE)
+    expect(html).not.toMatch(META_CLARITY)
+  })
+
+  it('with no consent stored renders no banner and no Google tag', () => {
+    const html = show('/auth/reset/confirm', null)
+    expect(html).not.toContain(BANNER)
+    expect(html).not.toMatch(GOOGLE)
+  })
+
+  it('is matched as an exact path only', () => {
+    expect(thirdPartyScriptsAllowed('/auth/reset/confirm')).toBe(false)
+    expect(thirdPartyScriptsAllowed('/auth/reset/confirm/x')).toBe(true)
+  })
+})
