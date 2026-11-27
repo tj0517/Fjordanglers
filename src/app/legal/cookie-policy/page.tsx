@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import Image from 'next/image'
 import { SiteNav } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
 
@@ -105,7 +104,7 @@ export default function CookiePolicyPage() {
           Cookie <span style={{ fontStyle: 'italic' }}>Policy</span>
         </h1>
         <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-          fjordanglers.com &nbsp;·&nbsp; Last updated: April 1, 2026
+          fjordanglers.com &nbsp;·&nbsp; Last updated: November 27, 2026
         </p>
       </header>
 
@@ -153,7 +152,7 @@ export default function CookiePolicyPage() {
             <BoldBulletList items={[
               {
                 label: 'Essential (Technical)',
-                desc: 'Absolutely necessary for the Platform to function. They enable account login, session maintenance, site navigation, and proper operation of the booking system. Without these files, the Platform cannot function properly. The option to disable them is not available.',
+                desc: 'Necessary for the website to work: remembering your cookie choice, keeping sessions (including the guide and admin login), site navigation and the inquiry form. They cannot be disabled.',
               },
               {
                 label: 'Security and Payment (Stripe)',
@@ -161,11 +160,11 @@ export default function CookiePolicyPage() {
               },
               {
                 label: 'Analytical (Statistical)',
-                desc: 'Help understand how Users interact with the Platform (e.g., which listings are most popular, how long visits last). This data is anonymized and used solely to improve service functionality (e.g., via Google Analytics tools).',
+                desc: 'Used only with your consent. They help us understand how visitors use the website (e.g., which trip pages are visited, where the inquiry form is abandoned) so we can improve it — via Google Analytics (loaded through Google Tag Manager) and Microsoft Clarity, which records anonymised interactions such as clicks and scrolling.',
               },
               {
-                label: 'Marketing and Affiliate',
-                desc: 'Used to track advertising campaign effectiveness and properly account for the Affiliate Program. They allow identification of whether a reservation originated from a specific Partner\'s referral, which determines proper commission calculation. They may also be used to display targeted advertisements on other websites (e.g., Meta Pixel, Google Ads).',
+                label: 'Marketing',
+                desc: 'Used only with your consent. They measure whether our ads lead to inquiries and bookings and may be used to show our ads on other websites (Google Ads, Meta Pixel).',
               },
             ]} />
           </section>
@@ -201,9 +200,9 @@ export default function CookiePolicyPage() {
                 <tbody>
                   {[
                     { provider: 'Stripe, Inc.',                  purpose: 'Payment processing and fraud prevention' },
-                    { provider: 'Google LLC',                    purpose: 'Traffic analytics (Google Analytics) and advertising tools' },
-                    { provider: 'Meta Platforms, Inc.',          purpose: 'Social media advertising effectiveness analysis' },
-                    { provider: 'Affiliate software providers',  purpose: 'Verification and management of partner links' },
+                    { provider: 'Google LLC',                    purpose: 'Google Tag Manager, Google Analytics and Google Ads conversion measurement (consent mode)' },
+                    { provider: 'Microsoft Corporation',         purpose: 'Microsoft Clarity — website usage analytics (only with consent)' },
+                    { provider: 'Meta Platforms, Inc.',          purpose: 'Meta Pixel — advertising effectiveness (only with consent)' },
                   ].map((row, i) => (
                     <tr
                       key={row.provider}
@@ -238,12 +237,12 @@ export default function CookiePolicyPage() {
             </Prose>
             <BoldBulletList items={[
               {
-                label: 'On-site settings panel',
-                desc: 'The User may change preferences at any time by clicking the "Manage Cookies" link located in the site footer. A full, dynamic list of cookies currently in use is available in the banner information panel.',
+                label: 'Changing your choice',
+                desc: 'Your choice is saved in your browser. To change it, clear this site\'s data in your browser settings — the banner will appear again on your next visit — or write to us and we will help.',
               },
               {
                 label: 'Browser settings',
-                desc: 'Most web browsers allow global blocking or deletion of cookies. However, please note that restricting the use of essential cookies may negatively affect Platform functionality (including preventing reservations).',
+                desc: 'Most web browsers allow global blocking or deletion of cookies. However, please note that restricting the use of essential cookies may negatively affect Platform functionality (including preventing inquiries and payments).',
               },
             ]} />
           </section>
