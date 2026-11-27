@@ -131,8 +131,14 @@ describe('sendEmail retry (FA-M.15)', () => {
 
   /** Runs the send while letting the backoff timers fire; resolves to the error, or null. */
   async function run(): Promise<Error | null> {
-    const done = sendPasswordResetEmail({ to: TO, resetUrl: 'https://example.test/reset' })
-      .then(() => null, (err: unknown) => err as Error)
+    const done = (async (): Promise<Error | null> => {
+      try {
+        await sendPasswordResetEmail({ to: TO, resetUrl: 'https://example.test/reset' })
+        return null
+      } catch (err) {
+        return err as Error
+      }
+    })()
     await vi.runAllTimersAsync()
     return done
   }
