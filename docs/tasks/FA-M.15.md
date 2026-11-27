@@ -2,7 +2,7 @@
 id: FA-M.15
 title: Reset hasła, który naprawdę wysyła maila i przeżywa drugie kliknięcie; wysyłki maili, które nie znikają na Vercelu
 stage: M
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -102,3 +102,4 @@ grep -rnE "send[A-Za-z]*Email\(" src --include=*.ts | grep -v "await\|return\|af
 ```
 
 ## Notatki z realizacji
+- **2026-11-27, tj (wf-review):** accepted PR #220 at 81f81fe — CI green (checked by tj); reviewed diff: resetPassword awaits the send with a neutral error; GET /auth/reset only 307s to /auth/reset/confirm (no verifyOtp), verifyOtp only in confirmPasswordReset (POST), otp-AMR session fallback; sendEmail retries network/429/5xx up to 3× with one Idempotency-Key per send; stripe-deposit awaits the FA email, angler/guide emails off behind POST_DEPOSIT_PARTY_EMAILS_ENABLED; /auth/reset/confirm added to THIRD_PARTY_FREE_ROUTES. Agent's three in-scope choices accepted. Outage-enumeration note stays in deferred as accepted risk. Prod check by tj after merge: reset email arrives, link opened twice → landing page both times, button → set password, old password refused.

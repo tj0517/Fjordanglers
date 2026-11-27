@@ -153,7 +153,7 @@ Zakres: dokument „Aplikacja dla przewodników — zakres MVP” (Claude Docs) 
 | FA-M.11 | Zgłoszenia zewnętrzne — klucze VAPID do push + env (szablon Mety odpada, Google zrobione); robi tj | S | — (człowiek) | todo | — |
 | FA-M.12 | PWA + web push — instalacja, zgoda, push przy nowym zleceniu | L | opus | done (PR #216) | FA-M.08 |
 | FA-M.13 | Panel przewodnika — zlecenia, podgląd kalendarza, „Connect” w koncie | M | sonnet | done (PR #207) | FA-M.08, FA-M.03, FA-M.09, FA-M.10 |
-| FA-M.15 | Reset hasła z `await` na wysyłce + strona lądowania (GET nie zużywa tokenu); retry z `Idempotency-Key` we wspólnym `sendEmail`; maile po depozycie do wędkarza/przewodnika wyłączone | M | sonnet | review (PR #220) | — |
+| FA-M.15 | Reset hasła z `await` na wysyłce + strona lądowania (GET nie zużywa tokenu); retry z `Idempotency-Key` we wspólnym `sendEmail`; maile po depozycie do wędkarza/przewodnika wyłączone | M | sonnet | done (PR #220) | — |
 
 ## Stages 2–8
 
